@@ -73,7 +73,7 @@ premise:
     { Premise.Proposition $1 }
 
 formula:
-  | predicate = ID args = nonempty_list(term)
+  | predicate = ID args = list(term)
     { Formula.{predicate; args} }
 
 term:
@@ -93,5 +93,5 @@ term:
     { Term.Seq $2 }
   | LBRACE key = ID MAPSTO value = term RBRACE
     { Term.Map {key; value} }
-  | LPAREN separated_nonempty_list(COMMA, term) RPAREN
-    { Term.Tuple $2 }
+  | LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
+    { Term.Tuple (t1 :: t2 :: rest) }

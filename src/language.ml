@@ -53,8 +53,8 @@ module Formula = struct
   let to_string f =
     let args_str =
       List.map f.args ~f:Term.to_string
-      |> String.concat ~sep:" "
-    in Printf.sprintf "%s %s" f.predicate args_str
+      |> String.concat ~sep:", "
+    in Printf.sprintf "%s(%s)" f.predicate args_str
 end
 
 module Formula_comparable = struct

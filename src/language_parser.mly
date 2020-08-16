@@ -73,7 +73,7 @@ premise:
     { Premise.Proposition $1 }
 
 formula:
-  | predicate = ID args = list(term)
+  | predicate = ID LPAREN args = separated_list(COMMA, term) RPAREN
     { Formula.{predicate; args} }
 
 term:

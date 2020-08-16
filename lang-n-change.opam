@@ -1,0 +1,8 @@
+opam-version: "2.0.5"
+version: "0.1"
+maintainer: "Benjamin_Mourad@student.uml.edu"
+authors: ["Benjamin Mourad"]
+license: "BSD"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]

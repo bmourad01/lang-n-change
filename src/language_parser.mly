@@ -1,5 +1,4 @@
 %{
-  open Core_kernel
   open Language
 %}
 
@@ -17,9 +16,6 @@
 %token QUOTE
 %token IN FORALL FIND WHERE WITH
 
-%left MAPSTO EQ
-%left MID COMMA FSLASH
-
 %start lan
 %type <Language.t> lan
 
@@ -28,6 +24,7 @@
 lan:
   | EOF
     {
+      let open Core_kernel in
       let grammar = Grammar.{categories = String.Map.empty} in
       let rules = String.Map.empty in
       Language.{grammar; rules}
@@ -37,6 +34,7 @@ lan:
 language:
   | categories = list(grammar_category) rules = list(rule)
     {
+      let open Core_kernel in
       let categories =
         List.fold categories ~init:String.Map.empty ~f:(fun m c ->
           Map.set m Grammar.Category.(c.name) c)
@@ -51,6 +49,7 @@ language:
 grammar_category:
   | name = ID meta_var = ID GRAMMAR_ASSIGN terms = separated_list(MID, term)
     {
+      let open Core_kernel in
       let terms = List.fold terms ~init:Term_set.empty ~f:Set.add in
       Grammar.Category.{name; meta_var; terms}
     }

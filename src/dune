@@ -1,5 +1,8 @@
 (ocamllex language_lexer)
-(menhir (modules language_parser))
+
+(menhir
+ (modules language_parser)
+ (flags --explain))
 
 (library
  (name lang_n_change)

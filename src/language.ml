@@ -141,7 +141,7 @@ module Grammar = struct
         name: string;
         meta_var: string;
         terms: Term_set.t;
-      } [@@deriving eq, compare, sexp]
+      }
 
     let to_string c =
       Printf.sprintf "%s %s ::= %s"

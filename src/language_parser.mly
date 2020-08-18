@@ -3,18 +3,20 @@
 %}
 
 %token EOF
-%token <string> ID
+%token <string> NAME
 %token <int> INT
-%token GRAMMAR_ASSIGN
+%token MOD
+%token GRAMMARASSIGN
 %token MID
 %token COMMA
+%token DOT
 %token DASH
-%token LSQUARE RSQUARE LPAREN RPAREN LBRACE RBRACE
+%token LSQUARE RSQUARE LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token FSLASH
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token IN FORALL FIND WHERE WITH
+%token IN FORALL FIND WHERE WITH DOM RANGE MEMBER
 
 %start lan
 %type <Language.t> lan
@@ -32,7 +34,7 @@ lan:
   | language EOF { $1 }
 
 language:
-  | categories = list(grammar_category) rules = list(rule)
+  | categories = list(grammar_category) MOD rules = list(rule)
     {
       let open Core_kernel in
       let categories =
@@ -47,7 +49,7 @@ language:
     }
 
 grammar_category:
-  | name = ID meta_var = ID GRAMMAR_ASSIGN terms = separated_list(MID, term)
+  | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_list(MID, term)
     {
       let open Core_kernel in
       let terms = List.fold terms ~init:Term_set.empty ~f:Set.add in
@@ -55,11 +57,11 @@ grammar_category:
     }
 
 rule:
-  | LSQUARE name = ID RSQUARE premises = separated_list(COMMA, premise) nonempty_list(DASH) conclusion = formula
+  | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, premise) nonempty_list(DASH) conclusion = formula
     { Rule.{name; premises; conclusion} }
 
 forall_result:
-  | ID EQ term
+  | NAME EQ term
     { ($1, $3) }
 
 premise:
@@ -73,25 +75,37 @@ premise:
     { Premise.Proposition $1 }
 
 formula:
-  | predicate = ID LPAREN args = separated_list(COMMA, term) RPAREN
-    { Formula.{predicate; args} }
+  | MEMBER LPAREN element = term COMMA collection = term RPAREN
+    { Formula.Member {element; collection} }
+  | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN
+    { Formula.Default {predicate; args} }
 
 term:
-  | QUOTE ID QUOTE
+  | DOM LPAREN m = NAME RPAREN
+    { Term.Map_domain m }
+  | RANGE LPAREN m = NAME RPAREN
+    { Term.Map_range m }
+  | QUOTE NAME QUOTE
     { Term.Str $2 }
-  | LPAREN name = ID args = list(term) RPAREN
+  | LPAREN name = NAME DOT RPAREN
+    { Term.Constructor {name; args = []} }
+  | LPAREN name = NAME args = list(term) RPAREN
     { Term.Constructor {name; args} }
-  | ID
+  | NAME
     { Term.Var $1 }
   | INT
     { Term.Num $1 }
-  | LPAREN var = ID RPAREN body = term
+  | LPAREN var = NAME RPAREN body = term
     { Term.Binding {var; body} }
-  | body = term LSQUARE subst = term FSLASH var = ID RSQUARE
+  | body = term LSQUARE subst = term FSLASH var = NAME RSQUARE
     { Term.Subst {body; subst; var} }
+  | LSQUARE key = NAME MAPSTO value = term RSQUARE map = NAME
+    { Term.Map_update {map; key; value} }
   | LBRACE term RBRACE
     { Term.Seq $2 }
-  | LBRACE key = ID MAPSTO value = term RBRACE
+  | LBRACE key = NAME MAPSTO value = term RBRACE
     { Term.Map {key; value} }
-  | LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
+  | LANGLE t1 = term COMMA t2 = term RANGLE
+    { Term.Tuple ([t1; t2]) }
+  | LANGLE t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RANGLE
     { Term.Tuple (t1 :: t2 :: rest) }

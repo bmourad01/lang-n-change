@@ -2,7 +2,7 @@
   open Lexing
   open Language_parser
 
-  exception Syntax_error of string
+  exception Error of string
 
   let next_line lexbuf =
     let pos = lexbuf.lex_curr_p in
@@ -11,17 +11,18 @@
                 pos_bol = pos.pos_cnum}
 }
 
-let space = [' ' '\t' '\n' '\r']
 let digit = ['0'-'9']
 let alpha = ['a'-'z' 'A'-'Z']
-let ident = ['a'-'z'] (alpha | '_' | '\'' | digit)*
+let name = ['a'-'z' 'A'-'Z'] (alpha | '_' | '-' | '\'' | digit)*
 let integer = digit+
 
 rule token = parse                            
-  | '\n' {next_line lexbuf; token lexbuf} 
-  | space {token lexbuf}
-  | "::=" {GRAMMAR_ASSIGN}
+  | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
+  | [' ' '\t'] {token lexbuf}
+  | '%' {MOD}
+  | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
+  | "." {DOT}
   | "|" {MID}
   | "[" {LSQUARE}
   | "]" {RSQUARE}
@@ -29,8 +30,9 @@ rule token = parse
   | ")" {RPAREN}
   | "{" {LBRACE}
   | "}" {RBRACE}
+  | "<" {LANGLE}
+  | ">" {RANGLE}
   | "-" {DASH}
-  | "\"" {QUOTE}
   | "/" {FSLASH}
   | "=>" {MAPSTO}
   | "=" {EQ}
@@ -39,10 +41,14 @@ rule token = parse
   | "find" {FIND}
   | "where" {WHERE}
   | "with" {WITH}
+  | "dom" {DOM}
+  | "range" {RANGE}
+  | "member" {MEMBER}
+  | "\"" {QUOTE}
   | integer as n {INT (int_of_string n)}
-  | ident as id {ID id}
+  | name as n {NAME n}
   | eof {EOF}
-  | _ {raise (Syntax_error
+  | _ {raise (Error
         (Printf.sprintf "At offset %d: unexpected character %s.\n"
           (Lexing.lexeme_start lexbuf)
           (Lexing.lexeme lexbuf)))}

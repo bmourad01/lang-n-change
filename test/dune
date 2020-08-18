@@ -1,0 +1,4 @@
+(executables
+ (names parse_lan)
+ (flags -w -33)
+ (libraries core_kernel lang-n-change))

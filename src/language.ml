@@ -8,6 +8,9 @@ module Term = struct
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
     | Subst of {body: t; subst: t; var: string}
+    | Map_update of {key: string; value: t; map: string}
+    | Map_domain of string
+    | Map_range of string
     | Seq of t
     | Map of {key: string; value: t}
     | Tuple of t list [@@deriving eq, compare, sexp]
@@ -17,10 +20,13 @@ module Term = struct
     | Str s -> Printf.sprintf "\"%s\"" s
     | Num n -> Int.to_string n
     | Constructor {name; args} ->
-       let args_str =
-         List.map args ~f:to_string
-         |> String.concat ~sep:" "
-       in Printf.sprintf "(%s %s)" name args_str
+       let args_str = match args with
+         | [] -> "."
+         | args ->
+            List.map args ~f:to_string
+            |> String.concat ~sep:" "
+            |> (fun s -> " " ^ s)
+       in Printf.sprintf "(%s%s)" name args_str
     | Binding {var; body} ->
        Printf.sprintf "(%s)%s" var (to_string body)
     | Subst {body; subst; var} ->
@@ -28,11 +34,15 @@ module Term = struct
          (to_string body)
          (to_string subst)
          var
+    | Map_update {key; value; map} ->
+       Printf.sprintf "[%s => %s]%s" key (to_string value) map
+    | Map_domain m -> Printf.sprintf "dom(%s)" m
+    | Map_range m -> Printf.sprintf "range(%s)" m
     | Seq t -> Printf.sprintf "{%s}" (to_string t)
     | Map {key; value} ->
        Printf.sprintf "{%s => %s}" key (to_string value)
     | Tuple ts ->
-       Printf.sprintf "(%s)" 
+       Printf.sprintf "<%s>" 
          (List.map ts ~f:to_string
           |> String.concat ~sep:", ")
 end
@@ -45,16 +55,26 @@ end
 module Term_set = Set.Make(Term_comparable)
 
 module Formula = struct
-  type t = {
-      predicate: string;
-      args: Term.t list
-    } [@@deriving eq, compare, sexp]
+  type t =
+    | Default of {
+        predicate: string;
+        args: Term.t list
+      }
+    | Member of {
+        element: Term.t;
+        collection: Term.t;
+      } [@@deriving eq, compare, sexp]
 
-  let to_string f =
-    let args_str =
-      List.map f.args ~f:Term.to_string
-      |> String.concat ~sep:", "
-    in Printf.sprintf "%s(%s)" f.predicate args_str
+  let to_string = function
+    | Default {predicate; args} ->
+       let args_str =
+         List.map args ~f:Term.to_string
+         |> String.concat ~sep:", "
+       in Printf.sprintf "%s (%s)" predicate args_str
+    | Member {element; collection} ->
+       Printf.sprintf "member (%s, %s)"
+         (Term.to_string element)
+         (Term.to_string collection)
 end
 
 module Formula_comparable = struct
@@ -120,12 +140,16 @@ module Rule = struct
     } [@@deriving eq, compare, sexp]
 
   let to_string r =
-    Printf.sprintf
-      "[%s]\n%s\n--------------------------------------\n%s"
-      r.name
-      (List.map r.premises ~f:Premise.to_string
-       |> String.concat ~sep:",\n")
-      (Formula.to_string r.conclusion)
+    let premises_str = match r.premises with
+      | [] -> ""
+      | premises ->
+         List.map premises ~f:Premise.to_string
+         |> String.concat ~sep:",\n"
+         |> (fun s -> s ^ "\n")
+    in Printf.sprintf
+         "[%s]\n%s--------------------------------------\n%s"
+         r.name premises_str
+         (Formula.to_string r.conclusion)
 end
 
 module Rule_comparable = struct
@@ -167,7 +191,7 @@ type t = {
   }
 
 let to_string lan =
-  Printf.sprintf "%s\n\n%s"
+  Printf.sprintf "%s\n\n%%\n\n%s"
     (Grammar.to_string lan.grammar)
     (Map.data lan.rules
      |> List.map ~f:Rule.to_string

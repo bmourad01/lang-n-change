@@ -35,7 +35,7 @@
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token IN FORALL FIND WHERE WITH DOM RANGE MEMBER
+%token IN FORALL FIND WHERE WITH DOM RANGE MEMBER NOT
 
 %start lan
 %type <Language.t> lan
@@ -100,6 +100,10 @@ premise:
     { Premise.Proposition $1 }
 
 formula:
+  | NOT LPAREN f = formula RPAREN
+    { Formula.Not f }
+  | term EQ term
+    { Formula.Equal ($1, $3) }
   | MEMBER LPAREN element = term COMMA collection = term RPAREN
     { Formula.Member {element; collection} }
   | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN

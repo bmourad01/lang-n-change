@@ -58,6 +58,8 @@ module Term_set = Set.Make(Term_comparable)
 
 module Formula = struct
   type t =
+    | Not of t
+    | Equal of Term.t * Term.t
     | Default of {
         predicate: string;
         args: Term.t list
@@ -67,7 +69,12 @@ module Formula = struct
         collection: Term.t;
       } [@@deriving eq, compare, sexp]
 
-  let to_string = function
+  let rec to_string = function
+    | Not f -> Printf.sprintf "not (%s)" (to_string f)
+    | Equal (t1, t2) ->
+       Printf.sprintf "%s = %s"
+         (Term.to_string t1)
+         (Term.to_string t2)
     | Default {predicate; args} ->
        let args_str =
          List.map args ~f:Term.to_string

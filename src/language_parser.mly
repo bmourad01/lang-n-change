@@ -34,7 +34,7 @@ lan:
   | language EOF { $1 }
 
 language:
-  | categories = list(grammar_category) MOD rules = list(rule)
+  | categories = nonempty_list(grammar_category) MOD rules = nonempty_list(rule)
     {
       let open Core_kernel in
       let categories =

@@ -75,7 +75,7 @@ hint_element:
     }
 
 hint:
-  | name = NAME COLON elements = separated_nonempty_list(MID, hint_element)
+  | name = NAME COLON elements = separated_nonempty_list(MID, hint_element) DOT
     {
       let open Core_kernel in
       let elements =

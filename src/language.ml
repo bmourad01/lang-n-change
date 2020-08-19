@@ -232,7 +232,7 @@ let to_string lan =
       Map.data lan.hints
       |> List.map ~f:Hint.to_string
       |> String.concat ~sep:"\n"
-      |> (fun s -> "\n\n%\n\n" ^ s)
+      |> (fun s -> Printf.sprintf "\n\n%%\n\n%s." s)
   in Printf.sprintf "%s%s\n\n%%\n\n%s%s"
        (Grammar.to_string lan.grammar)
        relations_str

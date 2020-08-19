@@ -70,4 +70,5 @@ step ((tail (cons v1 v2)), v2)
 
 %
 
-variance: arrow => contra cov | cons => cov cov
+mode: typeof => inp inp out | step => inp out.
+variance: arrow => contra cov | cons => cov cov.

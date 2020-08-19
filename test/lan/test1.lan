@@ -35,3 +35,7 @@ typeof (Gamma, (app e1 e2), T2)
 [R-BETA]
 --------------------------------
 step ((app (abs T (x)e) v), e[v/x])
+    
+%
+
+# variance: arrow => contra cov | cons => cov cov

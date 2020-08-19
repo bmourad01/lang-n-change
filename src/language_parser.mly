@@ -1,5 +1,21 @@
 %{
   open Language
+
+  let create_lan ?(hints = []) categories rules =
+    let open Core_kernel in
+    let categories =
+      List.fold categories ~init:String.Map.empty ~f:(fun m c ->
+        Map.set m Grammar.Category.(c.name) c)
+    in
+    let grammar = Grammar.{categories} in
+    let rules =
+      List.fold rules ~init:String.Map.empty ~f:(fun m r ->
+        Map.set m Rule.(r.name) r)
+    in
+    let hints =
+      List.fold hints ~init:String.Map.empty ~f:(fun m h ->
+        Map.set m Hint.(h.name) h)
+    in {grammar; rules; hints}
 %}
 
 %token EOF
@@ -9,10 +25,12 @@
 %token GRAMMARASSIGN
 %token MID
 %token COMMA
+%token COLON
 %token DOT
 %token DASH
 %token LSQUARE RSQUARE LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token FSLASH
+%token TAG
 %token MAPSTO
 %token EQ
 %token QUOTE
@@ -24,28 +42,34 @@
 %%
 
 lan:
-  | EOF
-    {
-      let open Core_kernel in
-      let grammar = Grammar.{categories = String.Map.empty} in
-      let rules = String.Map.empty in
-      Language.{grammar; rules}
-    }
   | language EOF { $1 }
 
 language:
+  | categories = nonempty_list(grammar_category) MOD rules = nonempty_list(rule) MOD hints = nonempty_list(hint)
+    { create_lan categories rules ~hints }
   | categories = nonempty_list(grammar_category) MOD rules = nonempty_list(rule)
+    { create_lan categories rules }
+
+hint_element:
+  | NAME MAPSTO nonempty_list(NAME)
     {
       let open Core_kernel in
-      let categories =
-        List.fold categories ~init:String.Map.empty ~f:(fun m c ->
-          Map.set m Grammar.Category.(c.name) c)
-      in
-      let grammar = Grammar.{categories} in
-      let rules =
-        List.fold rules ~init:String.Map.empty ~f:(fun m r ->
-          Map.set m r.name r)
-      in {grammar; rules}
+      String.Map.singleton $1 $3
+    }
+  | NAME
+    {
+      let open Core_kernel in
+      String.Map.singleton $1 []
+    }
+
+hint:
+  | TAG name = NAME COLON elements = separated_nonempty_list(MID, hint_element)
+    {
+      let open Core_kernel in
+      let elements =
+        List.fold elements ~init:String.Map.empty ~f:(fun m m' ->
+          Map.merge_skewed m m' ~combine:(fun ~key _ v -> v))
+      in Hint.{name; elements}
     }
 
 grammar_category:

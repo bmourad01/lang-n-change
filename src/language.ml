@@ -185,14 +185,37 @@ module Grammar = struct
     |> String.concat ~sep:"\n"
 end
 
+module Hint = struct
+  type t = {
+      name: string;
+      elements: (string list) String.Map.t;
+    }
+
+  let to_string h =
+    Printf.sprintf "# %s: %s" h.name
+      (Map.to_alist h.elements
+       |> List.map ~f:(fun (k, v) ->
+              Printf.sprintf "%s => %s" k
+                (String.concat v ~sep:" "))
+       |> String.concat ~sep:" | ")
+end
+
 type t = {
     grammar: Grammar.t;
     rules: Rule.t String.Map.t;
+    hints: Hint.t String.Map.t;
   }
 
 let to_string lan =
-  Printf.sprintf "%s\n\n%%\n\n%s"
-    (Grammar.to_string lan.grammar)
-    (Map.data lan.rules
-     |> List.map ~f:Rule.to_string
-     |> String.concat ~sep:"\n\n")
+  let hints_str =
+    if Map.is_empty lan.hints then "" else
+      Map.data lan.hints
+      |> List.map ~f:Hint.to_string
+      |> String.concat ~sep:"\n"
+      |> (fun s -> "\n\n%\n\n" ^ s)
+  in Printf.sprintf "%s\n\n%%\n\n%s%s"
+       (Grammar.to_string lan.grammar)
+       (Map.data lan.rules
+        |> List.map ~f:Rule.to_string
+        |> String.concat ~sep:"\n\n")
+       hints_str

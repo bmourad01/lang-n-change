@@ -22,6 +22,7 @@ rule token = parse
   | '%' {MOD}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
+  | ":" {COLON}
   | "." {DOT}
   | "|" {MID}
   | "[" {LSQUARE}
@@ -34,6 +35,7 @@ rule token = parse
   | ">" {RANGLE}
   | "-" {DASH}
   | "/" {FSLASH}
+  | "#" {TAG}
   | "=>" {MAPSTO}
   | "=" {EQ}
   | "in" {IN}

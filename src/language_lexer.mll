@@ -53,6 +53,6 @@ rule token = parse
   | name as n {NAME n}
   | eof {EOF}
   | _ {raise (Error
-        (Printf.sprintf "At offset %d: unexpected character %s.\n"
+        (Printf.sprintf "At offset %d: unexpected token %s.\n"
           (Lexing.lexeme_start lexbuf)
           (Lexing.lexeme lexbuf)))}

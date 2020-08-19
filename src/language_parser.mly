@@ -1,21 +1,29 @@
 %{
   open Language
 
-  let create_lan ?(hints = []) categories rules =
+  let create_lan ?(relations = []) ?(hints = []) categories rules =
     let open Core_kernel in
     let categories =
       List.fold categories ~init:String.Map.empty ~f:(fun m c ->
         Map.set m Grammar.Category.(c.name) c)
     in
     let grammar = Grammar.{categories} in
+    let relations = match String.Map.of_alist relations with
+      | `Ok r -> r
+      | `Duplicate_key p ->
+         failwith (Printf.sprintf "duplicate relation signature for %s" p)
+    in
     let rules =
       List.fold rules ~init:String.Map.empty ~f:(fun m r ->
         Map.set m Rule.(r.name) r)
     in
     let hints =
       List.fold hints ~init:String.Map.empty ~f:(fun m h ->
-        Map.set m Hint.(h.name) h)
-    in {grammar; rules; hints}
+        match Map.add m Hint.(h.name) h with
+        | `Ok m -> m
+        | `Duplicate ->
+           failwith (Printf.sprintf "duplicate hint %s" Hint.(h.name)))
+    in {grammar; relations; rules; hints}
 %}
 
 %token EOF
@@ -50,6 +58,10 @@ language:
     { create_lan categories rules ~hints }
   | categories = nonempty_list(grammar_category) MOD rules = nonempty_list(rule)
     { create_lan categories rules }
+  | categories = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule) MOD hints = nonempty_list(hint)
+    { create_lan categories rules ~relations ~hints }
+  | categories = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule)
+    { create_lan categories rules ~relations }
 
 hint_element:
   | NAME MAPSTO nonempty_list(NAME)
@@ -84,6 +96,10 @@ grammar_category:
 rule:
   | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, premise) nonempty_list(DASH) conclusion = formula
     { Rule.{name; premises; conclusion} }
+
+relation:
+  | name = NAME LPAREN terms = separated_nonempty_list(COMMA, term) RPAREN
+    { (name, terms) }
 
 forall_result:
   | NAME EQ term

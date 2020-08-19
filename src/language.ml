@@ -211,19 +211,31 @@ end
 
 type t = {
     grammar: Grammar.t;
+    relations: Term.t list String.Map.t;
     rules: Rule.t String.Map.t;
     hints: Hint.t String.Map.t;
   }
 
 let to_string lan =
+  let relations_str =
+    if Map.is_empty lan.relations then "" else
+      Map.to_alist lan.relations
+      |> List.map ~f:(fun (p, ts) ->
+             Printf.sprintf "%s (%s)" p
+               (List.map ts ~f:Term.to_string
+                |> String.concat ~sep:", "))
+      |> String.concat ~sep:"\n"
+      |> (fun s -> "\n\n%\n\n" ^ s)
+  in 
   let hints_str =
     if Map.is_empty lan.hints then "" else
       Map.data lan.hints
       |> List.map ~f:Hint.to_string
       |> String.concat ~sep:"\n"
       |> (fun s -> "\n\n%\n\n" ^ s)
-  in Printf.sprintf "%s\n\n%%\n\n%s%s"
+  in Printf.sprintf "%s%s\n\n%%\n\n%s%s"
        (Grammar.to_string lan.grammar)
+       relations_str
        (Map.data lan.rules
         |> List.map ~f:Rule.to_string
         |> String.concat ~sep:"\n\n")

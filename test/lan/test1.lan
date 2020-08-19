@@ -1,7 +1,8 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (nil.)
+Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e) | (nil.) | (error.)
+Error err ::= (error.)
 Value v ::= (abs T (x)e) | (cons v v) | (nil.)
 Type T ::= (arrow T T) | (list T)
-Context E ::= (app E e) | (app v E) | (cons E e) | (cons v E)
+Context E ::= (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E)
 Environment Gamma ::= {x => T}
  
 %
@@ -25,6 +26,16 @@ typeof (Gamma, (cons e1 e2), (list T))
 [T-NIL]
 --------------------------------
 typeof (Gamma, (nil.), (list T))
+    
+[T-HEAD]
+typeof (Gamma, e, (list T))
+--------------------------------
+typeof (Gamma, (head e), T)
+
+[T-TAIL]
+typeof (Gamma, e, (list T))
+--------------------------------
+typeof (Gamma, (tail e), (list T))
 
 [T-ABS]
 typeof ([x => T]Gamma, e, T2)
@@ -41,6 +52,22 @@ typeof (Gamma, (app e1 e2), T2)
 --------------------------------
 step ((app (abs T (x)e) v), e[v/x])
     
+[R-HEAD-NIL]
+--------------------------------
+step ((head (nil.)), (error.))
+
+[R-TAIL-NIL]
+--------------------------------
+step ((tail (nil.)), (error.))
+    
+[R-HEAD-CONS]
+--------------------------------
+step ((head (cons v1 v2)), v1)
+
+[R-TAIL-CONS]
+--------------------------------
+step ((tail (cons v1 v2)), v2)
+
 %
 
 variance: arrow => contra cov | cons => cov cov

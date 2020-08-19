@@ -2,6 +2,7 @@ open Core_kernel
 
 module Term = struct
   type t =
+    | Wildcard
     | Var of string
     | Str of string
     | Num of int
@@ -16,6 +17,7 @@ module Term = struct
     | Tuple of t list [@@deriving eq, compare, sexp]
 
   let rec to_string = function
+    | Wildcard -> "_"
     | Var v -> v
     | Str s -> Printf.sprintf "\"%s\"" s
     | Num n -> Int.to_string n

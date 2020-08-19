@@ -24,6 +24,7 @@ rule token = parse
   | "," {COMMA}
   | ":" {COLON}
   | "." {DOT}
+  | "_" {WILDCARD}
   | "|" {MID}
   | "[" {LSQUARE}
   | "]" {RSQUARE}

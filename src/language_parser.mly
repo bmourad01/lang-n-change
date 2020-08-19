@@ -23,6 +23,7 @@
 %token <int> INT
 %token MOD
 %token GRAMMARASSIGN
+%token WILDCARD
 %token MID
 %token COMMA
 %token COLON
@@ -115,6 +116,8 @@ term:
     { Term.Constructor {name; args = []} }
   | LPAREN name = NAME args = list(term) RPAREN
     { Term.Constructor {name; args} }
+  | WILDCARD
+    { Term.Wildcard }
   | NAME
     { Term.Var $1 }
   | INT

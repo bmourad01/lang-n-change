@@ -39,7 +39,6 @@
 %token DASH
 %token LSQUARE RSQUARE LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token FSLASH
-%token TAG
 %token MAPSTO
 %token EQ
 %token QUOTE
@@ -76,7 +75,7 @@ hint_element:
     }
 
 hint:
-  | TAG name = NAME COLON elements = separated_nonempty_list(MID, hint_element)
+  | name = NAME COLON elements = separated_nonempty_list(MID, hint_element)
     {
       let open Core_kernel in
       let elements =

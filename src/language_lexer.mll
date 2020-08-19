@@ -36,7 +36,6 @@ rule token = parse
   | ">" {RANGLE}
   | "-" {DASH}
   | "/" {FSLASH}
-  | "#" {TAG}
   | "=>" {MAPSTO}
   | "=" {EQ}
   | "in" {IN}

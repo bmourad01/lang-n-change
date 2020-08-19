@@ -201,7 +201,7 @@ module Hint = struct
     }
 
   let to_string h =
-    Printf.sprintf "# %s: %s" h.name
+    Printf.sprintf "%s: %s" h.name
       (Map.to_alist h.elements
        |> List.map ~f:(fun (k, v) ->
               Printf.sprintf "%s => %s" k

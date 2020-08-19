@@ -97,7 +97,7 @@ premise:
   | FIND element = term IN collection = term WHERE formulae = separated_nonempty_list(COMMA, formula)
     { Premise.Find {element; collection; formulae} }
   | formula
-    { Premise.Proposition $1 }
+    { Premise.Prop $1 }
 
 formula:
   | NOT LPAREN f = formula RPAREN

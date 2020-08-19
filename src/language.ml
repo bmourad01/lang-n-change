@@ -95,7 +95,7 @@ module Formula_set = Set.Make(Formula_comparable)
 
 module Premise = struct
   type t =
-    | Proposition of Formula.t
+    | Prop of Formula.t
     | Forall of {
         element: Term.t;
         collection: Term.t;
@@ -109,7 +109,7 @@ module Premise = struct
       } [@@deriving eq, compare, sexp]
 
   let to_string = function
-    | Proposition f -> Formula.to_string f
+    | Prop f -> Formula.to_string f
     | Forall {element; collection; formulae; result} ->
        let result_str = match result with
          | [] -> ""

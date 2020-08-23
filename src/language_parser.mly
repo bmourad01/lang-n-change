@@ -42,7 +42,7 @@
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token IN FORALL FIND WHERE WITH DOM RANGE MEMBER NOT
+%token IN FORALL FIND WHERE WITH DOM RANGE MEMBER NOT UNION ZIP
 
 %start lan
 %type <Language.t> lan
@@ -124,11 +124,23 @@ formula:
   | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN
     { Formula.Default {predicate; args} }
 
+subst:
+  | term = term FSLASH var = NAME
+    { Term.Subst_pair {term; var} }
+  | NAME
+    { Term.Subst_var $1 }
+
 term:
   | DOM LPAREN m = NAME RPAREN
     { Term.Map_domain m }
   | RANGE LPAREN m = NAME RPAREN
     { Term.Map_range m }
+  | UNION LPAREN t1 = term COMMA t2 = term RPAREN
+    { Term.Union [t1; t2] }
+  | UNION LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
+    { Term.Union (t1 :: t2 :: rest) }
+  | ZIP LPAREN t1 = term COMMA t2 = term RPAREN
+    { Term.Zip (t1, t2) }
   | QUOTE NAME QUOTE
     { Term.Str $2 }
   | LPAREN name = NAME DOT RPAREN
@@ -143,8 +155,8 @@ term:
     { Term.Num $1 }
   | LPAREN var = NAME RPAREN body = term
     { Term.Binding {var; body} }
-  | body = term LSQUARE subst = term FSLASH var = NAME RSQUARE
-    { Term.Subst {body; subst; var} }
+  | body = term LSQUARE substs = separated_nonempty_list(COMMA, subst) RSQUARE
+    { Term.Subst {body; substs} }
   | LSQUARE key = NAME MAPSTO value = term RSQUARE map = NAME
     { Term.Map_update {map; key; value} }
   | LBRACE term RBRACE

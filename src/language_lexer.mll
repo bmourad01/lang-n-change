@@ -47,6 +47,8 @@ rule token = parse
   | "range" {RANGE}
   | "member" {MEMBER}
   | "not" {NOT}
+  | "union" {UNION}
+  | "zip" {ZIP}
   | "\"" {QUOTE}
   | integer as n {INT (int_of_string n)}
   | name as n {NAME n}

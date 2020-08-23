@@ -1,6 +1,6 @@
 open Core_kernel
 
-module Term = struct
+module Term = struct 
   type t =
     | Wildcard
     | Var of string
@@ -8,13 +8,18 @@ module Term = struct
     | Num of int
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
-    | Subst of {body: t; subst: t; var: string}
+    | Subst of {body: t; substs: subst list}
     | Map_update of {key: string; value: t; map: string}
     | Map_domain of string
     | Map_range of string
     | Seq of t
     | Map of {key: string; value: t}
-    | Tuple of t list [@@deriving eq, compare, sexp]
+    | Tuple of t list
+    | Union of t list
+    | Zip of t * t
+  and subst =
+    | Subst_pair of {term: t; var: string}
+    | Subst_var of string [@@deriving eq, compare, sexp]
 
   let rec to_string = function
     | Wildcard -> "_"
@@ -31,11 +36,17 @@ module Term = struct
        in Printf.sprintf "(%s%s)" name args_str
     | Binding {var; body} ->
        Printf.sprintf "(%s)%s" var (to_string body)
-    | Subst {body; subst; var} ->
-       Printf.sprintf "%s[%s/%s]"
-         (to_string body)
-         (to_string subst)
-         var
+    | Subst {body; substs} ->
+       let substs_str =
+         if List.is_empty substs then "" else
+           Printf.sprintf "[%s]"
+             (List.map substs ~f:(function
+                  | Subst_pair {term; var} ->
+                     Printf.sprintf "%s/%s"
+                       (to_string term) var
+                  | Subst_var v -> v)
+              |> String.concat ~sep:", ")
+       in Printf.sprintf "%s%s" (to_string body) substs_str
     | Map_update {key; value; map} ->
        Printf.sprintf "[%s => %s]%s" key (to_string value) map
     | Map_domain m -> Printf.sprintf "dom(%s)" m
@@ -47,6 +58,65 @@ module Term = struct
        Printf.sprintf "<%s>" 
          (List.map ts ~f:to_string
           |> String.concat ~sep:", ")
+    | Union ts ->
+       Printf.sprintf "union(%s)"
+         (List.map ts ~f:to_string
+          |> String.concat ~sep:", ")
+    | Zip (t1, t2) ->
+       Printf.sprintf "zip(%s, %s)"
+         (to_string t1) (to_string t2)
+
+  let is_var = function
+    | Var _ -> true
+    | _ -> false
+
+  let is_string = function
+    | Str _ -> true
+    | _ -> false
+
+  let is_constructor = function
+    | Constructor _ -> true
+    | _ -> false
+
+  let is_binding = function
+    | Binding _ -> true
+    | _ -> false
+
+  let is_subst = function
+    | Subst _ -> true
+    | _ -> false
+
+  let is_map_update = function
+    | Map_update _ -> true
+    | _ -> false
+
+  let is_map_domain = function
+    | Map_domain _ -> true
+    | _ -> false
+
+  let is_map_range = function
+    | Map_range _ -> true
+    | _ -> false
+
+  let is_seq = function
+    | Seq _ -> true
+    | _ -> false
+
+  let is_map = function
+    | Map _ -> true
+    | _ -> false
+
+  let is_tuple = function
+    | Tuple _ -> true
+    | _ -> false
+
+  let is_union = function
+    | Union _ -> true
+    | _ -> false
+
+  let is_zip = function
+    | Zip _ -> true
+    | _ -> false
 end
 
 module Term_comparable = struct

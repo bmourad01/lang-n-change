@@ -118,7 +118,7 @@ formula:
   | NOT LPAREN f = formula RPAREN
     { Formula.Not f }
   | term EQ term
-    { Formula.Equal ($1, $3) }
+    { Formula.Eq ($1, $3) }
   | MEMBER LPAREN element = term COMMA collection = term RPAREN
     { Formula.Member {element; collection} }
   | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN

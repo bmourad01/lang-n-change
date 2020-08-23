@@ -117,6 +117,125 @@ module Term = struct
   let is_zip = function
     | Zip _ -> true
     | _ -> false
+
+  let unbind t = match t with
+    | Binding {var; body} -> body
+    | _ -> t
+
+  let rec unbind_rec t = match t with
+    | Constructor {name; args} ->
+       Constructor {name; args = List.map args ~f:unbind_rec}
+    | Binding {var; body} -> unbind_rec body
+    | Subst {body; substs} ->
+       let substs =
+         List.map substs ~f:(function
+             | Subst_pair {term; var} ->
+                Subst_pair {term = unbind_rec term; var}
+             | Subst_var v -> Subst_var v)
+       in Subst {body = unbind_rec body; substs}
+    | Map_update {key; value; map} ->
+       Map_update {key; value = unbind_rec value; map}
+    | Seq t -> Seq (unbind_rec t)
+    | Map {key; value} -> Map {key; value = unbind_rec value}
+    | Tuple ts -> Tuple (List.map ts ~f:unbind_rec)
+    | Union ts -> Union (List.map ts ~f:unbind_rec)
+    | Zip (t1, t2) -> Zip (unbind_rec t1, unbind_rec t2)
+    | _ -> t
+
+  let rec vars_dup t = match t with
+    | Var _ -> [t]
+    | Constructor {name; args} ->
+       List.map args ~f:vars_dup |> List.concat
+    | Binding {var; body} -> vars_dup body
+    | Subst {body; substs} ->
+       let substs_vars =
+         List.map substs ~f:(function
+             | Subst_pair {term; var} -> vars_dup term
+             | Subst_var v -> [Var v])
+         |> List.concat
+       in vars_dup body @ substs_vars
+    | Map_update {key; value; map} ->
+       (Var key :: vars_dup value) @ [Var map]
+    | Map_domain m | Map_range m -> [Var m]
+    | Seq s -> vars_dup s
+    | Map {key; value} -> vars_dup value
+    | Tuple ts | Union ts ->
+       List.map ts ~f:vars_dup |> List.concat
+    | Zip (t1, t2) -> vars_dup t1 @ vars_dup t2
+    | _ -> []
+
+  let vars t =
+    vars_dup t |> List.dedup_and_sort ~compare
+
+  let var_overlap t1 t2 =
+    let vs = vars t1 in
+    List.filter (vars t2) ~f:(fun v -> List.mem vs v ~equal)
+
+  let rec ticked t = match t with
+    | Var v -> Var (v ^ "'")
+    | Constructor {name; args} ->
+       Constructor {name; args = List.map args ~f:ticked}
+    | Binding {var; body} ->
+       Binding {var; body = ticked body}
+    | Subst {body; substs} ->
+       let substs =
+         List.map substs ~f:(function
+             | Subst_pair {term; var} ->
+                Subst_pair {term = ticked term; var}
+             | Subst_var v -> Subst_var (v ^ "'"))
+       in Subst {body = ticked body; substs}
+    | Map_update {key; value; map} ->
+       Map_update {
+           key = key ^ "'";
+           value = ticked value;
+           map = map ^ "'";
+         }
+    | Map_domain m -> Map_domain (m ^ "'")
+    | Map_range m -> Map_range (m ^ "'")
+    | Seq s -> Seq (ticked s)
+    | Map {key; value} -> Map {key; value = ticked value}
+    | Tuple ts -> Tuple (List.map ts ~f:ticked)
+    | Union ts -> Union (List.map ts ~f:ticked)
+    | Zip (t1, t2) -> Zip (ticked t1, ticked t2)
+    | _ -> t
+
+  let rec ticked_restricted t ts =
+    let f t = ticked_restricted t ts in
+    match t with
+    | Var v when List.mem ts t ~equal -> Var (v ^ "'")
+    | Constructor {name; args} ->
+       Constructor {name; args = List.map args ~f}
+    | Binding {var; body} ->
+       Binding {var; body = f body}
+    | Subst {body; substs} ->
+       let substs =
+         List.map substs ~f:(function
+             | Subst_pair {term; var} ->
+                Subst_pair {term = f term; var}
+             | Subst_var v ->
+                if List.mem ts (Var v) ~equal
+                then Subst_var (v ^ "'")
+                else Subst_var v)
+       in Subst {body = f body; substs}
+    | Map_update {key; value; map} ->
+       let key =
+         if List.mem ts (Var key) ~equal
+         then key ^ "'" else key
+       in
+       let map =
+         if List.mem ts (Var map) ~equal
+         then map ^ "'" else map
+       in Map_update {key; value = f value; map}
+    | Map_domain m when List.mem ts (Var m) ~equal ->
+       Map_domain (m ^ "'")
+    | Map_range m when List.mem ts (Var m) ~equal ->
+       Map_range (m ^ "'")
+    | Seq s -> Seq (f s)
+    | Map {key; value} -> Map {key; value = f value}
+    | Tuple ts -> Tuple (List.map ts ~f)
+    | Union ts -> Union (List.map ts ~f)
+    | Zip (t1, t2) -> Zip (f t1, f t2)
+    | _ -> t
 end
 
 module Term_comparable = struct
@@ -129,7 +248,7 @@ module Term_set = Set.Make(Term_comparable)
 module Formula = struct
   type t =
     | Not of t
-    | Equal of Term.t * Term.t
+    | Eq of Term.t * Term.t
     | Default of {
         predicate: string;
         args: Term.t list
@@ -141,7 +260,7 @@ module Formula = struct
 
   let rec to_string = function
     | Not f -> Printf.sprintf "not (%s)" (to_string f)
-    | Equal (t1, t2) ->
+    | Eq (t1, t2) ->
        Printf.sprintf "%s = %s"
          (Term.to_string t1)
          (Term.to_string t2)
@@ -154,6 +273,35 @@ module Formula = struct
        Printf.sprintf "member (%s, %s)"
          (Term.to_string element)
          (Term.to_string collection)
+
+  let is_not = function
+    | Not _ -> true
+    | _ -> false
+
+  let is_eq = function
+    | Eq _ -> true
+    | _ -> false
+
+  let is_default = function
+    | Default _ -> true
+    | _ -> false
+
+  let is_member = function
+    | Member _ -> true
+    | _ -> false
+
+  let rec vars = function
+    | Not f -> vars f
+    | Eq (t1, t2) ->
+       Term.vars t1 @ Term.vars t2
+       |> List.dedup_and_sort ~compare:Term.compare
+    | Default {predicate; args} ->
+       List.map args ~f:Term.vars
+       |> List.concat
+       |> List.dedup_and_sort ~compare:Term.compare
+    | Member {element; collection} ->
+       Term.vars element @ Term.vars collection
+       |> List.dedup_and_sort ~compare:Term.compare
 end
 
 module Formula_comparable = struct
@@ -202,6 +350,29 @@ module Premise = struct
          (Term.to_string collection)
          (List.map formulae ~f:Formula.to_string
           |> String.concat ~sep:", ")
+
+  let is_prop = function
+    | Prop _ -> true
+    | _ -> false
+
+  let is_forall = function
+    | Forall _ -> true
+    | _ -> false
+
+  let is_find = function
+    | Find _ -> true
+    | _ -> false
+
+  let vars = function
+    | Prop f -> Formula.vars f
+    | Forall {element; collection; formulae; result} ->
+       List.map formulae ~f:Formula.vars
+       |> List.concat
+       |> List.dedup_and_sort ~compare:Term.compare
+    | Find {element; collection; formulae} ->
+       List.map formulae ~f:Formula.vars
+       |> List.concat
+       |> List.dedup_and_sort ~compare:Term.compare
 end
 
 module Premise_comparable = struct
@@ -229,6 +400,12 @@ module Rule = struct
          "[%s]\n%s--------------------------------------\n%s"
          r.name premises_str
          (Formula.to_string r.conclusion)
+
+  let vars r =
+    List.map r.premises ~f:Premise.vars
+    |> List.concat
+    |> List.append (Formula.vars r.conclusion)
+    |> List.dedup_and_sort ~compare:Term.compare
 end
 
 module Rule_comparable = struct

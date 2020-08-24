@@ -236,6 +236,51 @@ module Term = struct
     | Union ts -> Union (List.map ts ~f)
     | Zip (t1, t2) -> Zip (f t1, f t2)
     | _ -> t
+
+  let rec substitute t sub = match List.Assoc.find sub ~equal t with
+    | Some t' -> t'
+    | None ->
+       let f t = substitute t sub in
+       match t with
+       | Constructor {name; args} ->
+          Constructor {name; args = List.map args ~f}
+       | Binding {var; body} ->
+          Binding {var; body = f body}
+       | Subst {body; substs} ->
+          let substs =
+            List.map substs ~f:(function
+                | Subst_pair {term; var} ->
+                   Subst_pair {term = f term; var}
+                | Subst_var v ->
+                   match List.Assoc.find sub ~equal (Var v) with
+                   | Some (Var v') -> Subst_var v'
+                   | _ -> Subst_var v)
+          in Subst {body = f body; substs}
+       | Map_update {key; value; map} ->
+          let key = match List.Assoc.find sub ~equal (Var key) with
+            | Some (Var key') -> key'
+            | _ -> key
+          in
+          let map = match List.Assoc.find sub ~equal (Var map) with
+            | Some (Var map') -> map'
+            | _ -> map
+          in Map_update {key; value = f value; map}
+       | Map_domain m ->
+          begin match List.Assoc.find sub ~equal (Var m) with
+          | Some (Var m') -> Map_domain m'
+          | _ -> t
+          end
+       | Map_range m ->
+          begin match List.Assoc.find sub ~equal (Var m) with
+          | Some (Var m') -> Map_range m'
+          | _ -> t
+          end
+       | Seq s -> Seq (f s)
+       | Map {key; value} -> Map {key; value = f value}
+       | Tuple ts -> Tuple (List.map ts ~f)
+       | Union ts -> Union (List.map ts ~f)
+       | Zip (t1, t2) -> Zip (f t1, f t2)
+       | _ -> t
 end
 
 module Term_comparable = struct

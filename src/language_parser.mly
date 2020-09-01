@@ -131,10 +131,10 @@ subst:
     { Term.Subst_var $1 }
 
 term:
-  | DOM LPAREN m = NAME RPAREN
-    { Term.Map_domain m }
-  | RANGE LPAREN m = NAME RPAREN
-    { Term.Map_range m }
+  | DOM LPAREN term RPAREN
+    { Term.Map_domain $3 }
+  | RANGE LPAREN term RPAREN
+    { Term.Map_range $3 }
   | UNION LPAREN t1 = term COMMA t2 = term RPAREN
     { Term.Union [t1; t2] }
   | UNION LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN

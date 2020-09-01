@@ -10,8 +10,8 @@ module Term = struct
     | Binding of {var: string; body: t}
     | Subst of {body: t; substs: subst list}
     | Map_update of {key: string; value: t; map: string}
-    | Map_domain of string
-    | Map_range of string
+    | Map_domain of t
+    | Map_range of t
     | Seq of t
     | Map of {key: string; value: t}
     | Tuple of t list
@@ -49,8 +49,8 @@ module Term = struct
        in Printf.sprintf "%s%s" (to_string body) substs_str
     | Map_update {key; value; map} ->
        Printf.sprintf "[%s => %s]%s" key (to_string value) map
-    | Map_domain m -> Printf.sprintf "dom(%s)" m
-    | Map_range m -> Printf.sprintf "range(%s)" m
+    | Map_domain m -> Printf.sprintf "dom(%s)" (to_string m)
+    | Map_range m -> Printf.sprintf "range(%s)" (to_string m)
     | Seq t -> Printf.sprintf "{%s}" (to_string t)
     | Map {key; value} ->
        Printf.sprintf "{%s => %s}" key (to_string value)
@@ -156,7 +156,7 @@ module Term = struct
        in vars_dup body @ substs_vars
     | Map_update {key; value; map} ->
        (Var key :: vars_dup value) @ [Var map]
-    | Map_domain m | Map_range m -> [Var m]
+    | Map_domain m | Map_range m -> vars_dup m
     | Seq s -> vars_dup s
     | Map {key; value} -> vars_dup value
     | Tuple ts | Union ts ->
@@ -190,8 +190,8 @@ module Term = struct
            value = ticked value;
            map = map ^ "'";
          }
-    | Map_domain m -> Map_domain (m ^ "'")
-    | Map_range m -> Map_range (m ^ "'")
+    | Map_domain m -> Map_domain (ticked m)
+    | Map_range m -> Map_range (ticked m)
     | Seq s -> Seq (ticked s)
     | Map {key; value} -> Map {key; value = ticked value}
     | Tuple ts -> Tuple (List.map ts ~f:ticked)
@@ -226,10 +226,10 @@ module Term = struct
          if List.mem ts (Var map) ~equal
          then map ^ "'" else map
        in Map_update {key; value = f value; map}
-    | Map_domain m when List.mem ts (Var m) ~equal ->
-       Map_domain (m ^ "'")
-    | Map_range m when List.mem ts (Var m) ~equal ->
-       Map_range (m ^ "'")
+    | Map_domain m ->
+       Map_domain (ticked_restricted m ts)
+    | Map_range m ->
+       Map_range (ticked_restricted m ts)
     | Seq s -> Seq (f s)
     | Map {key; value} -> Map {key; value = f value}
     | Tuple ts -> Tuple (List.map ts ~f)
@@ -265,16 +265,8 @@ module Term = struct
             | Some (Var map') -> map'
             | _ -> map
           in Map_update {key; value = f value; map}
-       | Map_domain m ->
-          begin match List.Assoc.find sub ~equal (Var m) with
-          | Some (Var m') -> Map_domain m'
-          | _ -> t
-          end
-       | Map_range m ->
-          begin match List.Assoc.find sub ~equal (Var m) with
-          | Some (Var m') -> Map_range m'
-          | _ -> t
-          end
+       | Map_domain m -> Map_domain (f m)
+       | Map_range m -> Map_range (f m)
        | Seq s -> Seq (f s)
        | Map {key; value} -> Map {key; value = f value}
        | Tuple ts -> Tuple (List.map ts ~f)

@@ -20,6 +20,6 @@ let interleave_pairs_of_list l =
   let rec loop = function
     | [] -> []
     | x :: y :: rest ->
-       (x, y) :: loop rest
+       (x, y) :: loop (y :: rest)
     | x :: [] -> []
-  in loop l |> List.rev
+  in loop l

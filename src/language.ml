@@ -5,7 +5,6 @@ module Term = struct
     | Wildcard
     | Var of string
     | Str of string
-    | Num of int
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
     | Subst of {body: t; substs: subst list}
@@ -25,7 +24,6 @@ module Term = struct
     | Wildcard -> "_"
     | Var v -> v
     | Str s -> Printf.sprintf "\"%s\"" s
-    | Num n -> Int.to_string n
     | Constructor {name; args} ->
        let args_str = match args with
          | [] -> "."
@@ -199,6 +197,40 @@ module Term = struct
     | Zip (t1, t2) -> Zip (ticked t1, ticked t2)
     | _ -> t
 
+  let rec unticked t =
+    let f v = match String.index v '\'' with
+      | None -> v
+      | Some len ->
+         String.sub v ~pos:0 ~len
+    in
+    match t with
+    | Var v -> Var (f v)
+    | Constructor {name; args} ->
+       Constructor {name; args = List.map args ~f:unticked}
+    | Binding {var; body} ->
+       Binding {var; body = unticked body}
+    | Subst {body; substs} ->
+       let substs =
+         List.map substs ~f:(function
+             | Subst_pair {term; var} ->
+                Subst_pair {term = unticked term; var}
+             | Subst_var v -> Subst_var (f v))
+       in Subst {body = unticked body; substs}
+    | Map_update {key; value; map} ->
+       Map_update {
+           key = f key;
+           value = unticked value;
+           map = f map;
+         }
+    | Map_domain m -> Map_domain (unticked m)
+    | Map_range m -> Map_range (unticked m)
+    | Seq s -> Seq (unticked s)
+    | Map {key; value} -> Map {key; value = unticked value}
+    | Tuple ts -> Tuple (List.map ts ~f:unticked)
+    | Union ts -> Union (List.map ts ~f:unticked)
+    | Zip (t1, t2) -> Zip (unticked t1, unticked t2)
+    | _ -> t
+
   let rec ticked_restricted t ts =
     let f t = ticked_restricted t ts in
     match t with
@@ -282,12 +314,27 @@ end
 
 module Term_set = Set.Make(Term_comparable)
 
+module Predicate = struct
+  type t = string
+
+  let compare = String.compare
+  let equal = String.equal
+  let sexp_of_t = String.sexp_of_t
+  let t_of_sexp = String.t_of_sexp
+
+  module Builtin = struct
+    let typeof = "typeof"
+    let step = "step"
+    let subtype = "subtype"
+  end
+end
+
 module Formula = struct
   type t =
     | Not of t
     | Eq of Term.t * Term.t
     | Default of {
-        predicate: string;
+        predicate: Predicate.t;
         args: Term.t list
       }
     | Member of {
@@ -339,14 +386,18 @@ module Formula = struct
     | Member {element; collection} ->
        Term.vars element @ Term.vars collection
        |> List.dedup_and_sort ~compare:Term.compare
-end
 
-module Formula_comparable = struct
-  include Formula
-  include Comparable.Make(Formula)
+  let rec substitute f sub = match f with
+    | Not f -> Not (substitute f sub)
+    | Eq (t1, t2) -> Eq (Term.substitute t1 sub, Term.substitute t2 sub)
+    | Default {predicate; args} ->
+       let args = List.map args ~f:(fun t -> Term.substitute t sub) in
+       Default {predicate; args}
+    | Member {element; collection} ->
+       let element = Term.substitute element sub in
+       let collection = Term.substitute collection sub in
+       Member {element; collection}
 end
-
-module Formula_set = Set.Make(Formula_comparable)
 
 module Premise = struct
   type t =
@@ -410,14 +461,25 @@ module Premise = struct
        List.map formulae ~f:Formula.vars
        |> List.concat
        |> List.dedup_and_sort ~compare:Term.compare
-end
 
-module Premise_comparable = struct
-  include Premise
-  include Comparable.Make(Premise)
+  let substitute p sub =
+    let f f = Formula.substitute f sub in
+    match p with
+    | Prop f' -> Prop (f f')
+    | Forall {element; collection; formulae; result} ->
+       let element = Term.substitute element sub in
+       let collection = Term.substitute collection sub in
+       let formulae = List.map formulae ~f in
+       let result =
+         List.map result ~f:(fun (v, t) ->
+             (v, Term.substitute t sub))
+       in Forall {element; collection; formulae; result}
+    | Find {element; collection; formulae} ->
+       let element = Term.substitute element sub in
+       let collection = Term.substitute collection sub in
+       let formulae = List.map formulae ~f in
+       Find {element; collection; formulae}
 end
-
-module Premise_set = Set.Make(Premise_comparable)
 
 module Rule = struct
   type t = {
@@ -443,14 +505,25 @@ module Rule = struct
     |> List.concat
     |> List.append (Formula.vars r.conclusion)
     |> List.dedup_and_sort ~compare:Term.compare
-end
 
-module Rule_comparable = struct
-  include Rule
-  include Comparable.Make(Rule)
-end
+  let substitute r sub =
+    let premises =
+      List.map r.premises ~f:(fun p ->
+          Premise.substitute p sub)
+    in
+    let conclusion = Formula.substitute r.conclusion sub in
+    {r with premises; conclusion}
 
-module Rule_set = Set.Make(Rule_comparable)
+  let is_reduction_rule r = match r.conclusion with
+    | Default {predicate; _} ->
+       String.is_prefix predicate ~prefix:Predicate.Builtin.step
+    | _ -> false
+
+  let is_typing_rule r = match r.conclusion with
+    | Default {predicate; _} ->
+       String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
+    | _ -> false
+end
 
 module Grammar = struct
   module Category = struct
@@ -466,14 +539,18 @@ module Grammar = struct
         (Set.to_list c.terms
          |> List.map ~f:Term.to_string
          |> String.concat ~sep:" | ")
+
+    let term_vars_of c =
+      Set.to_list c.terms
+      |> List.filter_map ~f:(function
+             | Term.Var v -> Some v
+             | _ -> None)
   end
 
-  type t = {
-      categories: Category.t String.Map.t;
-    }
+  type t = Category.t String.Map.t
 
   let to_string g =
-    Map.data g.categories
+    Map.data g
     |> List.map ~f:Category.to_string
     |> String.concat ~sep:"\n"
 end
@@ -524,3 +601,28 @@ let to_string lan =
         |> List.map ~f:Rule.to_string
         |> String.concat ~sep:"\n\n")
        hints_str
+
+let is_var_kind lan v category_name =
+  match Map.find lan.grammar category_name with
+  | None -> false
+  | Some c ->
+     String.is_prefix v ~prefix:c.meta_var
+     || Set.exists c.terms ~f:(function
+            | Term.Var prefix -> String.is_prefix v ~prefix
+            | _ -> false)
+
+let is_op_kind lan op category_name =
+  match Map.find lan.grammar category_name with
+  | None -> false
+  | Some c ->
+     Set.exists c.terms ~f:(function
+         | Term.Constructor {name; _} -> String.equal name op
+         | _ -> false)
+
+let reduction_rules_of lan =
+  Map.data lan.rules
+  |> List.filter ~f:Rule.is_reduction_rule
+
+let typing_rules_of lan =
+  Map.data lan.rules
+  |> List.filter ~f:Rule.is_typing_rule

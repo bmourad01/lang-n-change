@@ -14,7 +14,6 @@
 let digit = ['0'-'9']
 let alpha = ['a'-'z' 'A'-'Z']
 let name = ['a'-'z' 'A'-'Z'] (alpha | '_' | '-' | '\'' | digit)*
-let integer = digit+
 
 rule token = parse                            
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
@@ -50,7 +49,6 @@ rule token = parse
   | "union" {UNION}
   | "zip" {ZIP}
   | "\"" {QUOTE}
-  | integer as n {INT (int_of_string n)}
   | name as n {NAME n}
   | eof {EOF}
   | _ {raise (Error

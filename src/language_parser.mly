@@ -1,13 +1,12 @@
 %{
   open Language
 
-  let create_lan ?(relations = []) ?(hints = []) categories rules =
+  let create_lan ?(relations = []) ?(hints = []) grammar rules =
     let open Core_kernel in
-    let categories =
-      List.fold categories ~init:String.Map.empty ~f:(fun m c ->
+    let grammar =
+      List.fold grammar ~init:String.Map.empty ~f:(fun m c ->
         Map.set m Grammar.Category.(c.name) c)
     in
-    let grammar = Grammar.{categories} in
     let relations = match String.Map.of_alist relations with
       | `Ok r -> r
       | `Duplicate_key p ->
@@ -28,7 +27,6 @@
 
 %token EOF
 %token <string> NAME
-%token <int> INT
 %token MOD
 %token GRAMMARASSIGN
 %token WILDCARD
@@ -53,14 +51,14 @@ lan:
   | language EOF { $1 }
 
 language:
-  | categories = nonempty_list(grammar_category) MOD rules = nonempty_list(rule) MOD hints = nonempty_list(hint)
-    { create_lan categories rules ~hints }
-  | categories = nonempty_list(grammar_category) MOD rules = nonempty_list(rule)
-    { create_lan categories rules }
-  | categories = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule) MOD hints = nonempty_list(hint)
-    { create_lan categories rules ~relations ~hints }
-  | categories = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule)
-    { create_lan categories rules ~relations }
+  | grammar = nonempty_list(grammar_category) MOD rules = nonempty_list(rule) MOD hints = nonempty_list(hint)
+    { create_lan grammar rules ~hints }
+  | grammar = nonempty_list(grammar_category) MOD rules = nonempty_list(rule)
+    { create_lan grammar rules }
+  | grammar = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule) MOD hints = nonempty_list(hint)
+    { create_lan grammar rules ~relations ~hints }
+  | grammar = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule)
+    { create_lan grammar rules ~relations }
 
 hint_element:
   | NAME MAPSTO nonempty_list(NAME)
@@ -151,8 +149,6 @@ term:
     { Term.Wildcard }
   | NAME
     { Term.Var $1 }
-  | INT
-    { Term.Num $1 }
   | LPAREN var = NAME RPAREN body = term
     { Term.Binding {var; body} }
   | body = term LSQUARE substs = separated_nonempty_list(COMMA, subst) RSQUARE

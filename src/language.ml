@@ -68,7 +68,7 @@ module Term = struct
     | Var _ -> true
     | _ -> false
 
-  let is_string = function
+  let is_str = function
     | Str _ -> true
     | _ -> false
 
@@ -305,6 +305,123 @@ module Term = struct
        | Union ts -> Union (List.map ts ~f)
        | Zip (t1, t2) -> Zip (f t1, f t2)
        | _ -> t
+
+  let uniquify_map t =
+    let vars = vars_dup t in
+    let vars' =
+      List.fold vars ~init:[] ~f:(fun vars t ->
+          if List.mem vars t ~equal
+          then vars else t :: vars)
+      |> List.rev
+    in
+    let rec aux t n = function
+      | [] -> []
+      | ((Var v) as x) :: xs when equal x t ->
+         Var (v ^ Int.to_string n) :: aux t (succ n) xs
+      | _ :: xs -> aux t n xs
+    in
+    List.map vars' ~f:(fun t -> (t, aux t 1 vars))
+    |> List.filter ~f:(fun (_, l) -> List.length l > 1)
+
+  let uniquify t m =
+    let var t m = match List.Assoc.find m t ~equal with
+      | None -> (t, m)
+      | Some ts ->
+         let m = List.Assoc.remove m t ~equal in
+         match List.length ts with
+         | n when n > 1 ->
+            (List.hd_exn ts, (t, List.tl_exn ts) :: m)
+         | 0 -> (t, m)
+         | _ -> (List.hd_exn ts, m)
+    in
+    let rec aux t m = match t with
+      | Wildcard -> (t, m)
+      | Var v -> var t m
+      | Str _ -> (t, m)
+      | Constructor {name; args} ->
+         let rec aux' m = function
+           | [] -> ([], m)
+           | x :: xs ->
+              let (x, m) = aux x m in
+              let (xs, m) = aux' m xs in
+              (x :: xs, m)
+         in
+         let (args, m) = aux' m args in
+         (Constructor {name; args}, m)
+      | Binding {var; body} ->
+         let (body, m) = aux body m in
+         (Binding {var; body}, m)
+      | Subst {body; substs} ->
+         let rec aux' m = function
+           | [] -> ([], m)
+           | x :: xs ->
+              let (x, m) = match x with
+                | Subst_pair {term; var} ->              
+                   let (term, m) = aux term m in
+                   (Subst_pair {term; var}, m)
+                | Subst_var v ->
+                   match var (Var v) m with
+                   | (Var v, m) ->
+                      (Subst_var v, m)
+                   | _ -> (x, m)
+              in
+              let (xs, m) = aux' m xs in
+              (x :: xs, m)
+         in
+         let (body, m) = aux body m in        
+         let (substs, m) = aux' m substs in
+         (Subst {body; substs}, m)
+      | Map_update {key; value; map} ->
+         let (key, m) = match var (Var key) m with
+           | (Var v, m) -> (v, m)
+           | _ -> (key, m)
+         in
+         let (value, m) = aux value m in
+         let (map, m) = match var (Var map) m with
+           | (Var v, m) -> (v, m)
+           | _ -> (map, m)
+         in (Map_update {key; value; map}, m)         
+      | Map_domain t ->
+         let (t, m) = aux t m in
+         (Map_domain t, m)
+      | Map_range t ->
+         let (t, m) = aux t m in
+         (Map_range t, m)
+      | Seq t ->
+         let (t, m) = aux t m in
+         (Seq t, m)
+      | Map {key; value} ->
+         let (key, m) = match var (Var key) m with
+           | (Var v, m) -> (v, m)
+           | _ -> (key, m)
+         in
+         let (value, m) = aux value m in
+         (Map {key; value}, m)
+      | Tuple ts ->
+         let rec aux' m = function
+           | [] -> ([], m)
+           | x :: xs ->
+              let (x, m) = aux x m in
+              let (xs, m) = aux' m xs in
+              (x :: xs, m)
+         in
+         let (ts, m) = aux' m ts in
+         (Tuple ts, m)
+      | Union ts ->
+         let rec aux' m = function
+           | [] -> ([], m)
+           | x :: xs ->
+              let (x, m) = aux x m in
+              let (xs, m) = aux' m xs in
+              (x :: xs, m)
+         in
+         let (ts, m) = aux' m ts in
+         (Union ts, m)
+      | Zip (t1, t2) ->
+         let (t1, m) = aux t1 m in
+         let (t2, m) = aux t2 m in
+         (Zip (t1, t2), m)
+    in aux t m
 end
 
 module Term_comparable = struct
@@ -398,6 +515,60 @@ module Formula = struct
        let collection = Term.substitute collection sub in
        Member {element; collection}
 end
+
+let hint_vars_of_formulae fs hint_map hint_var =
+  let is_hint_constructor = function
+    | Term.Constructor {name; _} ->
+       List.Assoc.mem hint_map name ~equal:String.equal
+    | _ -> false
+  in
+  let constructors =
+    List.map fs ~f:(fun f ->
+        let rec constructors = function
+          | Formula.Not f -> constructors f
+          | Formula.Eq (t1, t2) ->
+             List.filter [t1; t2] ~f:is_hint_constructor
+          | Formula.Default {predicate; args} ->
+             List.filter args ~f:is_hint_constructor
+          | Formula.Member {element; collection} ->
+             List.filter [element; collection] ~f:is_hint_constructor
+        in constructors f)
+    |> List.concat
+  in
+  let formula_terms =
+    List.map fs ~f:(fun f ->
+        let rec terms = function
+          | Formula.Not f -> terms f
+          | Formula.Default {predicate; args} ->
+             let equal = String.equal in
+             begin match List.Assoc.find hint_map predicate ~equal with
+             | None -> []
+             | Some hints ->
+                List.filter_mapi args ~f:(fun i t ->
+                    let open Option.Let_syntax in
+                    let%bind var = List.nth hints i in
+                    Option.some_if (equal var hint_var) t)
+             end
+          | _ -> []
+        in terms f)
+    |> List.concat
+  in
+  let constructor_terms =
+    List.filter_map constructors ~f:(fun t ->
+        match t with
+        | Term.Constructor {name; args} ->
+           let open Option.Let_syntax in
+           let equal = String.equal in
+           let%map hints = List.Assoc.find hint_map name ~equal in
+           List.filter_mapi args ~f:(fun i t ->
+               let%bind var = List.nth hints i in
+               Option.some_if (equal var hint_var) t)
+        | _ -> None)
+    |> List.concat
+  in
+  List.append
+    (List.map formula_terms ~f:Term.vars_dup |> List.concat)
+    (List.map constructor_terms ~f:Term.vars_dup |> List.concat)
 
 module Premise = struct
   type t =
@@ -500,6 +671,16 @@ module Rule = struct
          r.name premises_str
          (Formula.to_string r.conclusion)
 
+  let is_reduction_rule r = match r.conclusion with
+    | Default {predicate; _} ->
+       String.is_prefix predicate ~prefix:Predicate.Builtin.step
+    | _ -> false
+
+  let is_typing_rule r = match r.conclusion with
+    | Default {predicate; _} ->
+       String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
+    | _ -> false
+
   let vars r =
     List.map r.premises ~f:Premise.vars
     |> List.concat
@@ -513,16 +694,6 @@ module Rule = struct
     in
     let conclusion = Formula.substitute r.conclusion sub in
     {r with premises; conclusion}
-
-  let is_reduction_rule r = match r.conclusion with
-    | Default {predicate; _} ->
-       String.is_prefix predicate ~prefix:Predicate.Builtin.step
-    | _ -> false
-
-  let is_typing_rule r = match r.conclusion with
-    | Default {predicate; _} ->
-       String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
-    | _ -> false
 end
 
 module Grammar = struct

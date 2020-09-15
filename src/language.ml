@@ -320,8 +320,9 @@ module Term = struct
          Var (v ^ Int.to_string n) :: aux t (succ n) xs
       | _ :: xs -> aux t n xs
     in
-    List.map vars' ~f:(fun t -> (t, aux t 1 vars))
-    |> List.filter ~f:(fun (_, l) -> List.length l > 1)
+    List.filter_map vars' ~f:(fun t ->
+        let l = aux t 1 vars in
+        Option.some_if (List.length l > 1) (t, l))
 
   let uniquify t m =
     let var t m = match List.Assoc.find m t ~equal with
@@ -568,6 +569,24 @@ let hint_vars_of_formulae fs hint_map hint_var =
   List.append
     (List.map formula_terms ~f:Term.vars_dup |> List.concat)
     (List.map constructor_terms ~f:Term.vars_dup |> List.concat)
+
+let uniquify_map_of_formulae fs hint_map hint_var =
+  let vars = hint_vars_of_formulae fs hint_map hint_var in
+  let vars' =
+    List.fold vars ~init:[] ~f:(fun vars t ->
+        if List.mem vars t ~equal:Term.equal
+        then vars else t :: vars)
+    |> List.rev
+  in
+  let rec aux t n = function
+    | [] -> []
+    | ((Term.Var v) as x) :: xs when Term.equal x t ->
+       Term.Var (v ^ Int.to_string n) :: aux t (succ n) xs
+    | _ :: xs -> aux t n xs
+  in
+  List.filter_map vars' ~f:(fun t ->
+      let l = aux t 1 vars in
+      Option.some_if (List.length l > 1) (t, l))
 
 module Premise = struct
   type t =

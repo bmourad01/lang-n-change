@@ -554,8 +554,7 @@ let hint_vars_of_formulae fs hint_map hint_var =
     |> List.concat
   in
   let constructor_terms =
-    List.filter_map constructors ~f:(fun t ->
-        match t with
+    List.filter_map constructors ~f:(function
         | Term.Constructor {name; args} ->
            let open Option.Let_syntax in
            let equal = String.equal in

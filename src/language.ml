@@ -666,7 +666,7 @@ module Rule = struct
          |> String.concat ~sep:",\n"
          |> (fun s -> s ^ "\n")
     in Printf.sprintf
-         "[%s]\n%s--------------------------------------\n%s"
+         "[%s]\n%s--------------------------------------\n%s\n."
          r.name premises_str
          (Formula.to_string r.conclusion)
 

@@ -91,7 +91,7 @@ grammar_category:
     }
 
 rule:
-  | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, premise) nonempty_list(DASH) conclusion = formula
+  | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, premise) nonempty_list(DASH) conclusion = formula DOT
     { Rule.{name; premises; conclusion} }
 
 relation:

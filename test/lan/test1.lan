@@ -16,57 +16,69 @@ typeof (Gamma, e, T)
 member (<x, T>, Gamma)
 --------------------------------
 typeof (Gamma, x, T)
+.
 
 [T-CONS]
 typeof (Gamma, e1, T),
 typeof (Gamma, e2, (list T))
 --------------------------------
 typeof (Gamma, (cons e1 e2), (list T))
+.
 
 [T-NIL]
 --------------------------------
 typeof (Gamma, (nil.), (list T))
+.
     
 [T-HEAD]
 typeof (Gamma, e, (list T))
 --------------------------------
 typeof (Gamma, (head e), T)
+.
 
 [T-TAIL]
 typeof (Gamma, e, (list T))
 --------------------------------
 typeof (Gamma, (tail e), (list T))
+.
 
 [T-ABS]
 typeof ([x => T]Gamma, e, T2)
 --------------------------------
 typeof (Gamma, (abs T1 (x)e), (arrow T1 T2))
+.
 
 [T-APP]
 typeof (Gamma, e1, (arrow T1 T2)),
 typeof (Gamma, e2, T1)
 --------------------------------
 typeof (Gamma, (app e1 e2), T2)
+.
     
 [R-BETA]
 --------------------------------
 step ((app (abs T (x)e) v), e[v/x])
+.
     
 [R-HEAD-NIL]
 --------------------------------
 step ((head (nil.)), (error.))
+.
 
 [R-TAIL-NIL]
 --------------------------------
 step ((tail (nil.)), (error.))
+.
     
 [R-HEAD-CONS]
 --------------------------------
 step ((head (cons v1 v2)), v1)
+.
 
 [R-TAIL-CONS]
 --------------------------------
 step ((tail (cons v1 v2)), v2)
+.
 
 %
 

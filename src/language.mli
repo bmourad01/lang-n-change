@@ -91,6 +91,7 @@ module Formula: sig
   val is_member: t -> bool
   val vars: t -> Term.t list
   val substitute: t -> (Term.t * Term.t) list -> t
+  val args: t -> Term.t list
 end
 
 module Premise: sig

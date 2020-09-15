@@ -515,6 +515,12 @@ module Formula = struct
        let element = Term.substitute element sub in
        let collection = Term.substitute collection sub in
        Member {element; collection}
+
+  let rec args = function
+    | Not f -> args f
+    | Eq (t1, t2) -> [t1; t2]
+    | Default {predicate; args} -> args
+    | Member {element; collection} -> [element; collection]
 end
 
 let hint_vars_of_formulae fs hint_map hint_var =

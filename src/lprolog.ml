@@ -242,7 +242,6 @@ module Sigs = struct
                          | `Ok terms' -> terms'
                          end
                       | _ -> terms'))
-                      
     in {kinds; terms; props}
 end
 

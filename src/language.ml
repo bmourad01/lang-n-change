@@ -3,6 +3,7 @@ open Core_kernel
 module Term = struct 
   type t =
     | Wildcard
+    | Nil
     | Var of string
     | Str of string
     | Constructor of {name: string; args: t list}
@@ -11,7 +12,6 @@ module Term = struct
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
-    | Nil
     | Cons of {element: t; list: t}
     | List of t
     | Map of {key: string; value: t}
@@ -27,6 +27,7 @@ module Term = struct
 
   let rec to_string = function
     | Wildcard -> "_"
+    | Nil -> "nil"
     | Var v -> v
     | Str s -> Printf.sprintf "\"%s\"" s
     | Constructor {name; args} ->
@@ -55,7 +56,6 @@ module Term = struct
          (to_string key) (to_string value) (to_string map)
     | Map_domain m -> Printf.sprintf "dom(%s)" (to_string m)
     | Map_range m -> Printf.sprintf "range(%s)" (to_string m)
-    | Nil -> "nil"
     | Cons {element; list} ->
        Printf.sprintf "(%s :: %s)" (to_string element) (to_string list)
     | List t -> Printf.sprintf "[%s...]" (to_string t)
@@ -347,9 +347,8 @@ module Term = struct
          | _ -> (List.hd_exn ts, m)
     in
     let rec aux t m = match t with
-      | Wildcard -> (t, m)
+      | Wildcard | Nil | Str _ -> (t, m)
       | Var v -> var t m
-      | Str _ -> (t, m)
       | Constructor {name; args} ->
          let rec aux' m = function
            | [] -> ([], m)
@@ -394,7 +393,6 @@ module Term = struct
       | Map_range t ->
          let (t, m) = aux t m in
          (Map_range t, m)
-      | Nil -> (t, m)
       | Cons {element; list} ->
          let (element, m) = aux element m in
          let (list, m) = aux list m in
@@ -467,7 +465,7 @@ module Formula = struct
     | Eq of Term.t * Term.t
     | Prop of {
         predicate: Predicate.t;
-        args: Term.t list
+        args: Term.t list;
       }
     | Member of {
         element: Term.t;
@@ -756,20 +754,36 @@ let to_string lan =
         |> String.concat ~sep:"\n\n")
        hints_str
 
+let kind_of_var lan v =
+  let open Grammar.Category in
+  Map.data lan.grammar
+  |> List.find ~f:(fun {name; meta_var; terms} ->
+         String.is_prefix v ~prefix:meta_var
+         || Set.exists terms ~f:(function
+                | Term.Var prefix -> String.is_prefix v ~prefix
+                | _ -> false))
+  |> Option.map ~f:(fun c -> c.name)
+
 let is_var_kind lan v category_name =
   match Map.find lan.grammar category_name with
   | None -> false
-  | Some c ->
-     String.is_prefix v ~prefix:c.meta_var
-     || Set.exists c.terms ~f:(function
+  | Some {name; meta_var; terms} ->
+     String.is_prefix v ~prefix:meta_var
+     || Set.exists terms ~f:(function
             | Term.Var prefix -> String.is_prefix v ~prefix
             | _ -> false)
 
+let is_meta_var_of lan v category_name =
+  match Map.find lan.grammar category_name with
+  | None -> false
+  | Some {name; meta_var; terms} ->
+     String.is_prefix v ~prefix:meta_var
+    
 let is_op_kind lan op category_name =
   match Map.find lan.grammar category_name with
   | None -> false
-  | Some c ->
-     Set.exists c.terms ~f:(function
+  | Some {name; meta_var; terms} ->
+     Set.exists terms ~f:(function
          | Term.Constructor {name; _} -> String.equal name op
          | _ -> false)
 

@@ -2,7 +2,7 @@ Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e)
 Error err ::= (error.)
 Value v ::= (abs T (x)e) | (cons v v) | (nill.)
 Type T ::= (arrow T T) | (list T)
-Context E ::= (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E)
+Context E ::= (hole.) | (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E)
 Environment Gamma ::= {x => T}
 VarList L ::= [x...]
  

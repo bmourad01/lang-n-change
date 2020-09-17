@@ -3,6 +3,7 @@ open Core_kernel
 module Term: sig
   type t =
     | Wildcard
+    | Nil
     | Var of string
     | Str of string
     | Constructor of {name: string; args: t list}
@@ -11,7 +12,6 @@ module Term: sig
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
-    | Nil
     | Cons of {element: t; list: t}
     | List of t
     | Map of {key: string; value: t}
@@ -85,7 +85,7 @@ module Formula: sig
     | Eq of Term.t * Term.t
     | Prop of {
         predicate: Predicate.t;
-        args: Term.t list
+        args: Term.t list;
       }
     | Member of {
         element: Term.t;
@@ -154,7 +154,9 @@ type t = {
   }
 
 val to_string: t -> string
+val kind_of_var: t -> string -> string option
 val is_var_kind: t -> string -> string -> bool
+val is_meta_var_of: t -> string -> string -> bool
 val is_op_kind: t -> string -> string -> bool
 val reduction_rules_of: t -> Rule.t list
 val typing_rules_of: t -> Rule.t list

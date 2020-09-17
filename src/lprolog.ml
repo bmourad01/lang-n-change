@@ -287,15 +287,12 @@ module Sigs = struct
                          let term = Term.{name; args; typ} in
                          Map.set terms' name term
                       | T.Map {key; value} ->
-                         let name = name' ^ "_t" in
-                         let args =
+                         let typ =
                            Printf.sprintf
                              "list (lnc_pair %s)"
                              (String.concat (aux_map key value) ~sep:" ")
-                           :: []
                          in
-                         let typ = name' in
-                         let term = Term.{name; args; typ} in
+                         let term = Term.{name = name'; args = []; typ} in
                          begin match Map.add terms' name term with
                          | `Duplicate -> 
                             invalid_arg

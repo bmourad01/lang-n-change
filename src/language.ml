@@ -335,7 +335,7 @@ module Term = struct
         let l = aux t 1 vars in
         Option.some_if (List.length l > 1) (t, l))
 
-  let uniquify t m =
+  let uniquify' t m =
     let var t m = match List.Assoc.find m t ~equal with
       | None -> (t, m)
       | Some ts ->
@@ -434,6 +434,9 @@ module Term = struct
          let (t2, m) = aux t2 m in
          (Zip (t1, t2), m)
     in aux t m
+
+  let uniquify t =
+    uniquify_map t |> uniquify' t |> fst [@@inline]
 end
 
 module Term_comparable = struct
@@ -604,7 +607,7 @@ let uniquify_formulae fs ~hint_map ~hint_var =
   let rec aux_ts ts m = function
     | [] -> (List.rev ts, m)
     | x :: xs ->
-       let (t, m) = Term.uniquify x m in
+       let (t, m) = Term.uniquify' x m in
        aux_ts (t :: ts) m xs
   in
   let rec aux_f m = function
@@ -612,15 +615,15 @@ let uniquify_formulae fs ~hint_map ~hint_var =
        let (f, m) = aux_f m f in
        (Formula.Not f, m)
     | Formula.Eq (t1, t2) ->
-       let (t1, m) = Term.uniquify t1 m in
-       let (t2, m) = Term.uniquify t2 m in
+       let (t1, m) = Term.uniquify' t1 m in
+       let (t2, m) = Term.uniquify' t2 m in
        (Formula.Eq (t1, t2), m)
     | Formula.Prop {predicate; args} ->
        let (args, m) = aux_ts [] m args in
        (Formula.Prop {predicate; args}, m)
     | Formula.Member {element; collection} ->
-       let (element, m) = Term.uniquify element m in
-       let (collection, m) = Term.uniquify collection m in
+       let (element, m) = Term.uniquify' element m in
+       let (collection, m) = Term.uniquify' collection m in
        (Formula.Member {element; collection}, m)
   in
   let rec aux_fs fs m = function

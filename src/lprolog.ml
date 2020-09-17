@@ -69,6 +69,8 @@ module Sigs = struct
       | "kind" -> "knd"
       | _ -> name
     in
+    (* generate needed kinds and proposition types
+     * from the relations of the language *)
     let (kinds, props) =
       let kind_of_var_rel pred v = match L.kind_of_var lan v with
         | Some kind ->
@@ -128,6 +130,8 @@ module Sigs = struct
              let prop = Prop.{name = pred; args = List.rev args} in
              (kinds, Map.set props pred prop))
     in
+    (* infer additional propositions based on
+     * whether one category is a proper subset of another *)
     let props =
       let ctor_name = function
         | T.Constructor {name; args} -> Some name
@@ -148,7 +152,9 @@ module Sigs = struct
                         Set.to_list C.(c.terms)
                         |> List.filter_map ~f:ctor_name
                         |> String.Set.of_list
-                      in Set.is_subset ops ops')
+                      in
+                      Set.length ops < Set.length ops'
+                      && Set.is_subset ops ops')
                |> function
                  | None -> props
                  | Some c ->
@@ -158,6 +164,7 @@ module Sigs = struct
                       let prop = Prop.{name; args} in
                       Map.set props name prop)
     in
+    (* generate term constructor types from the grammar *)
     let terms = 
       let init = String.Map.empty in
       Map.data lan.grammar

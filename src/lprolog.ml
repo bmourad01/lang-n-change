@@ -394,8 +394,7 @@ type t = {
 
 let of_language (lan: L.t) =
   let sigs = Sigs.of_language lan in
-  let wildcard = ref 0 in
-  let new_wildcard () =
+  let new_wildcard wildcard =
     let v = Term.Var ("_" ^ Int.to_string !wildcard) in
     wildcard := succ !wildcard; v
   in
@@ -408,9 +407,9 @@ let of_language (lan: L.t) =
       else Term.Var v'
     in aux 0
   in
-  let aux_term vars rule_name t =
+  let aux_term wildcard vars rule_name t =
     let rec aux_term t = match t with
-      | T.Wildcard -> ([new_wildcard ()], [])
+      | T.Wildcard -> ([new_wildcard wildcard], [])
       | T.Nil ->
          ([Term.Constructor {name = "nil"; args = []}], [])
       | T.Var v ->
@@ -586,7 +585,7 @@ let of_language (lan: L.t) =
               (T.to_string t) rule_name)
     in aux_term t
   in
-  let aux_formula vars rule_name f =
+  let aux_formula wildcard vars rule_name f =
     let rec aux_formula f = match f with
       | F.Not f ->
          let ps = aux_formula f in
@@ -596,13 +595,13 @@ let of_language (lan: L.t) =
                 (F.to_string f) rule_name)
          else [Prop.Not (List.hd_exn ps)]
       | F.Eq (t1, t2) ->
-         let (t1', ps1) = aux_term vars rule_name t1 in
+         let (t1', ps1) = aux_term wildcard vars rule_name t1 in
          if List.length t1' > 1 then
            invalid_arg
              (Printf.sprintf "invalid term %s in Eq of rule %s"
                 (T.to_string t1) rule_name)
          else
-           let (t2', ps2) = aux_term vars rule_name t2 in
+           let (t2', ps2) = aux_term wildcard vars rule_name t2 in
            if List.length t1' > 1 then
              invalid_arg
                (Printf.sprintf "invalid term %s in Eq of rule %s"
@@ -613,19 +612,19 @@ let of_language (lan: L.t) =
              ps1 @ ps2 @ [Prop.Eq (t1, t2)]
       | F.Prop {predicate; args} ->
          let (args, ps) =
-           List.map args ~f:(aux_term vars rule_name)
+           List.map args ~f:(aux_term wildcard vars rule_name)
            |> List.unzip
          in
          let (args, ps) = (List.concat args, List.concat ps) in
          ps @ [Prop.Prop {name = predicate; args}]
       | F.Member {element; collection} ->
-         let (t1', ps1) = aux_term vars rule_name element in
+         let (t1', ps1) = aux_term wildcard vars rule_name element in
          if List.length t1' > 1 then
            invalid_arg
              (Printf.sprintf "invalid term %s in Eq of rule %s"
                 (T.to_string collection) rule_name)
          else
-           let (t2', ps2) = aux_term vars rule_name collection in
+           let (t2', ps2) = aux_term wildcard vars rule_name collection in
            if List.length t1' > 1 then
              invalid_arg
                (Printf.sprintf "invalid term %s in Eq of rule %s"
@@ -642,6 +641,7 @@ let of_language (lan: L.t) =
     let init = String.Map.empty in
     Map.data lan.rules
     |> List.fold ~init ~f:(fun rules (R.{name; premises; conclusion} as r) ->
+           let wildcard = ref 0 in
            let vars =
              R.vars r
              |> List.filter_map ~f:(function
@@ -650,12 +650,14 @@ let of_language (lan: L.t) =
              |> String.Hash_set.of_list 
            in
            let premises =
-             List.map premises ~f:(aux_formula vars name)
+             List.map premises ~f:(aux_formula wildcard vars name)
              |> List.concat
            in
            let (conclusion, premises') =
-             let ps = aux_formula vars name conclusion |> List.rev in
-             (List.hd_exn ps, List.tl_exn ps |> List.rev)
+             let ps =
+               aux_formula wildcard vars name conclusion
+               |> List.rev
+             in  (List.hd_exn ps, List.tl_exn ps |> List.rev)
            in
            let premises =
              Aux.dedup_list_stable ~compare:Prop.compare

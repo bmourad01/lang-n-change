@@ -8,17 +8,22 @@ module Term: sig
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
     | Subst of {body: t; substs: subst list}
-    | Map_update of {key: string; value: t; map: string}
+    | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
-    | Seq of t
+    | Nil
+    | Cons of {element: t; list: t}
+    | List of t
     | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
     | Zip of t * t
   and subst =
     | Subst_pair of {term: t; var: string}
-    | Subst_var of string [@@deriving eq, compare, sexp]
+    | Subst_var of string [@@deriving equal, compare, sexp]
+
+  type subs = (t, t) List.Assoc.t
+  type uniquify_map = (t, t list) List.Assoc.t
 
   val to_string: t -> string
   val is_var: t -> bool
@@ -29,7 +34,9 @@ module Term: sig
   val is_map_update: t -> bool
   val is_map_domain: t -> bool
   val is_map_range: t -> bool
-  val is_seq: t -> bool
+  val is_nil: t -> bool
+  val is_cons: t -> bool
+  val is_list: t -> bool
   val is_map: t -> bool
   val is_tuple: t -> bool
   val is_union: t -> bool
@@ -42,7 +49,7 @@ module Term: sig
   val ticked: t -> t
   val unticked: t -> t
   val ticked_restricted: t -> t list -> t
-  val substitute: t -> (t * t) list -> t 
+  val substitute: t -> subs -> t 
 end
 
 module Term_comparable: sig
@@ -75,14 +82,14 @@ module Formula: sig
   type t =
     | Not of t
     | Eq of Term.t * Term.t
-    | Default of {
+    | Prop of {
         predicate: Predicate.t;
         args: Term.t list
       }
     | Member of {
         element: Term.t;
         collection: Term.t;
-      } [@@deriving eq, compare, sexp]
+      } [@@deriving equal, compare, sexp]
 
   val to_string: t -> string
   val is_not: t -> bool
@@ -90,45 +97,26 @@ module Formula: sig
   val is_default: t -> bool
   val is_member: t -> bool
   val vars: t -> Term.t list
-  val substitute: t -> (Term.t * Term.t) list -> t
-  val args: t -> Term.t list
+  val substitute: t -> Term.subs -> t
 end
 
-module Premise: sig
-  type t =
-    | Prop of Formula.t
-    | Forall of {
-        element: Term.t;
-        collection: Term.t;
-        formulae: Formula.t list;
-        result: (string * Term.t) list;
-      }
-    | Find of {
-        element: Term.t;
-        collection: Term.t;
-        formulae: Formula.t list;
-      } [@@deriving eq, compare, sexp]
-
-  val to_string: t -> string
-  val is_prop: t -> bool
-  val is_forall: t -> bool
-  val is_find: t -> bool
-  val vars: t -> Term.t list
-  val substitute: t -> (Term.t * Term.t) list -> t
-end
+val uniquify_formulae: Formula.t list
+                       -> hint_map:((string, string list) List.Assoc.t)
+                       -> hint_var:string
+                       -> (Formula.t list * Term.uniquify_map)
 
 module Rule: sig
   type t = {
       name: string;
-      premises: Premise.t list;
+      premises: Formula.t list;
       conclusion: Formula.t;
-    } [@@deriving eq, compare, sexp]
+    } [@@deriving equal, compare, sexp]
 
   val to_string: t -> string
   val is_reduction_rule: t -> bool
   val is_typing_rule: t -> bool
   val vars: t -> Term.t list
-  val substitute: t -> (Term.t * Term.t) list -> t
+  val substitute: t -> Term.subs -> t
 end
 
 module Grammar: sig

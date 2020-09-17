@@ -8,17 +8,22 @@ module Term = struct
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
     | Subst of {body: t; substs: subst list}
-    | Map_update of {key: string; value: t; map: string}
+    | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
-    | Seq of t
+    | Nil
+    | Cons of {element: t; list: t}
+    | List of t
     | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
     | Zip of t * t
   and subst =
     | Subst_pair of {term: t; var: string}
-    | Subst_var of string [@@deriving eq, compare, sexp]
+    | Subst_var of string [@@deriving equal, compare, sexp]
+
+  type subs = (t, t) List.Assoc.t
+  type uniquify_map = (t, t list) List.Assoc.t
 
   let rec to_string = function
     | Wildcard -> "_"
@@ -46,10 +51,14 @@ module Term = struct
               |> String.concat ~sep:", ")
        in Printf.sprintf "%s%s" (to_string body) substs_str
     | Map_update {key; value; map} ->
-       Printf.sprintf "[%s => %s]%s" key (to_string value) map
+       Printf.sprintf "[%s => %s]%s"
+         (to_string key) (to_string value) (to_string map)
     | Map_domain m -> Printf.sprintf "dom(%s)" (to_string m)
     | Map_range m -> Printf.sprintf "range(%s)" (to_string m)
-    | Seq t -> Printf.sprintf "{%s}" (to_string t)
+    | Nil -> "nil"
+    | Cons {element; list} ->
+       Printf.sprintf "(%s :: %s)" (to_string element) (to_string list)
+    | List t -> Printf.sprintf "[%s...]" (to_string t)
     | Map {key; value} ->
        Printf.sprintf "{%s => %s}" key (to_string value)
     | Tuple ts ->
@@ -96,8 +105,16 @@ module Term = struct
     | Map_range _ -> true
     | _ -> false
 
-  let is_seq = function
-    | Seq _ -> true
+  let is_nil = function
+    | Nil -> true
+    | _ -> false
+
+  let is_cons = function
+    | Cons _ -> true
+    | _ -> false
+
+  let is_list = function
+    | List _ -> true
     | _ -> false
 
   let is_map = function
@@ -133,7 +150,7 @@ module Term = struct
        in Subst {body = unbind_rec body; substs}
     | Map_update {key; value; map} ->
        Map_update {key; value = unbind_rec value; map}
-    | Seq t -> Seq (unbind_rec t)
+    | List t -> List (unbind_rec t)
     | Map {key; value} -> Map {key; value = unbind_rec value}
     | Tuple ts -> Tuple (List.map ts ~f:unbind_rec)
     | Union ts -> Union (List.map ts ~f:unbind_rec)
@@ -153,9 +170,9 @@ module Term = struct
          |> List.concat
        in vars_dup body @ substs_vars
     | Map_update {key; value; map} ->
-       (Var key :: vars_dup value) @ [Var map]
+       (vars_dup key) @ (vars_dup value) @ (vars_dup map)
     | Map_domain m | Map_range m -> vars_dup m
-    | Seq s -> vars_dup s
+    | List s -> vars_dup s
     | Map {key; value} -> vars_dup value
     | Tuple ts | Union ts ->
        List.map ts ~f:vars_dup |> List.concat
@@ -184,13 +201,13 @@ module Term = struct
        in Subst {body = ticked body; substs}
     | Map_update {key; value; map} ->
        Map_update {
-           key = key ^ "'";
+           key = ticked key;
            value = ticked value;
-           map = map ^ "'";
+           map = ticked map;
          }
     | Map_domain m -> Map_domain (ticked m)
     | Map_range m -> Map_range (ticked m)
-    | Seq s -> Seq (ticked s)
+    | List s -> List (ticked s)
     | Map {key; value} -> Map {key; value = ticked value}
     | Tuple ts -> Tuple (List.map ts ~f:ticked)
     | Union ts -> Union (List.map ts ~f:ticked)
@@ -218,13 +235,13 @@ module Term = struct
        in Subst {body = unticked body; substs}
     | Map_update {key; value; map} ->
        Map_update {
-           key = f key;
+           key = unticked key;
            value = unticked value;
-           map = f map;
+           map = unticked map;
          }
     | Map_domain m -> Map_domain (unticked m)
     | Map_range m -> Map_range (unticked m)
-    | Seq s -> Seq (unticked s)
+    | List s -> List (unticked s)
     | Map {key; value} -> Map {key; value = unticked value}
     | Tuple ts -> Tuple (List.map ts ~f:unticked)
     | Union ts -> Union (List.map ts ~f:unticked)
@@ -250,19 +267,16 @@ module Term = struct
                 else Subst_var v)
        in Subst {body = f body; substs}
     | Map_update {key; value; map} ->
-       let key =
-         if List.mem ts (Var key) ~equal
-         then key ^ "'" else key
-       in
-       let map =
-         if List.mem ts (Var map) ~equal
-         then map ^ "'" else map
-       in Map_update {key; value = f value; map}
+       Map_update {
+           key = f key;
+           value = f value;
+           map = f map;
+         }
     | Map_domain m ->
        Map_domain (ticked_restricted m ts)
     | Map_range m ->
        Map_range (ticked_restricted m ts)
-    | Seq s -> Seq (f s)
+    | List s -> List (f s)
     | Map {key; value} -> Map {key; value = f value}
     | Tuple ts -> Tuple (List.map ts ~f)
     | Union ts -> Union (List.map ts ~f)
@@ -289,17 +303,14 @@ module Term = struct
                    | _ -> Subst_var v)
           in Subst {body = f body; substs}
        | Map_update {key; value; map} ->
-          let key = match List.Assoc.find sub ~equal (Var key) with
-            | Some (Var key') -> key'
-            | _ -> key
-          in
-          let map = match List.Assoc.find sub ~equal (Var map) with
-            | Some (Var map') -> map'
-            | _ -> map
-          in Map_update {key; value = f value; map}
+          Map_update {
+              key = f key;
+              value = f value;
+              map = f map;
+            }
        | Map_domain m -> Map_domain (f m)
        | Map_range m -> Map_range (f m)
-       | Seq s -> Seq (f s)
+       | List s -> List (f s)
        | Map {key; value} -> Map {key; value = f value}
        | Tuple ts -> Tuple (List.map ts ~f)
        | Union ts -> Union (List.map ts ~f)
@@ -373,24 +384,24 @@ module Term = struct
          let (substs, m) = aux' m substs in
          (Subst {body; substs}, m)
       | Map_update {key; value; map} ->
-         let (key, m) = match var (Var key) m with
-           | (Var v, m) -> (v, m)
-           | _ -> (key, m)
-         in
+         let (key, m) = aux key m in
          let (value, m) = aux value m in
-         let (map, m) = match var (Var map) m with
-           | (Var v, m) -> (v, m)
-           | _ -> (map, m)
-         in (Map_update {key; value; map}, m)         
+         let (map, m) = aux map m in
+         (Map_update {key; value; map}, m)         
       | Map_domain t ->
          let (t, m) = aux t m in
          (Map_domain t, m)
       | Map_range t ->
          let (t, m) = aux t m in
          (Map_range t, m)
-      | Seq t ->
+      | Nil -> (t, m)
+      | Cons {element; list} ->
+         let (element, m) = aux element m in
+         let (list, m) = aux list m in
+         (Cons {element; list}, m)
+      | List t ->
          let (t, m) = aux t m in
-         (Seq t, m)
+         (List t, m)
       | Map {key; value} ->
          let (key, m) = match var (Var key) m with
            | (Var v, m) -> (v, m)
@@ -451,14 +462,14 @@ module Formula = struct
   type t =
     | Not of t
     | Eq of Term.t * Term.t
-    | Default of {
+    | Prop of {
         predicate: Predicate.t;
         args: Term.t list
       }
     | Member of {
         element: Term.t;
         collection: Term.t;
-      } [@@deriving eq, compare, sexp]
+      } [@@deriving equal, compare, sexp]
 
   let rec to_string = function
     | Not f -> Printf.sprintf "not (%s)" (to_string f)
@@ -466,7 +477,7 @@ module Formula = struct
        Printf.sprintf "%s = %s"
          (Term.to_string t1)
          (Term.to_string t2)
-    | Default {predicate; args} ->
+    | Prop {predicate; args} ->
        let args_str =
          List.map args ~f:Term.to_string
          |> String.concat ~sep:", "
@@ -485,7 +496,7 @@ module Formula = struct
     | _ -> false
 
   let is_default = function
-    | Default _ -> true
+    | Prop _ -> true
     | _ -> false
 
   let is_member = function
@@ -497,7 +508,7 @@ module Formula = struct
     | Eq (t1, t2) ->
        Term.vars t1 @ Term.vars t2
        |> List.dedup_and_sort ~compare:Term.compare
-    | Default {predicate; args} ->
+    | Prop {predicate; args} ->
        List.map args ~f:Term.vars
        |> List.concat
        |> List.dedup_and_sort ~compare:Term.compare
@@ -508,19 +519,13 @@ module Formula = struct
   let rec substitute f sub = match f with
     | Not f -> Not (substitute f sub)
     | Eq (t1, t2) -> Eq (Term.substitute t1 sub, Term.substitute t2 sub)
-    | Default {predicate; args} ->
+    | Prop {predicate; args} ->
        let args = List.map args ~f:(fun t -> Term.substitute t sub) in
-       Default {predicate; args}
+       Prop {predicate; args}
     | Member {element; collection} ->
        let element = Term.substitute element sub in
        let collection = Term.substitute collection sub in
        Member {element; collection}
-
-  let rec args = function
-    | Not f -> args f
-    | Eq (t1, t2) -> [t1; t2]
-    | Default {predicate; args} -> args
-    | Member {element; collection} -> [element; collection]
 end
 
 let hint_vars_of_formulae fs hint_map hint_var =
@@ -535,7 +540,7 @@ let hint_vars_of_formulae fs hint_map hint_var =
           | Formula.Not f -> constructors f
           | Formula.Eq (t1, t2) ->
              List.filter [t1; t2] ~f:is_hint_constructor
-          | Formula.Default {predicate; args} ->
+          | Formula.Prop {predicate; args} ->
              List.filter args ~f:is_hint_constructor
           | Formula.Member {element; collection} ->
              List.filter [element; collection] ~f:is_hint_constructor
@@ -546,7 +551,7 @@ let hint_vars_of_formulae fs hint_map hint_var =
     List.map fs ~f:(fun f ->
         let rec terms = function
           | Formula.Not f -> terms f
-          | Formula.Default {predicate; args} ->
+          | Formula.Prop {predicate; args} ->
              let equal = String.equal in
              begin match List.Assoc.find hint_map predicate ~equal with
              | None -> []
@@ -594,100 +599,51 @@ let uniquify_map_of_formulae fs hint_map hint_var =
       let l = aux t 1 vars in
       Option.some_if (List.length l > 1) (t, l))
 
-module Premise = struct
-  type t =
-    | Prop of Formula.t
-    | Forall of {
-        element: Term.t;
-        collection: Term.t;
-        formulae: Formula.t list;
-        result: (string * Term.t) list;
-      }
-    | Find of {
-        element: Term.t;
-        collection: Term.t;
-        formulae: Formula.t list;
-      } [@@deriving eq, compare, sexp]
-
-  let to_string = function
-    | Prop f -> Formula.to_string f
-    | Forall {element; collection; formulae; result} ->
-       let result_str = match result with
-         | [] -> ""
-         | result ->
-            let s =
-              List.map result ~f:(fun (v, t) ->
-                  Printf.sprintf "%s = %s" v
-                    (Term.to_string t))
-              |> String.concat ~sep:", "
-            in Printf.sprintf " with %s" s
-       in Printf.sprintf "forall %s in %s, %s%s"
-            (Term.to_string element)
-            (Term.to_string collection)
-            (List.map formulae ~f:Formula.to_string
-             |> String.concat ~sep:", ")
-            result_str
-    | Find {element; collection; formulae} ->
-       Printf.sprintf "find %s in %s where %s"
-         (Term.to_string element)
-         (Term.to_string collection)
-         (List.map formulae ~f:Formula.to_string
-          |> String.concat ~sep:", ")
-
-  let is_prop = function
-    | Prop _ -> true
-    | _ -> false
-
-  let is_forall = function
-    | Forall _ -> true
-    | _ -> false
-
-  let is_find = function
-    | Find _ -> true
-    | _ -> false
-
-  let vars = function
-    | Prop f -> Formula.vars f
-    | Forall {element; collection; formulae; result} ->
-       List.map formulae ~f:Formula.vars
-       |> List.concat
-       |> List.dedup_and_sort ~compare:Term.compare
-    | Find {element; collection; formulae} ->
-       List.map formulae ~f:Formula.vars
-       |> List.concat
-       |> List.dedup_and_sort ~compare:Term.compare
-
-  let substitute p sub =
-    let f f = Formula.substitute f sub in
-    match p with
-    | Prop f' -> Prop (f f')
-    | Forall {element; collection; formulae; result} ->
-       let element = Term.substitute element sub in
-       let collection = Term.substitute collection sub in
-       let formulae = List.map formulae ~f in
-       let result =
-         List.map result ~f:(fun (v, t) ->
-             (v, Term.substitute t sub))
-       in Forall {element; collection; formulae; result}
-    | Find {element; collection; formulae} ->
-       let element = Term.substitute element sub in
-       let collection = Term.substitute collection sub in
-       let formulae = List.map formulae ~f in
-       Find {element; collection; formulae}
-end
+let uniquify_formulae fs ~hint_map ~hint_var =
+  let m = uniquify_map_of_formulae fs hint_map hint_var in
+  let rec aux_ts ts m = function
+    | [] -> (List.rev ts, m)
+    | x :: xs ->
+       let (t, m) = Term.uniquify x m in
+       aux_ts (t :: ts) m xs
+  in
+  let rec aux_f m = function
+    | Formula.Not f ->
+       let (f, m) = aux_f m f in
+       (Formula.Not f, m)
+    | Formula.Eq (t1, t2) ->
+       let (t1, m) = Term.uniquify t1 m in
+       let (t2, m) = Term.uniquify t2 m in
+       (Formula.Eq (t1, t2), m)
+    | Formula.Prop {predicate; args} ->
+       let (args, m) = aux_ts [] m args in
+       (Formula.Prop {predicate; args}, m)
+    | Formula.Member {element; collection} ->
+       let (element, m) = Term.uniquify element m in
+       let (collection, m) = Term.uniquify collection m in
+       (Formula.Member {element; collection}, m)
+  in
+  let rec aux_fs fs m = function
+    | [] -> (List.rev fs, m)
+    | x :: xs ->
+       let (f, m) = aux_f m x in
+       aux_fs (f :: fs) m xs
+  in
+  let (fs, _) = aux_fs [] m fs in
+  (fs, m)
 
 module Rule = struct
   type t = {
       name: string;
-      premises: Premise.t list;
+      premises: Formula.t list;
       conclusion: Formula.t;
-    } [@@deriving eq, compare, sexp]
+    } [@@deriving equal, compare, sexp]
 
   let to_string r =
     let premises_str = match r.premises with
       | [] -> ""
       | premises ->
-         List.map premises ~f:Premise.to_string
+         List.map premises ~f:Formula.to_string
          |> String.concat ~sep:",\n"
          |> (fun s -> s ^ "\n")
     in Printf.sprintf
@@ -696,17 +652,17 @@ module Rule = struct
          (Formula.to_string r.conclusion)
 
   let is_reduction_rule r = match r.conclusion with
-    | Default {predicate; _} ->
+    | Formula.Prop {predicate; _} ->
        String.is_prefix predicate ~prefix:Predicate.Builtin.step
     | _ -> false
 
   let is_typing_rule r = match r.conclusion with
-    | Default {predicate; _} ->
+    | Formula.Prop {predicate; _} ->
        String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
     | _ -> false
 
   let vars r =
-    List.map r.premises ~f:Premise.vars
+    List.map r.premises ~f:Formula.vars
     |> List.concat
     |> List.append (Formula.vars r.conclusion)
     |> List.dedup_and_sort ~compare:Term.compare
@@ -714,7 +670,7 @@ module Rule = struct
   let substitute r sub =
     let premises =
       List.map r.premises ~f:(fun p ->
-          Premise.substitute p sub)
+          Formula.substitute p sub)
     in
     let conclusion = Formula.substitute r.conclusion sub in
     {r with premises; conclusion}

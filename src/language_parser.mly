@@ -32,6 +32,7 @@
 %token WILDCARD
 %token MID
 %token COMMA
+%token CONS
 %token COLON
 %token DOT
 %token DASH
@@ -40,7 +41,7 @@
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token IN FORALL FIND WHERE WITH DOM RANGE MEMBER NOT UNION ZIP
+%token NIL DOM RANGE MEMBER NOT UNION ZIP
 
 %start lan
 %type <Language.t> lan
@@ -83,7 +84,7 @@ hint:
     }
 
 grammar_category:
-  | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_list(MID, term)
+  | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_list(MID, grammar_term)
     {
       let open Core_kernel in
       let terms = List.fold terms ~init:Term_set.empty ~f:Set.add in
@@ -91,26 +92,12 @@ grammar_category:
     }
 
 rule:
-  | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, premise) nonempty_list(DASH) conclusion = formula DOT
+  | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, formula) nonempty_list(DASH) conclusion = formula DOT
     { Rule.{name; premises; conclusion} }
 
 relation:
   | name = NAME LPAREN terms = separated_nonempty_list(COMMA, term) RPAREN
     { (name, terms) }
-
-forall_result:
-  | NAME EQ term
-    { ($1, $3) }
-
-premise:
-  | FORALL element = term IN collection = term COMMA formulae = separated_nonempty_list(COMMA, formula) WITH result = separated_nonempty_list(COMMA, forall_result)
-    { Premise.Forall {element; collection; formulae; result} }
-  | FORALL element = term IN collection = term COMMA formulae = separated_nonempty_list(COMMA, formula)
-    { Premise.Forall {element; collection; formulae; result = []} }
-  | FIND element = term IN collection = term WHERE formulae = separated_nonempty_list(COMMA, formula)
-    { Premise.Find {element; collection; formulae} }
-  | formula
-    { Premise.Prop $1 }
 
 formula:
   | NOT LPAREN f = formula RPAREN
@@ -120,13 +107,21 @@ formula:
   | MEMBER LPAREN element = term COMMA collection = term RPAREN
     { Formula.Member {element; collection} }
   | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN
-    { Formula.Default {predicate; args} }
+    { Formula.Prop {predicate; args} }
 
 subst:
   | term = term FSLASH var = NAME
     { Term.Subst_pair {term; var} }
   | NAME
     { Term.Subst_var $1 }
+
+grammar_term:
+  | LSQUARE term DOT DOT DOT RSQUARE
+    { Term.List $2 }
+  | LBRACE key = NAME MAPSTO value = term RBRACE
+    { Term.Map {key; value} }
+  | term
+    { $1 }
 
 term:
   | DOM LPAREN term RPAREN
@@ -153,12 +148,12 @@ term:
     { Term.Binding {var; body} }
   | body = term LSQUARE substs = separated_nonempty_list(COMMA, subst) RSQUARE
     { Term.Subst {body; substs} }
-  | LSQUARE key = NAME MAPSTO value = term RSQUARE map = NAME
+  | LSQUARE key = term MAPSTO value = term RSQUARE map = term
     { Term.Map_update {map; key; value} }
-  | LBRACE term RBRACE
-    { Term.Seq $2 }
-  | LBRACE key = NAME MAPSTO value = term RBRACE
-    { Term.Map {key; value} }
+  | NIL
+    { Term.Nil }
+  | LPAREN element = term CONS list = term RPAREN
+    { Term.Cons {element; list} }
   | LANGLE t1 = term COMMA t2 = term RANGLE
     { Term.Tuple ([t1; t2]) }
   | LANGLE t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RANGLE

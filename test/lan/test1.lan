@@ -1,9 +1,10 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e) | (nil.) | (error.)
+Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e) | (nill.) | (error.)
 Error err ::= (error.)
-Value v ::= (abs T (x)e) | (cons v v) | (nil.)
+Value v ::= (abs T (x)e) | (cons v v) | (nill.)
 Type T ::= (arrow T T) | (list T)
 Context E ::= (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E)
 Environment Gamma ::= {x => T}
+VarList L ::= [x...]
  
 %
 
@@ -27,7 +28,7 @@ typeof (Gamma, (cons e1 e2), (list T))
 
 [T-NIL]
 --------------------------------
-typeof (Gamma, (nil.), (list T))
+typeof (Gamma, (nill.), (list T))
 .
     
 [T-HEAD]
@@ -43,7 +44,7 @@ typeof (Gamma, (tail e), (list T))
 .
 
 [T-ABS]
-typeof ([x => T]Gamma, e, T2)
+typeof ([x => T1]Gamma, e, T2)
 --------------------------------
 typeof (Gamma, (abs T1 (x)e), (arrow T1 T2))
 .
@@ -62,12 +63,12 @@ step ((app (abs T (x)e) v), e[v/x])
     
 [R-HEAD-NIL]
 --------------------------------
-step ((head (nil.)), (error.))
+step ((head (nill.)), (error.))
 .
 
 [R-TAIL-NIL]
 --------------------------------
-step ((tail (nil.)), (error.))
+step ((tail (nill.)), (error.))
 .
     
 [R-HEAD-CONS]

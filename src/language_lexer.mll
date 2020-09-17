@@ -21,6 +21,7 @@ rule token = parse
   | '%' {MOD}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
+  | "::" {CONS}
   | ":" {COLON}
   | "." {DOT}
   | "_" {WILDCARD}
@@ -37,11 +38,7 @@ rule token = parse
   | "/" {FSLASH}
   | "=>" {MAPSTO}
   | "=" {EQ}
-  | "in" {IN}
-  | "forall" {FORALL}
-  | "find" {FIND}
-  | "where" {WHERE}
-  | "with" {WITH}
+  | "nil" {NIL}
   | "dom" {DOM}
   | "range" {RANGE}
   | "member" {MEMBER}

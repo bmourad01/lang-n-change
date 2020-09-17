@@ -2,8 +2,17 @@ open Core_kernel
 
 module L = Language
 module T = L.Term
+module F = L.Formula
+module R = L.Rule
 module G = L.Grammar
 module C = G.Category
+
+let kind_name name =
+  let name = String.lowercase name in
+  match name with
+  | "type" -> "typ"
+  | "kind" -> "knd"
+  | _ -> name
 
 module Sigs = struct
   module Term = struct
@@ -34,6 +43,46 @@ module Sigs = struct
            (String.concat args ~sep:" -> ") ^ " -> "
       in Printf.sprintf "type %s %so." name args_str
   end
+
+  let builtin_props =
+    let lnc_subst =
+      Prop.{
+          name = "lnc_subst";
+          args = ["A"; "lnc_pair A string"; "A"];
+      } in
+    let lnc_member =
+      Prop.{
+          name = "lnc_member";
+          args = ["A"; "list A"];
+      } in
+    let lnc_map_update =
+      Prop.{
+          name = "lnc_map_update";
+          args = ["A"; "B"; "list (lnc_pair A B)"; "list (lnc_pair A B)"];
+      } in
+    let lnc_map_domain =
+      Prop.{
+          name = "lnc_map_domain";
+          args = ["list (lnc_pair A B)"; "list A"];
+      } in
+    let lnc_map_range =
+      Prop.{
+          name = "lnc_map_range";
+          args = ["list (lnc_pair A B)"; "list A"];
+      } in
+    let lnc_zip =
+      Prop.{
+          name = "lnc_zip";
+          args = ["list A"; "list B"; "list (lnc_pair A B)"];
+      } in
+    String.Map.of_alist_exn
+      [(lnc_subst.name, lnc_subst);
+       (lnc_member.name, lnc_member);
+       (lnc_map_update.name, lnc_map_update);
+       (lnc_map_domain.name, lnc_map_domain);
+       (lnc_map_range.name, lnc_map_range);
+       (lnc_zip.name, lnc_zip);
+       ]
 
   type t = {
       kinds: int String.Map.t;
@@ -70,13 +119,6 @@ module Sigs = struct
     |> String.concat  ~sep:"\n\n"
 
   let of_language (lan: L.t) =
-    let kind_name name =
-      let name = String.lowercase name in
-      match name with
-      | "type" -> "typ"
-      | "kind" -> "knd"
-      | _ -> name
-    in
     let tuple_sizes = ref Int.Set.empty in
     (* generate needed kinds and proposition types
      * from the relations of the language *)
@@ -90,7 +132,7 @@ module Sigs = struct
            invalid_arg
              (Printf.sprintf "bad var %s in relation %s" v pred)
       in
-      let init = (String.Map.empty, String.Map.empty) in
+      let init = (String.Map.empty, builtin_props) in
       Map.to_alist lan.relations
       |> List.fold ~init ~f:(fun (kinds, props) (pred, ts) ->
              let (kinds, args) =
@@ -291,7 +333,7 @@ module Term = struct
     | Constructor of {
         name: string;
         args: t list;
-      }
+      } [@@deriving equal, compare]
 
   let rec to_string = function
     | Var v -> v
@@ -305,17 +347,26 @@ module Term = struct
 end
 
 module Prop = struct
-  type t = {
-      name: string;
-      args: Term.t list;
-    }
+  type t =
+    | Not of t
+    | Eq of Term.t * Term.t
+    | Prop of {
+        name: string;
+        args: Term.t list;
+      } [@@deriving equal, compare]
 
-  let to_string {name; args} = match args with
-    | [] -> name
-    | args ->
-       Printf.sprintf "%s %s" name
-         (List.map args ~f:Term.to_string
-          |> String.concat ~sep:" ")
+  let rec to_string = function
+    | Not p -> Printf.sprintf "not(%s)" (to_string p)
+    | Eq (t1, t2) ->
+       Printf.sprintf "%s = %s"
+         (Term.to_string t1) (Term.to_string t2)
+    | Prop {name; args} ->
+       match args with
+       | [] -> name
+       | args ->
+          Printf.sprintf "%s %s" name
+            (List.map args ~f:Term.to_string
+             |> String.concat ~sep:" ")
 end
 
 module Rule = struct
@@ -333,7 +384,7 @@ module Rule = struct
          Printf.sprintf " :- %s"
            (List.map premises ~f:Prop.to_string
             |> String.concat ~sep:", ")
-    in Printf.sprintf "%s%s.%%%s" conclusion_str premises_str name
+    in Printf.sprintf "%s%s %% %s" conclusion_str premises_str name
 end
 
 type t = {
@@ -343,5 +394,274 @@ type t = {
 
 let of_language (lan: L.t) =
   let sigs = Sigs.of_language lan in
-  let rules = String.Map.empty in
+  let wildcard = ref 0 in
+  let new_wildcard () =
+    let v = Term.Var ("_" ^ Int.to_string !wildcard) in
+    wildcard := succ !wildcard; v
+  in
+  let fresh_var vars v =
+    let v = String.capitalize v in
+    let rec aux i =
+      let v' = v ^ Int.to_string i in
+      if Hash_set.mem vars v'
+      then aux (succ i)
+      else Term.Var v'
+    in aux 0
+  in
+  let aux_term vars rule_name t =
+    let rec aux_term t = match t with
+      | T.Wildcard -> ([new_wildcard ()], [])
+      | T.Nil ->
+         ([Term.Constructor {name = "nil"; args = []}], [])
+      | T.Var v ->
+         let t' = [Term.Var (String.capitalize v)] in
+         let prop = match L.kind_of_var lan v with
+           | None -> []
+           | Some kind ->
+              let kind = kind_name kind in
+              if Map.mem sigs.props kind
+              then [Prop.Prop {name = kind; args = t'}]
+              else []
+         in (t', prop)
+      | T.Constructor {name; args} ->
+         let (args, props) =
+           List.map args ~f:aux_term
+           |> List.unzip
+         in
+         let (args, props) = (List.concat args, List.concat props) in
+         ([Term.Constructor {name; args}], props)
+      | T.Binding {var; body} ->
+         let (ts, props) = aux_term body in
+         (Term.Var (String.capitalize var) :: ts, props)
+      | T.Subst {body; substs} ->
+         let (body', props) = aux_term body in
+         if List.length body' > 1 then
+           invalid_arg
+             (Printf.sprintf
+                "invalid subst body term %s in rule %s"
+                (T.to_string body) rule_name)
+         else
+           let body' = List.hd_exn body' in
+           let rec aux props subs = function
+             | [] -> (List.rev props, List.rev subs)
+             | x :: xs ->
+                match x with
+                | T.Subst_pair {term; var} ->
+                   let sub = fresh_var vars "sub" in
+                   let (terms, props') = aux_term term in
+                   if List.length terms > 1 then
+                     invalid_arg
+                       (Printf.sprintf
+                          "invalid subst term %s in rule %s"
+                          (T.to_string t) rule_name)
+                   else
+                     let term = List.hd_exn terms in
+                     let var = Term.Var var in
+                     let arg =
+                       let name = "lnc_pair" in
+                       let args = [term; var] in
+                       Term.Constructor {name; args}
+                     in
+                     let body = match List.hd subs with
+                       | None -> body'
+                       | Some sub -> sub
+                     in
+                     let args = [body; arg; sub] in
+                     let prop = Prop.Prop {name = "lnc_subst"; args} in
+                     aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
+                | T.Subst_var s ->
+                   let sub = fresh_var vars "sub" in
+                   let body = match List.hd subs with
+                     | None -> body'
+                     | Some sub -> sub
+                   in
+                   let args = [body; Term.Var s; sub] in
+                   let prop = Prop.Prop {name = "lnc_subst"; args} in
+                   aux (prop :: props) (sub :: subs) xs
+           in
+           let (props, subs) = aux props [] substs in
+           ([List.last_exn subs], props)
+      | T.Map_update {key; value; map} ->
+         let (key', ps1) = aux_term key in
+         if List.length key' > 1 then
+           invalid_arg
+             (Printf.sprintf
+                "invalid map key term %s in rule %s"
+                (T.to_string key) rule_name)
+         else
+           let key' = List.hd_exn key' in
+           let (value', ps2) = aux_term value in
+           if List.length value' > 1 then
+             invalid_arg
+               (Printf.sprintf
+                  "invalid map value term %s in rule %s"
+                  (T.to_string value) rule_name)
+           else
+             let value' = List.hd_exn value' in
+             let (map', ps3) = aux_term map in
+             if List.length map' > 1 then
+               invalid_arg
+                 (Printf.sprintf
+                    "invalid map source term %s in rule %s"
+                    (T.to_string map) rule_name)
+             else
+               let map' = List.hd_exn map' in
+               let m = fresh_var vars "Map" in
+               let prop =
+                 Prop.Prop {
+                     name = "lnc_map_update";
+                     args = [key'; value'; map'; m];
+                 } in
+               ([m], ps1 @ ps2 @ ps3 @ [prop])
+      | T.Map_domain t ->
+         let (t', ps) = aux_term t in
+         if List.length t' > 1 then
+           invalid_arg
+             (Printf.sprintf
+                "invalid map domain key term %s in rule %s"
+                (T.to_string t) rule_name)
+         else
+           let t' = List.hd_exn t' in
+           let m = fresh_var vars "List" in
+           let prop =
+             Prop.Prop {
+                 name = "lnc_map_domain";
+                 args = [t'; m];
+               } in
+           ([m], ps @ [prop])
+      | T.Map_range t ->
+         let (t', ps) = aux_term t in
+         if List.length t' > 1 then
+           invalid_arg
+             (Printf.sprintf
+                "invalid map range key term %s in rule %s"
+                (T.to_string t) rule_name)
+         else
+           let t' = List.hd_exn t' in
+           let m = fresh_var vars "List" in
+           let prop =
+             Prop.Prop {
+                 name = "lnc_map_range";
+                 args = [t'; m];
+               } in
+           ([m], ps @ [prop])
+      | T.Tuple ts ->
+         let (ts', props) =
+           List.map ts ~f:aux_term
+           |> List.unzip
+         in
+         let (args, props) = (List.concat ts', List.concat props) in
+         let name = match List.length ts with
+           | 2 -> "lnc_pair"
+           | n -> Printf.sprintf "lnc_%dtuple" n
+         in
+         ([Term.Constructor {name; args}], props)
+      | T.Zip (t1, t2) ->
+         let (t1', ps1) = aux_term t1 in
+         if List.length t1' > 1 then
+           invalid_arg
+             (Printf.sprintf
+                "invalid zip term %s in rule %s"
+                (T.to_string t1) rule_name)
+         else
+           let t1' = List.hd_exn t1' in
+           let (t2', ps2) = aux_term t2 in
+           if List.length t2' > 1 then
+             invalid_arg
+               (Printf.sprintf
+                  "invalid zip term %s in rule %s"
+                  (T.to_string t2) rule_name)
+           else
+             let t2' = List.hd_exn t2' in
+             let m = fresh_var vars "Map" in
+             let prop =
+               Prop.Prop {
+                   name = "lnc_zip";
+                   args = [t1'; t2'; m];
+                 } in
+             ([m], ps1 @ ps2 @ [prop])
+      | _ ->
+         invalid_arg
+           (Printf.sprintf "invalid term %s in rule %s" 
+              (T.to_string t) rule_name)
+    in aux_term t
+  in
+  let aux_formula vars rule_name f =
+    let rec aux_formula f = match f with
+      | F.Not f ->
+         let ps = aux_formula f in
+         if List.length ps > 1 then
+           invalid_arg
+             (Printf.sprintf "invalid 'not' formula %s of rule %s"
+                (F.to_string f) rule_name)
+         else [Prop.Not (List.hd_exn ps)]
+      | F.Eq (t1, t2) ->
+         let (t1', ps1) = aux_term vars rule_name t1 in
+         if List.length t1' > 1 then
+           invalid_arg
+             (Printf.sprintf "invalid term %s in Eq of rule %s"
+                (T.to_string t1) rule_name)
+         else
+           let (t2', ps2) = aux_term vars rule_name t2 in
+           if List.length t1' > 1 then
+             invalid_arg
+               (Printf.sprintf "invalid term %s in Eq of rule %s"
+                  (T.to_string t2) rule_name)
+           else
+             let t1 = List.hd_exn t1' in
+             let t2 = List.hd_exn t2' in
+             ps1 @ ps2 @ [Prop.Eq (t1, t2)]
+      | F.Prop {predicate; args} ->
+         let (args, ps) =
+           List.map args ~f:(aux_term vars rule_name)
+           |> List.unzip
+         in
+         let (args, ps) = (List.concat args, List.concat ps) in
+         ps @ [Prop.Prop {name = predicate; args}]
+      | F.Member {element; collection} ->
+         let (t1', ps1) = aux_term vars rule_name element in
+         if List.length t1' > 1 then
+           invalid_arg
+             (Printf.sprintf "invalid term %s in Eq of rule %s"
+                (T.to_string collection) rule_name)
+         else
+           let (t2', ps2) = aux_term vars rule_name collection in
+           if List.length t1' > 1 then
+             invalid_arg
+               (Printf.sprintf "invalid term %s in Eq of rule %s"
+                  (T.to_string collection) rule_name)
+           else
+             let t1 = List.hd_exn t1' in
+             let t2 = List.hd_exn t2' in
+             let name = "lnc_member" in
+             let args = [t1; t2] in
+             ps1 @ ps2 @ [Prop.Prop {name; args}]
+    in aux_formula f
+  in
+  let rules =
+    let init = String.Map.empty in
+    Map.data lan.rules
+    |> List.fold ~init ~f:(fun rules (R.{name; premises; conclusion} as r) ->
+           let vars =
+             R.vars r
+             |> List.filter_map ~f:(function
+                    | T.Var v -> Some v
+                    | _ -> None)
+             |> String.Hash_set.of_list 
+           in
+           let premises =
+             List.map premises ~f:(aux_formula vars name)
+             |> List.concat
+           in
+           let (conclusion, premises') =
+             let ps = aux_formula vars name conclusion |> List.rev in
+             (List.hd_exn ps, List.tl_exn ps |> List.rev)
+           in
+           let premises =
+             Aux.dedup_list_stable ~compare:Prop.compare
+               (premises @ premises')
+           in
+           let rule = Rule.{name; premises; conclusion} in
+           Map.set rules name rule)
+  in
   {sigs; rules}

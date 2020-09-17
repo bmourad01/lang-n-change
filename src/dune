@@ -9,6 +9,7 @@
  (public_name lang-n-change)
  (flags -w -33)
  (libraries core_kernel)
+ (modes byte native)
  (preprocess (pps ppx_compare
                   ppx_let
                   ppx_sexp_conv)))

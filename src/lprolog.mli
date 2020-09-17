@@ -27,7 +27,6 @@ module Sigs: sig
     }
 
   val to_string: t -> string
-  val of_language: Language.t -> t
 end
 
 module Term: sig
@@ -36,16 +35,19 @@ module Term: sig
     | Constructor of {
         name: string;
         args: t list;
-      }
+      } [@@deriving equal, compare]
 
   val to_string: t -> string
 end
 
 module Prop: sig
-  type t = {
-      name: string;
-      args: Term.t list;
-    }
+  type t =
+    | Not of t
+    | Eq of Term.t * Term.t
+    | Prop of {
+        name: string;
+        args: Term.t list;
+      } [@@deriving equal, compare]
 
   val to_string: t -> string
 end

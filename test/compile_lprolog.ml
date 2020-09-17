@@ -24,7 +24,7 @@ let () =
         | Language_parser.Error ->
            failwith (Printf.sprintf "Parser error: %s" (file_pos lexbuf))
       in
-      Printf.printf "%s\n\n%s"
+      Printf.printf "%s\n\n%s\n"
         (Lprolog.Sigs.to_string lprolog.sigs)
         (Map.data lprolog.rules
          |> List.map ~f:Lprolog.Rule.to_string

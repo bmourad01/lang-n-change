@@ -1,4 +1,5 @@
 (executables
  (names parse_lan compile_lprolog)
  (flags -w -33)
+ (modes byte native)
  (libraries core_kernel lang-n-change))

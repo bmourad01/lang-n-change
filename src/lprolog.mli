@@ -5,7 +5,7 @@ module Sigs: sig
     type t = {
         name: string; 
         args: string list;
-        kind: string;
+        typ: string;
       }
 
     val to_string: t -> string

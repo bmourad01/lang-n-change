@@ -10,15 +10,15 @@ module Sigs = struct
     type t = {
         name: string; 
         args: string list;
-        kind: string;
+        typ: string;
       }
     
-    let to_string {name; args; kind} =
+    let to_string {name; args; typ} =
       let args_str = match args with
         | [] -> ""
         | args ->
            (String.concat args ~sep:" -> ") ^ " -> "
-      in Printf.sprintf "type %s %s%s." name args_str kind
+      in Printf.sprintf "type %s %s%s." name args_str typ
   end
 
   module Prop = struct
@@ -241,8 +241,8 @@ module Sigs = struct
                       | T.Constructor {name; args} ->
                          let name = kind_name name in
                          let args = List.map args ~f:aux |> List.concat in
-                         let kind = name' in
-                         let term = Term.{name; args; kind} in
+                         let typ = name' in
+                         let term = Term.{name; args; typ} in
                          Map.set terms' name term
                       | T.Map {key; value} ->
                          let name = name' ^ "_t" in
@@ -252,8 +252,8 @@ module Sigs = struct
                              (String.concat (aux_map key value) ~sep:" ")
                            :: []
                          in
-                         let kind = name' in
-                         let term = Term.{name; args; kind} in
+                         let typ = name' in
+                         let term = Term.{name; args; typ} in
                          begin match Map.add terms' name term with
                          | `Duplicate -> 
                             invalid_arg
@@ -275,11 +275,11 @@ module Sigs = struct
              in
              let kinds = Map.set kinds name n in
              let args = List.init n ~f:(fun n -> Printf.sprintf "A%d" n) in
-             let kind =
+             let typ =
                Printf.sprintf "(%s %s)" name
                  (String.concat args ~sep:" ")
              in                   
-             let term = Term.{name; args; kind} in
+             let term = Term.{name; args; typ} in
              let terms = Map.set terms name term in
              (kinds, terms))
     in {kinds; terms; props}

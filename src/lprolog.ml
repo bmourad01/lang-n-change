@@ -36,15 +36,23 @@ module Sigs = struct
   end
 
   type t = {
-      kinds: String.Set.t;
+      kinds: int String.Map.t;
       terms: Term.t String.Map.t;
       props: Prop.t String.Map.t;
     }
 
   let to_string {kinds; terms; props} =
     let kinds_str =
-      Set.to_list kinds
-      |> List.map ~f:(Printf.sprintf "kind %s type.")
+      Map.to_alist kinds
+      |> List.map ~f:(fun (kind, n) ->
+             let n_str = match n with
+               | 0 -> ""
+               | n ->
+                  let n_str =
+                    List.init n ~f:(fun _ -> "type")
+                    |> String.concat ~sep:" -> "
+                  in n_str ^ " -> "
+             in Printf.sprintf "kind %s %stype." kind n_str)
       |> String.concat ~sep:"\n"
     in
     let terms_str =
@@ -69,6 +77,7 @@ module Sigs = struct
       | "kind" -> "knd"
       | _ -> name
     in
+    let tuple_sizes = ref Int.Set.empty in
     (* generate needed kinds and proposition types
      * from the relations of the language *)
     let (kinds, props) =
@@ -81,7 +90,7 @@ module Sigs = struct
            invalid_arg
              (Printf.sprintf "bad var %s in relation %s" v pred)
       in
-      let init = (String.Set.empty, String.Map.empty) in
+      let init = (String.Map.empty, String.Map.empty) in
       Map.to_alist lan.relations
       |> List.fold ~init ~f:(fun (kinds, props) (pred, ts) ->
              let (kinds, args) =
@@ -108,7 +117,9 @@ module Sigs = struct
                               (kinds, args @ [arg]))
                         in
                         let args = String.concat args ~sep:" " in
-                        let ctor = match List.length ts with
+                        let len = List.length ts in
+                        tuple_sizes := Set.add !tuple_sizes len;
+                        let ctor = match len with
                           | 2 -> "lnc_pair"
                           | n -> Printf.sprintf "lnc_%dtuple" n
                         in (kinds, Printf.sprintf "(%s %s)" ctor args)
@@ -122,10 +133,11 @@ module Sigs = struct
                      List.filter kinds' ~f:(function
                          | "string" -> false
                          | _ -> true)
-                     |> String.Set.of_list
                    in
-                   let kinds = Set.union kinds kinds' in
-                   (kinds, arg :: args))
+                   let kinds =
+                     List.fold kinds' ~init:kinds ~f:(fun kinds k ->
+                         Map.set kinds k 0)
+                   in (kinds, arg :: args))
              in
              let prop = Prop.{name = pred; args = List.rev args} in
              (kinds, Map.set props pred prop))
@@ -170,7 +182,7 @@ module Sigs = struct
       Map.data lan.grammar
       |> List.fold ~init ~f:(fun terms' C.{name; meta_var; terms} ->
              let name' = kind_name name in
-             if not (Set.mem kinds name') then terms' else
+             if not (Map.mem kinds name') then terms' else
                let rec aux = function
                  | T.Var v ->
                     begin match L.kind_of_var lan v with
@@ -180,7 +192,7 @@ module Sigs = struct
                             v name)
                     | Some kind ->
                        let kind = kind_name kind in
-                       if Set.mem kinds kind
+                       if Map.mem kinds kind
                        then [kind]
                        else ["string"]
                     end
@@ -194,7 +206,9 @@ module Sigs = struct
                       |> List.concat
                       |> String.concat ~sep:" "
                     in
-                    let ctor = match List.length ts with
+                    let len = List.length ts in
+                    tuple_sizes := Set.add !tuple_sizes len;
+                    let ctor = match len with
                       | 2 -> "lnc_pair"
                       | n -> Printf.sprintf "lnc_%dtuple" n
                     in [Printf.sprintf "(%s %s)" ctor ts']
@@ -210,7 +224,7 @@ module Sigs = struct
                            key name)
                    | Some kind ->
                       let kind = kind_name kind in
-                      if Set.mem kinds kind
+                      if Map.mem kinds kind
                       then kind
                       else "string"
                  in
@@ -249,6 +263,25 @@ module Sigs = struct
                          | `Ok terms' -> terms'
                          end
                       | _ -> terms'))
+    in
+    (* generate signatures for builtin tuples *)
+    let (kinds, terms) =
+      let init = (kinds, terms) in
+      Set.to_list !tuple_sizes 
+      |> List.fold ~init ~f:(fun (kinds, terms) n ->
+             let name = match n with
+               | 2 -> "lnc_pair"
+               | n -> Printf.sprintf "lnc_%dtuple" n
+             in
+             let kinds = Map.set kinds name n in
+             let args = List.init n ~f:(fun n -> Printf.sprintf "A%d" n) in
+             let kind =
+               Printf.sprintf "(%s %s)" name
+                 (String.concat args ~sep:" ")
+             in                   
+             let term = Term.{name; args; kind} in
+             let terms = Map.set terms name term in
+             (kinds, terms))
     in {kinds; terms; props}
 end
 

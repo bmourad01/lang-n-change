@@ -21,7 +21,7 @@ module Sigs: sig
   end
 
   type t = {
-      kinds: String.Set.t;
+      kinds: int String.Map.t;
       terms: Term.t String.Map.t;
       props: Prop.t String.Map.t;
     }

@@ -44,6 +44,7 @@ rule token = parse
   | "member" {MEMBER}
   | "not" {NOT}
   | "union" {UNION}
+  | "subset" {SUBSET}
   | "zip" {ZIP}
   | "\"" {QUOTE}
   | name as n {NAME n}

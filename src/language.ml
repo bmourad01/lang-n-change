@@ -470,6 +470,10 @@ module Formula = struct
     | Member of {
         element: Term.t;
         collection: Term.t;
+      }
+    | Subset of {
+        sub: Term.t;
+        super: Term.t;
       } [@@deriving equal, compare, sexp]
 
   let rec to_string = function
@@ -487,6 +491,10 @@ module Formula = struct
        Printf.sprintf "member (%s, %s)"
          (Term.to_string element)
          (Term.to_string collection)
+    | Subset {sub; super} ->
+       Printf.sprintf "subset (%s, %s)"
+         (Term.to_string sub)
+         (Term.to_string super)
 
   let is_not = function
     | Not _ -> true
@@ -504,6 +512,10 @@ module Formula = struct
     | Member _ -> true
     | _ -> false
 
+  let is_subset = function
+    | Subset _ -> true
+    | _ -> false
+
   let rec vars = function
     | Not f -> vars f
     | Eq (t1, t2) ->
@@ -516,6 +528,9 @@ module Formula = struct
     | Member {element; collection} ->
        Term.vars element @ Term.vars collection
        |> List.dedup_and_sort ~compare:Term.compare
+    | Subset {sub; super} ->
+       Term.vars sub @ Term.vars super
+       |> List.dedup_and_sort ~compare:Term.compare
 
   let rec substitute f sub = match f with
     | Not f -> Not (substitute f sub)
@@ -527,6 +542,11 @@ module Formula = struct
        let element = Term.substitute element sub in
        let collection = Term.substitute collection sub in
        Member {element; collection}
+    | Subset s ->
+       Subset {
+           sub = Term.substitute s.sub sub;
+           super = Term.substitute s.super sub;
+         }
 end
 
 let hint_vars_of_formulae fs hint_map hint_var =
@@ -545,6 +565,8 @@ let hint_vars_of_formulae fs hint_map hint_var =
              List.filter args ~f:is_hint_constructor
           | Formula.Member {element; collection} ->
              List.filter [element; collection] ~f:is_hint_constructor
+          | Formula.Subset {sub; super} ->
+             List.filter [sub; super] ~f:is_hint_constructor
         in constructors f)
     |> List.concat
   in
@@ -623,6 +645,10 @@ let uniquify_formulae fs ~hint_map ~hint_var =
        let (element, m) = Term.uniquify' element m in
        let (collection, m) = Term.uniquify' collection m in
        (Formula.Member {element; collection}, m)
+    | Formula.Subset {sub; super} ->
+       let (sub, m) = Term.uniquify' sub m in
+       let (super, m) = Term.uniquify' super m in
+       (Formula.Subset {sub; super}, m)
   in
   let rec aux_fs fs m = function
     | [] -> (List.rev fs, m)

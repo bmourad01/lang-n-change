@@ -41,7 +41,7 @@
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token NIL DOM RANGE MEMBER NOT UNION ZIP
+%token NIL DOM RANGE MEMBER NOT UNION SUBSET ZIP
 
 %start lan
 %type <Language.t> lan
@@ -106,6 +106,8 @@ formula:
     { Formula.Eq ($1, $3) }
   | MEMBER LPAREN element = term COMMA collection = term RPAREN
     { Formula.Member {element; collection} }
+  | SUBSET LPAREN sub = term COMMA super = term RPAREN
+    { Formula.Subset {sub; super} }
   | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN
     { Formula.Prop {predicate; args} }
 

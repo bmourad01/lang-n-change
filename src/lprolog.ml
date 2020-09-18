@@ -70,6 +70,11 @@ module Sigs = struct
           name = "lnc_map_range";
           args = ["list (lnc_pair A B)"; "list A"];
       } in
+    let lnc_subset =
+      Prop.{
+          name = "lnc_subset";
+          args = ["list A"; "list A"]
+      } in
     let lnc_zip =
       Prop.{
           name = "lnc_zip";
@@ -81,6 +86,7 @@ module Sigs = struct
        (lnc_map_update.name, lnc_map_update);
        (lnc_map_domain.name, lnc_map_domain);
        (lnc_map_range.name, lnc_map_range);
+       (lnc_subset.name, lnc_subset);
        (lnc_zip.name, lnc_zip);
        ]
 
@@ -119,7 +125,7 @@ module Sigs = struct
     |> String.concat  ~sep:"\n\n"
 
   let of_language (lan: L.t) =
-    let tuple_sizes = ref Int.Set.empty in
+    let tuple_sizes = ref Int.Set.(singleton 2) in
     (* generate needed kinds and proposition types
      * from the relations of the language *)
     let (kinds, props) =
@@ -395,17 +401,22 @@ module Term = struct
     | Constructor of {
         name: string;
         args: t list;
-      } [@@deriving equal, compare]
+      }
+    | Cons of t * t [@@deriving equal, compare]
 
   let rec to_string = function
     | Var v -> v
     | Constructor {name; args} ->
-       match args with
+       begin match args with
        | [] -> name
        | args ->
           Printf.sprintf "(%s %s)" name
             (List.map args ~f:to_string
              |> String.concat ~sep:" ")
+       end
+    | Cons (t1, t2) ->
+       Printf.sprintf "(%s :: %s)"
+         (to_string t1) (to_string t2)
 end
 
 module Prop = struct
@@ -446,8 +457,325 @@ module Rule = struct
          Printf.sprintf " :- %s"
            (List.map premises ~f:Prop.to_string
             |> String.concat ~sep:", ")
-    in Printf.sprintf "%s%s %% %s" conclusion_str premises_str name
+    in Printf.sprintf "%s%s. %% %s" conclusion_str premises_str name
 end
+
+let builtin_rules =
+  let lnc_member_1 =
+    Rule.{
+        name = "LNC-MEMBER-1";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_member";
+              args = [
+                  Term.Var "X";
+                  Term.(Cons (Var "X", Var "L"));
+                ];
+            };
+    } in
+  let lnc_member_2 =
+    Rule.{
+        name = "LNC-MEMBER-2";
+        premises = [
+            Prop.Prop {
+                name = "lnc_member";
+                args = [
+                    Term.Var "X";
+                    Term.Var "L";
+                  ]
+              };
+          ];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_member";
+              args = [
+                  Term.Var "X";
+                  Term.(Cons (Var "Y", Var "L"));
+                ];
+            };
+    } in
+  let lnc_map_update_1 =
+    Rule.{
+        name = "LNC-MAP-UPDATE-1";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_update";
+              args = [
+                  Term.Constructor {
+                      name = "nil";
+                      args = [];
+                    };
+                  Term.Var "X";
+                  Term.Var "Y";
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X"; Var "Y"];
+                          },
+                        Constructor {
+                            name = "nil";
+                            args = [];
+                          }));
+                ];
+            };
+    } in
+  let lnc_map_update_2 =
+    Rule.{
+        name = "LNC-MAP-UPDATE-2";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_update";
+              args = [
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X"; Var "Y"];
+                          },
+                        Var "L"));
+                  Term.Var "X";
+                  Term.Var "Y'";
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X"; Var "Y'"];
+                          },
+                        Var "L"));
+                ];
+            };
+    } in
+  let lnc_map_update_3 =
+    Rule.{
+        name = "LNC-MAP-UPDATE-3";
+        premises = [
+            Prop.Prop {
+                name = "lnc_map_update";
+                args = [
+                    Term.Var "L";
+                    Term.Var "X";
+                    Term.Var "Y";
+                    Term.Var "L'";
+                  ];
+              };
+          ];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_update";
+              args = [
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X'"; Var "Y"];
+                          },
+                        Var "L"));
+                  Term.Var "X";
+                  Term.Var "Y'";
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X'"; Var "Y"];
+                          },
+                        Var "L'"));
+                ];
+            };
+    } in
+  let lnc_map_domain_1 =
+    Rule.{
+        name = "LNC-MAP-DOMAIN-1";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_domain";
+              args = [
+                  Term.Constructor {name = "nil"; args = []};
+                  Term.Constructor {name = "nil"; args = []};
+                ];
+            };
+    } in
+  let lnc_map_domain_2 =
+    Rule.{
+        name = "LNC-MAP-DOMAIN-2";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_domain";
+              args = [
+                  Term.(
+                    Cons
+                      (Constructor {
+                           name = "lnc_pair";
+                           args = [Var "X"; Var "Y"];
+                         },
+                       Var "M"));
+                  Term.(Cons (Var "X", Var "L"));
+                ];
+            };
+    } in
+  let lnc_map_range_1 =
+    Rule.{
+        name = "LNC-MAP-RANGE-1";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_range";
+              args = [
+                  Term.Constructor {name = "nil"; args = []};
+                  Term.Constructor {name = "nil"; args = []};
+                ];
+            };
+    } in
+  let lnc_map_range_2 =
+    Rule.{
+        name = "LNC-MAP-RANGE-2";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_map_range";
+              args = [
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X"; Var "Y"];
+                          },
+                        Var "M"));
+                  Term.(Cons (Var "Y", Var "L"));
+                ];
+            };
+    } in
+  let lnc_subset_1 =
+    Rule.{
+        name = "LNC-SUBSET-1";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_subset";
+              args = [
+                  Term.Constructor {name = "nil"; args = []};
+                  Term.Constructor {name = "nil"; args = []};
+                ];
+            };
+    } in
+  let lnc_subset_2 =
+    Rule.{
+        name = "LNC-SUBSET-2";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_subset";
+              args = [
+                  Term.Constructor {name = "nil"; args = []};
+                  Term.(Cons (Var "Y", Var "L"));
+                ];
+            };
+    } in
+  let lnc_subset_3 =
+    Rule.{
+        name = "LNC-SUBSET-3";
+        premises = [
+            Prop.Prop {
+                name = "lnc_subset";
+                args = Term.[Var "L1"; Var "L2"];
+              };
+          ];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_subset";
+              args = [
+                  Term.(Cons (Var "X", Var "L1"));
+                  Term.(Cons (Var "Y", Var "L2"));
+                ];
+            };
+    } in
+  let lnc_subset_4 =
+    Rule.{
+        name = "LNC-SUBSET-4";
+        premises = [
+            Prop.Prop {
+                name = "lnc_member";
+                args = Term.[Var "X"; Var "L2"];
+              };
+            Prop.Prop {
+                name = "lnc_subset";
+                args = Term.[Var "L1"; Var "L2"];
+              };
+          ];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_subset";
+              args = [
+                  Term.(Cons (Var "X", Var "L1"));
+                  Term.(Cons (Var "Y", Var "L2"));
+                ];
+            };
+    } in
+  let lnc_zip_1 =
+    Rule.{
+        name = "LNC-ZIP-1";
+        premises = [];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_zip";
+              args = [
+                  Term.Constructor {name = "nil"; args = []};
+                  Term.Constructor {name = "nil"; args = []};
+                  Term.Constructor {name = "nil"; args = []};
+                ];
+            };
+    } in
+  let lnc_zip_2 =
+    Rule.{
+        name = "LNC-ZIP-2";
+        premises = [
+            Prop.Prop {
+                name = "lnc_zip";
+                args = [
+                    Term.Var "L1";
+                    Term.Var "L2";
+                    Term.Var "M";
+                  ];
+              };
+          ];
+        conclusion =
+          Prop.Prop {
+              name = "lnc_zip";
+              args = [
+                  Term.(Cons (Var "X", Var "L1"));
+                  Term.(Cons (Var "Y", Var "L2"));
+                  Term.(
+                    Cons (
+                        Constructor {
+                            name = "lnc_pair";
+                            args = [Var "X"; Var "Y"];
+                          },
+                        Var "M"));
+                ];
+            };
+    } in
+  String.Map.of_alist_exn
+    [(lnc_member_1.name, lnc_member_1);
+     (lnc_member_2.name, lnc_member_2);
+     (lnc_map_domain_1.name, lnc_map_domain_1);
+     (lnc_map_domain_2.name, lnc_map_domain_2);
+     (lnc_map_range_1.name, lnc_map_range_1);
+     (lnc_map_range_2.name, lnc_map_range_2);
+     (lnc_subset_1.name, lnc_subset_1);
+     (lnc_subset_2.name, lnc_subset_2);
+     (lnc_subset_3.name, lnc_subset_3);
+     (lnc_subset_4.name, lnc_subset_4);
+     (lnc_zip_1.name, lnc_zip_1);
+     (lnc_zip_2.name, lnc_zip_2);
+     (lnc_map_update_1.name, lnc_map_update_1);
+     (lnc_map_update_2.name, lnc_map_update_2);
+     (lnc_map_update_3.name, lnc_map_update_3);
+    ]
 
 type t = {
     sigs: Sigs.t;
@@ -687,13 +1015,13 @@ let of_language (lan: L.t) =
          let (t1', ps1) = aux_term wildcard vars rule_name element in
          if List.length t1' > 1 then
            invalid_arg
-             (Printf.sprintf "invalid term %s in Eq of rule %s"
-                (T.to_string collection) rule_name)
+             (Printf.sprintf "invalid term %s in Member of rule %s"
+                (T.to_string element) rule_name)
          else
            let (t2', ps2) = aux_term wildcard vars rule_name collection in
            if List.length t1' > 1 then
              invalid_arg
-               (Printf.sprintf "invalid term %s in Eq of rule %s"
+               (Printf.sprintf "invalid term %s in Member of rule %s"
                   (T.to_string collection) rule_name)
            else
              let t1 = List.hd_exn t1' in
@@ -701,11 +1029,29 @@ let of_language (lan: L.t) =
              let name = "lnc_member" in
              let args = [t1; t2] in
              ps1 @ ps2 @ [Prop.Prop {name; args}]
+      | F.Subset {sub; super} ->
+         let (t1', ps1) = aux_term wildcard vars rule_name sub in
+         if List.length t1' > 1 then
+           invalid_arg
+             (Printf.sprintf "invalid term %s in Subset of rule %s"
+                (T.to_string sub) rule_name)
+         else
+           let (t2', ps2) = aux_term wildcard vars rule_name super in
+           if List.length t1' > 1 then
+             invalid_arg
+               (Printf.sprintf "invalid term %s in Subset of rule %s"
+                  (T.to_string super) rule_name)
+           else
+             let t1 = List.hd_exn t1' in
+             let t2 = List.hd_exn t2' in
+             let name = "lnc_subset" in
+             let args = [t1; t2] in
+             ps1 @ ps2 @ [Prop.Prop {name; args}]
     in aux_formula f
   in
   (* compile the inference rules of the language *)
   let rules =
-    let init = String.Map.empty in
+    let init = builtin_rules in
     Map.data lan.rules
     |> List.fold ~init ~f:(fun rules (R.{name; premises; conclusion} as r) ->
            let wildcard = ref 0 in

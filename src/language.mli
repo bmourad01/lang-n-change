@@ -90,6 +90,10 @@ module Formula: sig
     | Member of {
         element: Term.t;
         collection: Term.t;
+      }
+    | Subset of {
+        sub: Term.t;
+        super: Term.t;
       } [@@deriving equal, compare, sexp]
 
   val to_string: t -> string

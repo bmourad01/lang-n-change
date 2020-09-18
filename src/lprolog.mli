@@ -35,7 +35,8 @@ module Term: sig
     | Constructor of {
         name: string;
         args: t list;
-      } [@@deriving equal, compare]
+      }
+    | Cons of t * t [@@deriving equal, compare]
 
   val to_string: t -> string
 end

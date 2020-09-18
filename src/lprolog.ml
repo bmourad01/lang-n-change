@@ -8,7 +8,7 @@ module G = L.Grammar
 module C = G.Category
 
 let kind_name name =
-  let name = String.lowercase name in
+  let name = String.uncapitalize name in
   match name with
   | "type" -> "typ"
   | "kind" -> "knd"
@@ -871,32 +871,26 @@ let of_language (lan: L.t) =
               | None ->
                  invalid_arg
                    (Printf.sprintf
-                      "invalid kind of subst %s %s in rule %s"
+                      "unknown kind of subst %s %s in rule %s"
                       s (T.to_string body) rule_name)
               | Some kind ->
-                 if not (L.is_meta_var_of lan v kind) then
-                   invalid_arg
-                     (Printf.sprintf
-                        "invalid kind of subst %s %s in rule %s"
-                        s (T.to_string body) rule_name)
-                 else
-                   let kind = match Hashtbl.find subsets kind with
-                     | None -> kind
-                     | Some kind -> kind
-                   in kind_name kind
+                 let kind = match Hashtbl.find subsets kind with
+                   | None -> kind
+                   | Some kind -> kind
+                 in (kind_name kind, not (L.is_meta_var_of lan v kind))
               end
            | T.Constructor {name; _} ->
               begin match L.kind_of_op lan name with
               | None ->
                  invalid_arg
                    (Printf.sprintf
-                      "invalid kind of subst %s %s in rule %s"
+                      "unknown kind of subst %s %s in rule %s"
                       s (T.to_string body) rule_name)
               | Some kind ->
                  let kind = match Hashtbl.find subsets kind with
                    | None -> kind
                    | Some kind -> kind
-                 in kind_name kind
+                 in (kind_name kind, false)
               end
            | _ ->
               invalid_arg
@@ -904,61 +898,74 @@ let of_language (lan: L.t) =
                    "invalid subst %s term %s in rule %s"
                    s (T.to_string body) rule_name)
          in
-         let body_kind = subst_kind "body" body in
-         let (body', props) = aux_term (succ depth) body in
-         if List.length body' > 1 then
+         let (body_kind, wrap) = subst_kind "body" body in
+         if wrap then
            invalid_arg
              (Printf.sprintf
                 "invalid subst body term %s in rule %s"
                 (T.to_string body) rule_name)
          else
-           let body' = List.hd_exn body' in
-           let rec aux props subs = function
-             | [] -> (List.rev props, List.rev subs)
-             | x :: xs ->
-                match x with
-                | T.Subst_pair {term; var} ->
-                   let term_kind = subst_kind "term" term in
-                   let sub = fresh_var vars "sub" in
-                   let (terms, props') = aux_term (succ depth) term in
-                   if List.length terms > 1 then
-                     invalid_arg
-                       (Printf.sprintf
-                          "invalid subst term %s in rule %s"
-                          (T.to_string t) rule_name)
-                   else
-                     let term = List.hd_exn terms in
-                     let var = Term.Var (String.capitalize var) in
-                     let arg =
-                       let name = "lnc_pair" in
-                       let args = [term; var] in
-                       Term.Constructor {name; args}
-                     in
+           let (body', props) = aux_term (succ depth) body in
+           if List.length body' > 1 then
+             invalid_arg
+               (Printf.sprintf
+                  "invalid subst body term %s in rule %s"
+                  (T.to_string body) rule_name)
+           else
+             let body' = List.hd_exn body' in
+             let rec aux props subs = function
+               | [] -> (List.rev props, List.rev subs)
+               | x :: xs ->
+                  match x with
+                  | T.Subst_pair {term; var} ->
+                     let (term_kind, wrap) = subst_kind "term" term in
+                     let sub = fresh_var vars "sub" in
+                     let depth' = if wrap then 0 else succ depth in
+                     let (terms, props') = aux_term depth' term in
+                     if List.length terms > 1 then
+                       invalid_arg
+                         (Printf.sprintf
+                            "invalid subst term %s in rule %s"
+                            (T.to_string t) rule_name)
+                     else
+                       let term = List.hd_exn terms in
+                       let var = Term.Var (String.capitalize var) in
+                       let arg =
+                         let name = "lnc_pair" in
+                         let args = [term; var] in
+                         Term.Constructor {name; args}
+                       in
+                       let body = match List.hd subs with
+                         | None -> body'
+                         | Some sub -> sub
+                       in
+                       let args = [body; arg; sub] in
+                       let name =
+                         Printf.sprintf "lnc_subst_%s_%s"
+                           body_kind term_kind
+                       in
+                       let prop = Prop.Prop {name; args} in
+                       Hashtbl.add_multi subst_kinds body_kind term_kind;
+                       aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
+                  | T.Subst_var s ->
+                     let sub = fresh_var vars "sub" in
                      let body = match List.hd subs with
                        | None -> body'
                        | Some sub -> sub
                      in
-                     let args = [body; arg; sub] in
-                     let name = Printf.sprintf "lnc_subst_%s_%s" body_kind term_kind in
+                     let args = [body; Term.Var (String.capitalize s); sub] in
+                     (* fixme: how do we infer the kind of the substitution? *)
+                     let name =
+                       Printf.sprintf "lnc_subst_list_%s_%s"
+                         body_kind body_kind
+                     in
                      let prop = Prop.Prop {name; args} in
-                     Hashtbl.add_multi subst_kinds body_kind term_kind;
-                     aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
-                | T.Subst_var s ->
-                   let sub = fresh_var vars "sub" in
-                   let body = match List.hd subs with
-                     | None -> body'
-                     | Some sub -> sub
-                   in
-                   let args = [body; Term.Var (String.capitalize s); sub] in
-                   (* fixme: how do we infer the kind of the substitution? *)
-                   let name = Printf.sprintf "lnc_subst_list_%s_%s" body_kind body_kind in
-                   let prop = Prop.Prop {name; args} in
-                   Hashtbl.add_multi subst_kinds body_kind body_kind;
-                   Hashtbl.add_multi subst_list_kinds body_kind body_kind;
-                   aux (prop :: props) (sub :: subs) xs
-           in
-           let (props, subs) = aux props [] substs in
-           ([List.last_exn subs], props)
+                     Hashtbl.add_multi subst_kinds body_kind body_kind;
+                     Hashtbl.add_multi subst_list_kinds body_kind body_kind;
+                     aux (prop :: props) (sub :: subs) xs
+             in
+             let (props, subs) = aux props [] substs in
+             ([List.last_exn subs], props)
       | T.Map_update {key; value; map} ->
          let (key', ps1) = aux_term (succ depth) key in
          if List.length key' > 1 then
@@ -1247,7 +1254,8 @@ let of_language (lan: L.t) =
   in
   (* generate substitution rules *)
   let rules =
-    let subst_rule wildcard vars rule_name name t meta_var var =
+    let subst_rule wildcard vars rule_name name t
+          meta_var_body meta_var_term var =
       let t = T.uniquify t ~min:0 in
       let (t', _) = aux_term wildcard vars rule_name 0 t in
       let t' = List.hd_exn t' in
@@ -1258,7 +1266,7 @@ let of_language (lan: L.t) =
            List.filter_map c.args ~f:(function
                | T.Var v ->
                   let orig = String.capitalize v in
-                  if String.is_prefix orig ~prefix:meta_var then
+                  if String.is_prefix orig ~prefix:meta_var_body then
                     let sub = orig ^ "'" in
                     Some
                       (Prop.Prop {
@@ -1268,7 +1276,7 @@ let of_language (lan: L.t) =
                                Term.Constructor {
                                    name = "lnc_pair";
                                    args = [
-                                       Term.Var meta_var;
+                                       Term.Var meta_var_term;
                                        Term.Var var;
                                      ];
                                  };
@@ -1296,7 +1304,7 @@ let of_language (lan: L.t) =
                     Term.Constructor {
                         name = "lnc_pair";
                         args = [
-                            Term.Var meta_var;
+                            Term.Var meta_var_term;
                             Term.Var var;
                           ];
                       };
@@ -1308,114 +1316,164 @@ let of_language (lan: L.t) =
     Hashtbl.to_alist subst_kinds
     |> List.fold ~init:rules ~f:(fun rules (body, terms) ->
            let body_cat = cat_name lan body in
-           List.fold terms ~init:rules ~f:(fun rules term ->
-               let term_cat = cat_name lan term in
-               match (Map.find lan.grammar body_cat,
-                      Map.find lan.grammar term_cat) with
-               | (None, _) | (_, None) -> rules
-               | (Some bc, Some tc) ->
-                  let var =
-                    let f = function
-                      | T.Var v -> Some v
-                      | _ -> None
-                    in
-                    match Set.find_map bc.terms ~f with
-                    | Some var -> String.capitalize var
-                    | None ->
-                       invalid_arg                      
-                         (Printf.sprintf
-                            "no variable kind found for category %s"
-                            bc.name)
+           let f rules term =
+             let term_cat = cat_name lan term in
+             match (Map.find lan.grammar body_cat,
+                    Map.find lan.grammar term_cat) with
+             | (None, _) | (_, None) -> rules
+             | (Some bc, Some tc) ->
+                let var_body =
+                  let f = function
+                    | T.Var v -> Some v
+                    | _ -> None
                   in
-                  let f rules t =
-                    let suffix = match t with
-                      | T.Var v -> Some (String.uppercase v)
-                      | T.Constructor {name; _} ->
-                         Some (String.uppercase name)
-                      | _ -> None
-                    in
-                    Option.(
-                      value ~default:rules
-                        (suffix >>| fun suffix ->
-                         let name =
-                           Printf.sprintf "lnc_subst_%s_%s"
-                             body term
-                         in
-                         let rule_name =
-                           Printf.sprintf "LNC-SUBST-%s-%s-%s"
-                             (String.uppercase body)
-                             (String.uppercase term)
-                             suffix
-                         in
-                         let meta_var =
-                           String.capitalize tc.meta_var
-                         in
-                         if T.is_constructor t then
-                           let rule =
-                             subst_rule
-                               (ref 0) (String.Hash_set.create ())
-                               rule_name name t meta_var var
-                           in Map.set rules rule_name rule
-                         else
-                           let rule1 =
-                             Rule.{
-                                 name = rule_name ^ "-EQ";
-                                 premises = [];
-                                 conclusion =
-                                   Prop.Prop {
-                                       name;
-                                       args = [
-                                           Term.Constructor {
-                                               name = body ^ "_var";
-                                               args = [
-                                                   Term.Var var;
-                                                 ];
-                                             };
-                                           Term.Constructor {
-                                               name = "lnc_pair";
-                                               args = [
-                                                   Term.Var meta_var;
-                                                   Term.Var var;
-                                                 ];
-                                             };
-                                           Term.Var meta_var;
-                                         ];
-                                     };
-                             } in
-                           let rule2 =
-                             Rule.{
-                                 name = rule_name ^ "-NEQ";
-                                 premises = [];
-                                 conclusion =
-                                   Prop.Prop {
-                                       name;
-                                       args = [
-                                           Term.Constructor {
-                                               name = body ^ "_var";
-                                               args = [
-                                                   Term.Var var;
-                                                 ];
-                                             };
-                                           Term.Constructor {
-                                               name = "lnc_pair";
-                                               args = [
-                                                   Term.Var meta_var;
-                                                   Term.Var (var ^ "'");
-                                                 ];
-                                             };
-                                           Term.Constructor {
-                                               name = body ^ "_var";
-                                               args = [
-                                                   Term.Var var;
-                                                 ];
-                                             };
-                                         ];
-                                     };
-                             } in
-                           Map.set
-                             (Map.set rules rule1.name rule1)
-                             rule2.name rule2))
-                  in List.fold (Set.to_list bc.terms) ~init:rules ~f))
+                  match Set.find_map bc.terms ~f with
+                  | Some var -> String.capitalize var
+                  | None ->
+                     invalid_arg                      
+                       (Printf.sprintf
+                          "no variable kind found for category %s"
+                          bc.name)
+                in
+                let var_term =
+                  let f = function
+                    | T.Var v -> Some v
+                    | _ -> None
+                  in
+                  match Set.find_map tc.terms ~f with
+                  | Some var -> String.capitalize var
+                  | None ->
+                     invalid_arg                      
+                       (Printf.sprintf
+                          "no variable kind found for category %s"
+                          bc.name)
+                in
+                let f rules t =
+                  let suffix = match t with
+                    | T.Var v -> Some (String.uppercase v)
+                    | T.Constructor {name; _} ->
+                       Some (String.uppercase name)
+                    | _ -> None
+                  in
+                  Option.(
+                    value ~default:rules
+                      (suffix >>| fun suffix ->
+                       let name =
+                         Printf.sprintf "lnc_subst_%s_%s"
+                           body term
+                       in
+                       let rule_name =
+                         Printf.sprintf "LNC-SUBST-%s-%s-%s"
+                           (String.uppercase body)
+                           (String.uppercase term)
+                           suffix
+                       in
+                       let meta_var_body =
+                         String.capitalize bc.meta_var
+                       in
+                       let meta_var_term =
+                         String.capitalize tc.meta_var
+                       in
+                       if T.is_constructor t then
+                         let rule =
+                           subst_rule
+                             (ref 0) (String.Hash_set.create ())
+                             rule_name name t meta_var_body
+                             meta_var_term var_body
+                         in Map.set rules rule_name rule
+                       else if String.equal body term then
+                         let rule1 =
+                           Rule.{
+                               name = rule_name ^ "-EQ";
+                               premises = [];
+                               conclusion =
+                                 Prop.Prop {
+                                     name;
+                                     args = [
+                                         Term.Constructor {
+                                             name = body ^ "_var";
+                                             args = [
+                                                 Term.Var var_body;
+                                               ];
+                                           };
+                                         Term.Constructor {
+                                             name = "lnc_pair";
+                                             args = [
+                                                 Term.Var meta_var_term;
+                                                 Term.Var var_term;
+                                               ];
+                                           };
+                                         Term.Var meta_var_body;
+                                       ];
+                                   };
+                           } in
+                         let rule2 =
+                           Rule.{
+                               name = rule_name ^ "-NEQ";
+                               premises = [];
+                               conclusion =
+                                 Prop.Prop {
+                                     name;
+                                     args = [
+                                         Term.Constructor {
+                                             name = body ^ "_var";
+                                             args = [
+                                                 Term.Var var_body;
+                                               ];
+                                           };
+                                         Term.Constructor {
+                                             name = "lnc_pair";
+                                             args = [
+                                                 Term.Var meta_var_body;
+                                                 Term.Var (var_term ^ "'");
+                                               ];
+                                           };
+                                         Term.Constructor {
+                                             name = body ^ "_var";
+                                             args = [
+                                                 Term.Var var_body;
+                                               ];
+                                           };
+                                       ];
+                                   };
+                           } in
+                         Map.set
+                           (Map.set rules rule1.name rule1)
+                           rule2.name rule2
+                       else
+                         let rule =
+                           Rule.{
+                               name = rule_name;
+                               premises = [];
+                               conclusion =
+                                 Prop.Prop {
+                                     name;
+                                     args = [
+                                         Term.Constructor {
+                                             name = body ^ "_var";
+                                             args = [
+                                                 Term.Var var_body;
+                                               ];
+                                           };
+                                         Term.Constructor {
+                                             name = "lnc_pair";
+                                             args = [
+                                                 Term.Var meta_var_term;
+                                                 Term.Var var_term;
+                                               ];
+                                           };
+                                         Term.Constructor {
+                                             name = body ^ "_var";
+                                             args = [
+                                                 Term.Var var_body;
+                                               ];
+                                           };
+                                       ];
+                                   };
+                           } in
+                         Map.set rules rule_name rule))
+                in List.fold (Set.to_list bc.terms) ~init:rules ~f
+           in List.fold terms ~init:rules ~f)
   in
   let rules =
     Hashtbl.to_alist subst_list_kinds

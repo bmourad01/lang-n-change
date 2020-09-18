@@ -1,10 +1,10 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e) | (nill.) | (error.)
+Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e) | (nill.) | (error.) | (tt.) | (ff.) | (ite e e e) | (let e (x)e) | (absT (Z)e) | (appT e T)
 Error err ::= (error.)
-Value v ::= (abs T (x)e) | (cons v v) | (nill.)
-Type T ::= (arrow T T) | (list T)
-Context E ::= (hole.) | (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E)
+Value v ::= (abs T (x)e) | (cons v v) | (nill.) | (tt.) | (ff.) | (absT (Z)e)
+Type T ::= Z | (arrow T T) | (list T) | (bool.) | (all (Z)T)
+Context E ::= (hole.) | (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E) | (ite E e e) | (let E (x)e) | (appT E T)
 Environment Gamma ::= {x => T}
- 
+    
 %
 
 step (e, e)
@@ -54,7 +54,44 @@ typeof (Gamma, e2, T1)
 --------------------------------
 typeof (Gamma, (app e1 e2), T2)
 .
-    
+
+[T-TRUE]
+--------------------------------
+typeof (Gamma, (tt.), (bool.))
+.
+ 
+[T-FALSE]
+--------------------------------
+typeof (Gamma, (ff.), (bool.))
+.
+
+[T-IF]
+typeof (Gamma, e1, (bool.)),
+typeof (Gamma, e2, T),
+typeof (Gamma, e3, T)
+--------------------------------
+typeof (Gamma, (ite e1 e2 e3), T)
+.
+
+[T-LET]
+typeof (Gamma, e1, T1),
+typeof ([x => T1]Gamma, e2, T2)
+--------------------------------
+typeof (Gamma, (let e1 (x)e2), T2)
+.
+
+[T-ABST]
+typeof (Gamma, e, T)
+--------------------------------
+typeof (Gamma, (absT (Z)e), (all (Z)T))
+.
+
+[T-APPT]
+typeof (Gamma, e, (all (Z2)T))
+--------------------------------
+typeof (Gamma, (appT e Z1), T[Z2/Z1])
+.
+
 [R-BETA]
 --------------------------------
 step ((app (abs T (x)e) v), e[v/x])
@@ -78,6 +115,26 @@ step ((head (cons v1 v2)), v1)
 [R-TAIL-CONS]
 --------------------------------
 step ((tail (cons v1 v2)), v2)
+.
+
+[R-IF-TRUE]
+--------------------------------
+step ((ite (tt.) e1 e2), e1)
+.
+
+[R-IF-FALSE]
+--------------------------------
+step ((ite (ff.) e1 e2), e2)
+.
+
+[R-LET]
+--------------------------------
+step ((let v (x)e), e[v/x])
+.
+
+[R-ALPHA]
+--------------------------------
+step ((appT (absT (Z1)e) Z2), e[Z2/Z1])
 .
 
 %

@@ -796,6 +796,31 @@ let kind_of_var lan v =
                 | _ -> false))
   |> Option.map ~f:(fun c -> c.name)
 
+let kind_of_op lan op =
+  let open Grammar.Category in
+  let ops_of c =
+    Set.to_list c.terms
+    |> List.filter_map ~f:(function
+           | Term.Constructor {name; _} -> Some name
+           | _ -> None)
+    |> String.Set.of_list
+  in
+  Map.data lan.grammar
+  |> List.filter ~f:(fun {name; meta_var; terms} ->
+         Set.exists terms ~f:(function
+             | Term.Constructor {name; _} -> String.equal name op
+             | _ -> false))
+  |> List.fold ~init:None ~f:(fun candidate c ->
+         match candidate with
+         | None -> Some c
+         | Some c' ->
+            (* this isn't a very good heuristic *)
+            let ops' = ops_of c' in
+            let ops = ops_of c in
+            if Set.length ops > Set.length ops'
+            then Some c else candidate)
+  |> Option.map ~f:(fun c -> c.name)
+
 let is_var_kind lan v category_name =
   match Map.find lan.grammar category_name with
   | None -> false

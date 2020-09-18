@@ -14,6 +14,19 @@ let kind_name name =
   | "kind" -> "knd"
   | _ -> name
 
+let cat_name (lan: L.t) name =
+  let name = String.uppercase name in
+  match name with
+  | "Typ" ->
+     if Map.mem lan.grammar name
+     then name
+     else "Type"
+  | "Knd" ->
+     if Map.mem lan.grammar name
+     then name
+     else "Kind"
+  | _ -> name
+
 module Sigs = struct
   module Term = struct
     type t = {
@@ -45,11 +58,6 @@ module Sigs = struct
   end
 
   let builtin_props =
-    let lnc_subst =
-      Prop.{
-          name = "lnc_subst";
-          args = ["A"; "lnc_pair A string"; "A"];
-      } in
     let lnc_member =
       Prop.{
           name = "lnc_member";
@@ -81,8 +89,7 @@ module Sigs = struct
           args = ["list A"; "list B"; "list (lnc_pair A B)"];
       } in
     String.Map.of_alist_exn
-      [(lnc_subst.name, lnc_subst);
-       (lnc_member.name, lnc_member);
+      [(lnc_member.name, lnc_member);
        (lnc_map_update.name, lnc_map_update);
        (lnc_map_domain.name, lnc_map_domain);
        (lnc_map_range.name, lnc_map_range);
@@ -192,7 +199,7 @@ module Sigs = struct
     in
     (* infer additional propositions based on
      * whether one category is a proper subset of another *)
-    let subsets = String.Hash_set.create () in
+    let subsets = Hashtbl.create (module String) in
     let props =
       let ctor_name = function
         | T.Constructor {name; args} -> Some name
@@ -223,7 +230,7 @@ module Sigs = struct
                     if Set.mem ops name' then props else
                       let args = [kind_name C.(c.name)] in
                       let prop = Prop.{name = name'; args} in
-                      Hash_set.add subsets name;
+                      Hashtbl.set subsets name C.(c.name);
                       Map.set props name' prop)
     in
     (* generate term constructor types from the grammar *)
@@ -800,6 +807,7 @@ let of_language (lan: L.t) =
   (* generate terms along with additional propositions
    * if the term itself needs to make use of some
    * propositions to compute its result *)
+  let subst_kinds = Hashtbl.create (module String) in
   let aux_term wildcard vars rule_name t =
     let rec aux_term t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
@@ -826,6 +834,46 @@ let of_language (lan: L.t) =
          let (ts, props) = aux_term body in
          (Term.Var (String.capitalize var) :: ts, props)
       | T.Subst {body; substs} ->
+         let subst_kind s = function
+           | T.Var v ->
+              begin match L.kind_of_var lan v with
+              | None ->
+                 invalid_arg
+                   (Printf.sprintf
+                      "invalid kind of subst %s %s in rule %s"
+                      s (T.to_string body) rule_name)
+              | Some kind ->
+                 if not (L.is_meta_var_of lan v kind) then
+                   invalid_arg
+                     (Printf.sprintf
+                        "invalid kind of subst %s %s in rule %s"
+                        s (T.to_string body) rule_name)
+                 else
+                   let kind = match Hashtbl.find subsets kind with
+                     | None -> kind
+                     | Some kind -> kind
+                   in kind_name kind
+              end
+           | T.Constructor {name; _} ->
+              begin match L.kind_of_op lan name with
+              | None ->
+                 invalid_arg
+                   (Printf.sprintf
+                      "invalid kind of subst %s %s in rule %s"
+                      s (T.to_string body) rule_name)
+              | Some kind ->
+                 let kind = match Hashtbl.find subsets kind with
+                   | None -> kind
+                   | Some kind -> kind
+                 in kind_name kind
+              end
+           | _ ->
+              invalid_arg
+                (Printf.sprintf
+                   "invalid subst %s term %s in rule %s"
+                   s (T.to_string body) rule_name)
+         in
+         let body_kind = subst_kind "body" body in
          let (body', props) = aux_term body in
          if List.length body' > 1 then
            invalid_arg
@@ -839,6 +887,7 @@ let of_language (lan: L.t) =
              | x :: xs ->
                 match x with
                 | T.Subst_pair {term; var} ->
+                   let term_kind = subst_kind "term" term in
                    let sub = fresh_var vars "sub" in
                    let (terms, props') = aux_term term in
                    if List.length terms > 1 then
@@ -859,7 +908,9 @@ let of_language (lan: L.t) =
                        | Some sub -> sub
                      in
                      let args = [body; arg; sub] in
-                     let prop = Prop.Prop {name = "lnc_subst"; args} in
+                     let name = Printf.sprintf "lnc_subst_%s_%s" body_kind term_kind in
+                     let prop = Prop.Prop {name; args} in
+                     Hashtbl.add_multi subst_kinds body_kind term_kind;
                      aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
                 | T.Subst_var s ->
                    let sub = fresh_var vars "sub" in
@@ -868,7 +919,10 @@ let of_language (lan: L.t) =
                      | Some sub -> sub
                    in
                    let args = [body; Term.Var s; sub] in
-                   let prop = Prop.Prop {name = "lnc_subst"; args} in
+                   (* fixme: how do we infer the kind of the substitution? *)
+                   let name = Printf.sprintf "lnc_subst_%s_%s" body_kind body_kind in
+                   let prop = Prop.Prop {name; args} in
+                   Hashtbl.add_multi subst_kinds body_kind body_kind;
                    aux (prop :: props) (sub :: subs) xs
            in
            let (props, subs) = aux props [] substs in
@@ -1087,7 +1141,7 @@ let of_language (lan: L.t) =
     let init = rules in
     Map.data lan.grammar
     |> List.fold ~init ~f:(fun rules C.{name; meta_var; terms} ->
-           if not (Hash_set.mem subsets name) then rules else
+           if not (Hashtbl.mem subsets name) then rules else
              let name' = kind_name name in             
              Set.to_list terms
              |> List.fold ~init:rules ~f:(fun rules t ->
@@ -1123,5 +1177,23 @@ let of_language (lan: L.t) =
                            } in
                          Map.set rules rule_name rule
                     | _ -> rules))
+  in
+  (* update the signatures with substitutions *)
+  let sigs =
+    Hashtbl.to_alist subst_kinds
+    |> List.fold ~init:sigs ~f:(fun sigs (body, terms) ->
+           List.fold terms ~init:sigs ~f:(fun sigs term ->
+               let name = Printf.sprintf "lnc_subst_%s_%s" body term in
+               let prop =
+                 Sigs.Prop.{
+                     name;
+                     args = [
+                         body;
+                         Printf.sprintf "(lnc_pair %s string)" term;
+                         body;
+                       ];
+                 } in
+               let props = Map.set sigs.props name prop in
+               {sigs with props}))
   in
   {sigs; rules}

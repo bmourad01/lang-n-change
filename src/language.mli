@@ -101,6 +101,7 @@ module Formula: sig
   val is_eq: t -> bool
   val is_default: t -> bool
   val is_member: t -> bool
+  val is_subset: t -> bool
   val vars: t -> Term.t list
   val substitute: t -> Term.subs -> t
 end

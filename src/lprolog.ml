@@ -249,9 +249,9 @@ module Sigs = struct
                     let ts' =
                       List.map ts ~f:aux
                       |> List.concat
-                      |> String.concat ~sep:" "
                     in
-                    let len = List.length ts in
+                    let len = List.length ts' in
+                    let ts' = String.concat ts' ~sep:" " in
                     tuple_sizes := Set.add !tuple_sizes len;
                     let ctor = match len with
                       | 2 -> "lnc_pair"
@@ -329,9 +329,10 @@ module Sigs = struct
                                 (T.to_string t) name)
                          else
                            let ts' = List.map ts ~f:aux |> List.concat in
+                           let len = List.length ts' in
+                           tuple_sizes := Set.add !tuple_sizes len;
                            let typ =                           
-                             Printf.sprintf "lnc_%dtuple %s"
-                               (List.length ts')
+                             Printf.sprintf "lnc_%dtuple %s" len
                                (String.concat ts' ~sep:" ")
                            in Hashtbl.set aliases name' typ; terms'
                       | _ -> terms'))

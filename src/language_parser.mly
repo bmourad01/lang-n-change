@@ -87,8 +87,14 @@ grammar_category:
   | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_list(MID, grammar_term)
     {
       let open Core_kernel in
-      let terms = List.fold terms ~init:Term_set.empty ~f:Set.add in
-      Grammar.Category.{name; meta_var; terms}
+      if String.(equal name (capitalize name)) then
+        let terms = List.fold terms ~init:Term_set.empty ~f:Set.add in
+        Grammar.Category.{name; meta_var; terms}
+      else
+        invalid_arg
+          (Printf.sprintf
+             "bad grammar category name %s, must be capitalized"
+             name)
     }
 
 rule:

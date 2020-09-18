@@ -317,7 +317,7 @@ module Term = struct
        | Zip (t1, t2) -> Zip (f t1, f t2)
        | _ -> t
 
-  let uniquify_map t =
+  let uniquify_map min t =
     let vars = vars_dup t in
     let vars' =
       List.fold vars ~init:[] ~f:(fun vars t ->
@@ -333,7 +333,7 @@ module Term = struct
     in
     List.filter_map vars' ~f:(fun t ->
         let l = aux t 1 vars in
-        Option.some_if (List.length l > 1) (t, l))
+        Option.some_if (List.length l > min) (t, l))
 
   let uniquify' t m =
     let var t m = match List.Assoc.find m t ~equal with
@@ -433,8 +433,8 @@ module Term = struct
          (Zip (t1, t2), m)
     in aux t m
 
-  let uniquify t =
-    uniquify_map t |> uniquify' t |> fst [@@inline]
+  let uniquify ?(min = 1) t =
+    uniquify_map min t |> uniquify' t |> fst [@@inline]
 end
 
 module Term_comparable = struct

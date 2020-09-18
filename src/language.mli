@@ -50,7 +50,7 @@ module Term: sig
   val unticked: t -> t
   val ticked_restricted: t -> t list -> t
   val substitute: t -> subs -> t 
-  val uniquify: t -> t
+  val uniquify: ?min:int -> t -> t
 end
 
 module Term_comparable: sig

@@ -4,7 +4,6 @@ Value v ::= (abs T (x)e) | (cons v v) | (nill.)
 Type T ::= (arrow T T) | (list T)
 Context E ::= (hole.) | (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E)
 Environment Gamma ::= {x => T}
-VarList L ::= [x...]
  
 %
 

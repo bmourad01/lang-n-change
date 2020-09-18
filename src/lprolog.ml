@@ -1234,6 +1234,8 @@ let of_language (lan: L.t) =
       let t' = List.hd_exn t' in
       let (premises, sub) = match t with
         | T.Constructor c ->
+           (* fixme: this assumes that constructors in the
+            * grammar will have a maximum term depth of 1 *)
            List.filter_map c.args ~f:(function
                | T.Var v ->
                   let orig = String.capitalize v in

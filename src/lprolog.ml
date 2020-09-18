@@ -219,6 +219,7 @@ module Sigs = struct
                       Map.set props name prop)
     in
     (* generate term constructor types from the grammar *)
+    let aliases = Hashtbl.create (module String) in
     let terms = 
       let init = String.Map.empty in
       Map.data lan.grammar
@@ -233,9 +234,11 @@ module Sigs = struct
                          (Printf.sprintf "bad var %s in category %s"
                             v name)
                     | Some kind ->
-                       let kind = kind_name kind in
-                       if Map.mem kinds kind
-                       then [kind]
+                       if L.is_meta_var_of lan v kind then
+                         let kind = kind_name kind in
+                         if Map.mem kinds kind
+                         then [kind]
+                         else ["string"]
                        else ["string"]
                     end
                  | T.Str _ -> ["string"]
@@ -265,9 +268,11 @@ module Sigs = struct
                         (Printf.sprintf "bad map key %s in category %s"
                            key name)
                    | Some kind ->
-                      let kind = kind_name kind in
-                      if Map.mem kinds kind
-                      then kind
+                      if L.is_meta_var_of lan key kind then
+                        let kind = kind_name kind in
+                        if Map.mem kinds kind
+                        then kind
+                        else "string"
                       else "string"
                  in
                  let value' = aux value in
@@ -287,22 +292,64 @@ module Sigs = struct
                          let term = Term.{name; args; typ} in
                          Map.set terms' name term
                       | T.Map {key; value} ->
-                         let typ =
-                           Printf.sprintf
-                             "list (lnc_pair %s)"
-                             (String.concat (aux_map key value) ~sep:" ")
-                         in
-                         let term = Term.{name = name'; args = []; typ} in
-                         begin match Map.add terms' name term with
-                         | `Duplicate -> 
-                            invalid_arg
-                              (Printf.sprintf
-                                 "duplicate term %s for category %s"
-                                 (T.to_string t) name)
-                         | `Ok terms' -> terms'
-                         end
+                         if not (Map.is_empty terms') then
+                           invalid_arg
+                             (Printf.sprintf
+                                "bad term %s in category %s"
+                                (T.to_string t) name)
+                         else
+                           let typ =
+                             Printf.sprintf
+                               "list (lnc_pair %s)"
+                               (String.concat (aux_map key value) ~sep:" ")
+                           in Hashtbl.set aliases name' typ; terms'
+                      | T.List t' ->
+                         if not (Map.is_empty terms') then
+                           invalid_arg
+                             (Printf.sprintf
+                                "bad term %s in category %s"
+                                (T.to_string t) name)
+                         else
+                           let ts = aux t' in
+                           if List.length ts > 1 then
+                             invalid_arg
+                               (Printf.sprintf
+                                  "bad list term %s in category %s"
+                                  (T.to_string t') name)
+                           else
+                             let typ =
+                               Printf.sprintf "list %s"
+                                 (String.concat (aux t') ~sep:" ")
+                             in Hashtbl.set aliases name' typ; terms'
                       | _ -> terms'))
     in
+    (* substitute with aliases *)
+    let (kinds, terms, props) =
+      let init = (kinds, terms, props) in
+      Hashtbl.to_alist aliases
+      |> List.fold ~init ~f:(fun (kinds, terms, props) (k, ty) ->
+             let kinds = Map.remove kinds k in
+             let terms =
+               Map.map terms ~f:(fun ({name; args; typ} as term) ->
+                   let args =
+                     List.map args ~f:(fun a ->
+                         String.substr_replace_all a
+                           ~pattern:k ~with_:ty)
+                   in
+                   let typ =
+                     String.substr_replace_all typ
+                       ~pattern:k ~with_:ty
+                   in {term with args; typ})
+             in
+             let props =
+               Map.map props ~f:(fun ({name; args} as prop) ->
+                   let args =
+                     List.map args ~f:(fun a ->
+                         String.substr_replace_all a
+                           ~pattern:k ~with_:ty)
+                   in {prop with args})
+             in (kinds, terms, props))
+    in           
     (* generate signatures for builtin tuples *)
     let (kinds, terms) =
       let init = (kinds, terms) in

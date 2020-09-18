@@ -834,6 +834,10 @@ let of_language (lan: L.t) =
            | Some kind ->
               if L.is_meta_var_of lan v kind then [def]
               else if depth = 0 then
+                (* fixme: we shouldn't rely on depth of
+                 * terms to infer whether we should wrap
+                 * a variable in a constructor (we should
+                 * look at the signatures instead) *)
                 let kind = kind_name kind in
                 [Term.Constructor {
                      name = kind ^ "_var";

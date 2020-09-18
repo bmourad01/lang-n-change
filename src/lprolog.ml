@@ -393,7 +393,7 @@ module Sigs = struct
              let kinds = Map.set kinds name n in
              let args = List.init n ~f:(fun n -> Printf.sprintf "A%d" n) in
              let typ =
-               Printf.sprintf "(%s %s)" name
+               Printf.sprintf "%s %s" name
                  (String.concat args ~sep:" ")
              in                   
              let term = Term.{name; args; typ} in
@@ -814,13 +814,14 @@ let of_language (lan: L.t) =
       let v' = v ^ Int.to_string i in
       if Hash_set.mem vars v'
       then aux (succ i)
-      else Term.Var v'
+      else (Hash_set.add vars v'; Term.Var v')
     in aux 0
   in
   (* generate terms along with additional propositions
    * if the term itself needs to make use of some
    * propositions to compute its result *)
   let subst_kinds = Hashtbl.create (module String) in
+  let subst_list_kinds = Hashtbl.create (module String) in
   let aux_term wildcard vars rule_name depth t =
     let rec aux_term depth t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
@@ -948,11 +949,12 @@ let of_language (lan: L.t) =
                      | None -> body'
                      | Some sub -> sub
                    in
-                   let args = [body; Term.Var s; sub] in
+                   let args = [body; Term.Var (String.capitalize s); sub] in
                    (* fixme: how do we infer the kind of the substitution? *)
-                   let name = Printf.sprintf "lnc_subst_%s_%s" body_kind body_kind in
+                   let name = Printf.sprintf "lnc_subst_list_%s_%s" body_kind body_kind in
                    let prop = Prop.Prop {name; args} in
                    Hashtbl.add_multi subst_kinds body_kind body_kind;
+                   Hashtbl.add_multi subst_list_kinds body_kind body_kind;
                    aux (prop :: props) (sub :: subs) xs
            in
            let (props, subs) = aux props [] substs in
@@ -1219,7 +1221,24 @@ let of_language (lan: L.t) =
                      name;
                      args = [
                          body;
-                         Printf.sprintf "(lnc_pair %s string)" term;
+                         Printf.sprintf "lnc_pair %s string" term;
+                         body;
+                       ];
+                 } in
+               let props = Map.set sigs.props name prop in
+               {sigs with props}))
+  in
+  let sigs =
+    Hashtbl.to_alist subst_list_kinds
+    |> List.fold ~init:sigs ~f:(fun sigs (body, terms) ->
+           List.fold terms ~init:sigs ~f:(fun sigs term ->
+               let name = Printf.sprintf "lnc_subst_list_%s_%s" body term in
+               let prop =
+                 Sigs.Prop.{
+                     name;
+                     args = [
+                         body;
+                         Printf.sprintf "list (lnc_pair %s string)" term;
                          body;
                        ];
                  } in
@@ -1397,5 +1416,82 @@ let of_language (lan: L.t) =
                              (Map.set rules rule1.name rule1)
                              rule2.name rule2))
                   in List.fold (Set.to_list bc.terms) ~init:rules ~f))
+  in
+  let rules =
+    Hashtbl.to_alist subst_list_kinds
+    |> List.fold ~init:rules ~f:(fun rules (body, terms) ->
+           let body_cat = cat_name lan body in
+           List.fold terms ~init:rules ~f:(fun rules term ->
+               let term_cat = cat_name lan term in
+               match (Map.find lan.grammar body_cat,
+                      Map.find lan.grammar term_cat) with
+               | (None, _) | (_, None) -> rules
+               | (Some bc, Some tc) ->
+                  let name =
+                    Printf.sprintf "lnc_subst_list_%s_%s"
+                      body term
+                  in
+                  let name' =
+                    Printf.sprintf "lnc_subst_%s_%s"
+                      body term
+                  in
+                  let rule_name =
+                    Printf.sprintf "LNC-SUBST-LIST-%s-%s"
+                      (String.uppercase body)
+                      (String.uppercase term)
+                  in
+                  let meta_var = String.capitalize tc.meta_var in
+                  let meta_var_s = meta_var ^ "1" in
+                  let rule1 =
+                    Rule.{
+                        name = rule_name ^ "-1";
+                        premises = [];
+                        conclusion =
+                          Prop.Prop {
+                              name;
+                              args = [
+                                  Term.Var meta_var_s;
+                                  Term.Constructor {
+                                      name = "nil";
+                                      args = [];
+                                    };
+                                  Term.Var meta_var_s;
+                                ];
+                            };
+                    } in
+                  let rule2 =
+                    Rule.{
+                        name = rule_name ^ "-2";
+                        premises = [
+                            Prop.Prop {
+                                name = name';
+                                args = [
+                                    Term.Var meta_var_s;
+                                    Term.Var "Sub";
+                                    Term.Var (meta_var_s ^ "'");
+                                  ];
+                              };
+                            Prop.Prop {
+                                name;
+                                args = [
+                                    Term.Var (meta_var_s ^ "'");
+                                    Term.Var "L";
+                                    Term.Var (meta_var_s ^ "''");
+                                  ];
+                              };
+                          ];
+                        conclusion =
+                          Prop.Prop {
+                              name;
+                              args = [
+                                  Term.Var meta_var_s;
+                                  Term.(Cons (Var "Sub", Var "L"));
+                                  Term.Var (meta_var_s ^ "''");
+                                ];
+                            };
+                    } in
+                  Map.set
+                    (Map.set rules rule1.name rule1)
+                    rule2.name rule2))
   in
   {sigs; rules}

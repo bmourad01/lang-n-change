@@ -310,8 +310,8 @@ module Sigs = struct
                                 "bad term %s in category %s"
                                 (T.to_string t) name)
                          else
-                           let ts = aux t' in
-                           if List.length ts > 1 then
+                           let t'' = aux t' in
+                           if List.length t'' > 1 then
                              invalid_arg
                                (Printf.sprintf
                                   "bad list term %s in category %s"
@@ -319,8 +319,21 @@ module Sigs = struct
                            else
                              let typ =
                                Printf.sprintf "list %s"
-                                 (String.concat (aux t') ~sep:" ")
+                                 (String.concat t'' ~sep:" ")
                              in Hashtbl.set aliases name' typ; terms'
+                      | T.Tuple ts ->
+                         if not (Map.is_empty terms') then
+                           invalid_arg
+                             (Printf.sprintf
+                                "bad term %s in category %s"
+                                (T.to_string t) name)
+                         else
+                           let ts' = List.map ts ~f:aux |> List.concat in
+                           let typ =                           
+                             Printf.sprintf "lnc_%dtuple %s"
+                               (List.length ts')
+                               (String.concat ts' ~sep:" ")
+                           in Hashtbl.set aliases name' typ; terms'
                       | _ -> terms'))
     in
     (* substitute with aliases *)

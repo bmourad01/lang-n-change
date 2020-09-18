@@ -364,7 +364,9 @@ module Sigs = struct
                    in {prop with args})
              in (kinds, terms, props))
     in           
-    (* generate signatures for builtin tuples *)
+    (* generate signatures for builtin
+     * tuples since lambda-prolog doesn't
+     * support declaring them anonymously *)
     let (kinds, terms) =
       let init = (kinds, terms) in
       Set.to_list !tuple_sizes 

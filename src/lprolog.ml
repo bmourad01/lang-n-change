@@ -186,6 +186,7 @@ module Sigs = struct
     in
     (* infer additional propositions based on
      * whether one category is a proper subset of another *)
+    let subsets = String.Hash_set.create () in
     let props =
       let ctor_name = function
         | T.Constructor {name; args} -> Some name
@@ -212,11 +213,12 @@ module Sigs = struct
                |> function
                  | None -> props
                  | Some c ->
-                    let name = kind_name name in
-                    if Set.mem ops name then props else
+                    let name' = kind_name name in
+                    if Set.mem ops name' then props else
                       let args = [kind_name C.(c.name)] in
-                      let prop = Prop.{name; args} in
-                      Map.set props name prop)
+                      let prop = Prop.{name = name'; args} in
+                      Hash_set.add subsets name;
+                      Map.set props name' prop)
     in
     (* generate term constructor types from the grammar *)
     let aliases = Hashtbl.create (module String) in
@@ -384,7 +386,7 @@ module Sigs = struct
              let term = Term.{name; args; typ} in
              let terms = Map.set terms name term in
              (kinds, terms))
-    in {kinds; terms; props}
+    in ({kinds; terms; props}, subsets)
 end
 
 module Term = struct
@@ -453,7 +455,7 @@ type t = {
   }
 
 let of_language (lan: L.t) =
-  let sigs = Sigs.of_language lan in
+  let (sigs, subsets) = Sigs.of_language lan in
   let new_wildcard wildcard =
     let v = Term.Var ("_" ^ Int.to_string !wildcard) in
     wildcard := succ !wildcard; v
@@ -467,6 +469,9 @@ let of_language (lan: L.t) =
       else Term.Var v'
     in aux 0
   in
+  (* generate terms along with additional propositions
+   * if the term itself needs to make use of some
+   * propositions to compute its result *)
   let aux_term wildcard vars rule_name t =
     let rec aux_term t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
@@ -645,6 +650,7 @@ let of_language (lan: L.t) =
               (T.to_string t) rule_name)
     in aux_term t
   in
+  (* generate the propositions *)
   let aux_formula wildcard vars rule_name f =
     let rec aux_formula f = match f with
       | F.Not f ->
@@ -697,6 +703,7 @@ let of_language (lan: L.t) =
              ps1 @ ps2 @ [Prop.Prop {name; args}]
     in aux_formula f
   in
+  (* compile the inference rules of the language *)
   let rules =
     let init = String.Map.empty in
     Map.data lan.rules
@@ -725,5 +732,50 @@ let of_language (lan: L.t) =
            in
            let rule = Rule.{name; premises; conclusion} in
            Map.set rules name rule)
+  in
+  (* for categories which are proper subsets of others
+   * we need to generate the rules which declare them
+   * as distinct (for example, Value vs Expression
+   * needs to be distinguishable for call-by-value) *)
+  let rules =
+    let init = rules in
+    Map.data lan.grammar
+    |> List.fold ~init ~f:(fun rules C.{name; meta_var; terms} ->
+           if not (Hash_set.mem subsets name) then rules else
+             let name' = kind_name name in             
+             Set.to_list terms
+             |> List.fold ~init:rules ~f:(fun rules t ->
+                    match t with
+                    | T.Constructor c ->
+                       let t = T.uniquify t in
+                       let rule_name =
+                         Printf.sprintf "%s-%s"
+                           (String.uppercase name)
+                           (String.uppercase c.name)
+                       in
+                       let (t', props) =
+                         aux_term (ref 0) (String.Hash_set.create ())
+                            rule_name t
+                       in
+                       if List.length t' > 1 then
+                         invalid_arg
+                           (Printf.sprintf
+                              "invalid term %s in subset category %s"
+                              (T.to_string t) name)
+                       else
+                         let t' = List.hd_exn t' in
+                         let conclusion =
+                           Prop.Prop {
+                               name = name';
+                               args = [t'];
+                             } in
+                         let rule =
+                           Rule.{
+                               name = rule_name;
+                               premises = props;
+                               conclusion;
+                           } in
+                         Map.set rules rule_name rule
+                    | _ -> rules))
   in
   {sigs; rules}

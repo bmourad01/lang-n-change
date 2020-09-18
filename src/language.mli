@@ -116,6 +116,7 @@ module Rule: sig
   val to_string: t -> string
   val is_reduction_rule: t -> bool
   val is_typing_rule: t -> bool
+  val has_typing_premises: t -> bool
   val vars: t -> Term.t list
   val substitute: t -> Term.subs -> t
 end

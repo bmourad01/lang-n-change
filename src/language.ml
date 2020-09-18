@@ -662,6 +662,12 @@ module Rule = struct
        String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
     | _ -> false
 
+  let has_typing_premises r =
+    List.exists r.premises ~f:(function
+        | Formula.Prop {predicate; args} ->
+           String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
+        | _ -> false)
+
   let vars r =
     List.map r.premises ~f:Formula.vars
     |> List.concat

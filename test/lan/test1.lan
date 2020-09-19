@@ -1,8 +1,8 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (tail e) | (nill.) | (pair e e) | (fst e) | (snd e) | (error.) | (tt.) | (ff.) | (ite e e e) | (zero.) | (succ e) | (pred e) | (let e (x)e) | (absT (Z)e) | (appT e T)
+Expression e ::= x | (abs T (x)e) | (app e e) | (cons e e) | (head e) | (filter e e) | (tail e) | (nill.) | (pair e e) | (fst e) | (snd e) | (error.) | (tt.) | (ff.) | (ite e e e) | (zero.) | (succ e) | (pred e) | (let e (x)e) | (absT (Z)e) | (appT e T)
 Error err ::= (error.)
 Value v ::= (abs T (x)e) | (cons v v) | (nill.) | (pair v v ) | (tt.) | (ff.) | (zero.) | (succ v) | (absT (Z)e)
 Type T ::= Z | (arrow T T) | (list T) | (times T T ) | (bool.) | (nat.) | (all (Z)T)
-Context E ::= (hole.) | (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E) | (pair E e) | (pair v E) | (fst E) | (snd E) | (ite E e e) | (succ E) | (pred E) | (let E (x)e) | (appT E T)
+Context E ::= (hole.) | (app E e) | (app v E) | (cons E e) | (cons v E) | (head E) | (tail E) | (filter E e) | (filter v E) | (pair E e) | (pair v E) | (fst E) | (snd E) | (ite E e e) | (succ E) | (pred E) | (let E (x)e) | (appT E T)
 Environment Gamma ::= {x => T}
     
 %
@@ -40,6 +40,13 @@ typeof (Gamma, (head e), T)
 typeof (Gamma, e, (list T))
 --------------------------------
 typeof (Gamma, (tail e), (list T))
+.
+
+[T-FILTER]
+typeof (Gamma, e1, (list T)),
+typeof (Gamma, e2, (arrow T (bool.)))
+--------------------------------
+typeof (Gamma, (filter e1 e2), (list T))
 .
 
 [T-PAIR]
@@ -151,6 +158,16 @@ step ((head (cons v1 v2)), v1)
 [R-TAIL-CONS]
 --------------------------------
 step ((tail (cons v1 v2)), v2)
+.
+
+[R-FILTER-NIL]
+--------------------------------
+step ((filter (nill.) v), (nill.))
+.
+
+[R-FILTER-CONS]
+--------------------------------
+step ((filter (cons v1 v2) v3), (ite (app v3 v1) (cons v1 (filter v2 v3)) (filter v2 v3)))
 .
 
 [R-FST]

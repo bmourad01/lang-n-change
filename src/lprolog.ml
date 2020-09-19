@@ -311,60 +311,59 @@ module Sigs = struct
                         (T.to_string value) name)
                  else key :: value'
                in
-               Set.to_list terms
-               |> List.fold ~init:terms' ~f:(fun terms' t ->
-                      match t with
-                      | T.Constructor {name; args} ->
-                         let name = kind_name name in
-                         let args = List.map args ~f:aux |> List.concat in
-                         let typ = name' in
-                         let term = Term.{name; args; typ} in
-                         Map.set terms' name term
-                      | T.Map {key; value} ->
-                         if not (Map.is_empty terms') then
-                           invalid_arg
-                             (Printf.sprintf
-                                "bad term %s in category %s"
-                                (T.to_string t) name)
-                         else
-                           let typ =
-                             Printf.sprintf
-                               "list (lnc_pair %s)"
-                               (String.concat (aux_map key value) ~sep:" ")
-                           in Hashtbl.set aliases name' typ; terms'
-                      | T.List t' ->
-                         if not (Map.is_empty terms') then
-                           invalid_arg
-                             (Printf.sprintf
-                                "bad term %s in category %s"
-                                (T.to_string t) name)
-                         else
-                           let t'' = aux t' in
-                           if List.length t'' > 1 then
-                             invalid_arg
-                               (Printf.sprintf
-                                  "bad list term %s in category %s"
-                                  (T.to_string t') name)
-                           else
-                             let typ =
-                               Printf.sprintf "list %s"
-                                 (String.concat t'' ~sep:" ")
-                             in Hashtbl.set aliases name' typ; terms'
-                      | T.Tuple ts ->
-                         if not (Map.is_empty terms') then
-                           invalid_arg
-                             (Printf.sprintf
-                                "bad term %s in category %s"
-                                (T.to_string t) name)
-                         else
-                           let ts' = List.map ts ~f:aux |> List.concat in
-                           let len = List.length ts' in
-                           tuple_sizes := Set.add !tuple_sizes len;
-                           let typ =                           
-                             Printf.sprintf "lnc_%dtuple %s" len
-                               (String.concat ts' ~sep:" ")
-                           in Hashtbl.set aliases name' typ; terms'
-                      | _ -> terms'))
+               let f terms' t = match t with
+                 | T.Constructor {name; args} ->
+                    let name = kind_name name in
+                    let args = List.map args ~f:aux |> List.concat in
+                    let typ = name' in
+                    let term = Term.{name; args; typ} in
+                    Map.set terms' name term
+                 | T.Map {key; value} ->
+                    if not (Map.is_empty terms') then
+                      invalid_arg
+                        (Printf.sprintf
+                           "bad term %s in category %s"
+                           (T.to_string t) name)
+                    else
+                      let typ =
+                        Printf.sprintf
+                          "list (lnc_pair %s)"
+                          (String.concat (aux_map key value) ~sep:" ")
+                      in Hashtbl.set aliases name' typ; terms'
+                 | T.List t' ->
+                    if not (Map.is_empty terms') then
+                      invalid_arg
+                        (Printf.sprintf
+                           "bad term %s in category %s"
+                           (T.to_string t) name)
+                    else
+                      let t'' = aux t' in
+                      if List.length t'' > 1 then
+                        invalid_arg
+                          (Printf.sprintf
+                             "bad list term %s in category %s"
+                             (T.to_string t') name)
+                      else
+                        let typ =
+                          Printf.sprintf "list %s"
+                            (String.concat t'' ~sep:" ")
+                        in Hashtbl.set aliases name' typ; terms'
+                 | T.Tuple ts ->
+                    if not (Map.is_empty terms') then
+                      invalid_arg
+                        (Printf.sprintf
+                           "bad term %s in category %s"
+                           (T.to_string t) name)
+                    else
+                      let ts' = List.map ts ~f:aux |> List.concat in
+                      let len = List.length ts' in
+                      tuple_sizes := Set.add !tuple_sizes len;
+                      let typ =                           
+                        Printf.sprintf "lnc_%dtuple %s" len
+                          (String.concat ts' ~sep:" ")
+                      in Hashtbl.set aliases name' typ; terms'
+                 | _ -> terms'
+               in List.fold (Set.to_list terms) ~init:terms' ~f)
     in
     (* substitute with aliases *)
     let (kinds, terms, props) =

@@ -87,9 +87,9 @@ typeof (Gamma, (absT (Z)e), (all (Z)T))
 .
 
 [T-APPT]
-typeof (Gamma, e, (all (Z2)T))
+typeof (Gamma, e, (all (Z)T2))
 --------------------------------
-typeof (Gamma, (appT e Z1), T[Z2/Z1])
+typeof (Gamma, (appT e T1), T2[T1/Z])
 .
 
 [R-BETA]
@@ -134,7 +134,7 @@ step ((let v (x)e), e[v/x])
 
 [R-ALPHA]
 --------------------------------
-step ((appT (absT (Z1)e) Z2), e[Z2/Z1])
+step ((appT (absT (Z)e) T), e[T/Z])
 .
 
 %

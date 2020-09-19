@@ -1034,17 +1034,19 @@ let of_language (lan: L.t) =
             * grammar will have a maximum term depth of 1 *)
            List.filter_map c.args ~f:(function
                | T.Var v ->
+                  let open Option.Let_syntax in
                   let orig = String.capitalize v in
-                  if String.is_prefix orig ~prefix:meta_var_body then
-                    let sub = orig ^ "'" in
-                    Some
-                      (Syntax.(
-                         name
-                         $ [v orig;
-                            "lnc_pair" @ [v meta_var_term; v var];
-                            v sub]),
-                       (T.Var v, T.Var (v ^ "'")))
-                  else None
+                  let%map _ =
+                    Option.some_if
+                      (String.is_prefix orig ~prefix:meta_var_body) ()
+                  in
+                  let sub = orig ^ "'" in
+                  (Syntax.(
+                     name
+                     $ [v orig;
+                        "lnc_pair" @ [v meta_var_term; v var];
+                        v sub]),
+                   (T.Var v, T.Var (v ^ "'")))
                | _ -> None)
            |> List.unzip
         | _ -> ([], [])

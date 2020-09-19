@@ -260,16 +260,11 @@ module Sigs = struct
                  | T.Binding {var; body} -> "string" :: aux body
                  | T.List t ->
                     let t' = aux t in
-                    begin match List.length t' with
-                    | 1 -> [Printf.sprintf "list %s" (List.hd_exn t')]
-                    | 2 ->
-                       [Printf.sprintf "list (lnc_pair %s)"
-                          (String.concat t' ~sep:" ")]
-                    | _ ->
-                       invalid_arg
-                         (Printf.sprintf "bad list kind %s in category %s"
-                            (T.to_string t) name)
-                    end
+                    if List.length t' > 1 then
+                      invalid_arg
+                        (Printf.sprintf "bad list kind %s in category %s"
+                           (T.to_string t) name)
+                    else [Printf.sprintf "list %s" (List.hd_exn t')]
                  | T.Map {key; value} ->
                     let t' = aux_map key value in
                     if List.length t' <> 2 then

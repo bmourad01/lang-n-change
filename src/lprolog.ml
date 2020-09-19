@@ -735,6 +735,7 @@ let of_language (lan: L.t) =
                   | T.Subst_pair {term; var} ->
                      let (term_kind, wrap) = subst_kind "term" term in
                      let sub = fresh_var vars "sub" in
+                     (* fixme: this is a hack *)
                      let depth' = if wrap then 0 else succ depth in
                      let (terms, props') = aux_term depth' term in
                      if List.length terms > 1 then

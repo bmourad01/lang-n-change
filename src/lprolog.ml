@@ -480,305 +480,111 @@ module Rule = struct
     in Printf.sprintf "%s%s. %% %s" conclusion_str premises_str name
 end
 
+module Syntax = struct
+  let v v = Term.Var v [@@inline]
+  let (@) name args = Term.Constructor {name; args} [@@inline]
+  let (++) t1 t2 = Term.Cons (t1, t2) [@@inline]
+  
+  let (!) prop = Prop.Not prop [@@inline]
+  let (=) t1 t2 = Prop.Eq (t1, t2) [@@inline]
+  let ($) name args = Prop.Prop {name; args} [@@inline]
+  
+  let (<--) (name, conclusion) premises =
+    Rule.{name; premises; conclusion} [@@inline]
+end
+
 let builtin_rules =
+  let open Syntax in
   let lnc_member_1 =
-    Rule.{
-        name = "LNC-MEMBER-1";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_member";
-              args = [
-                  Term.Var "X";
-                  Term.(Cons (Var "X", Var "L"));
-                ];
-            };
-    } in
+    ("LNC-MEMBER-1",
+     "lnc_member" $ [v "X"; v "X" ++ v "L"]) <-- []
+  in
   let lnc_member_2 =
-    Rule.{
-        name = "LNC-MEMBER-2";
-        premises = [
-            Prop.Prop {
-                name = "lnc_member";
-                args = [
-                    Term.Var "X";
-                    Term.Var "L";
-                  ]
-              };
-          ];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_member";
-              args = [
-                  Term.Var "X";
-                  Term.(Cons (Var "Y", Var "L"));
-                ];
-            };
-    } in
+    ("LNC-MEMBER-2",
+     "lnc_member" $ [v "X"; v "Y" ++ v "L"]) <-- [
+        "lnc_member" $ [v "X"; v "L"];
+      ]
+  in
   let lnc_map_update_1 =
-    Rule.{
-        name = "LNC-MAP-UPDATE-1";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_update";
-              args = [
-                  Term.Constructor {
-                      name = "nil";
-                      args = [];
-                    };
-                  Term.Var "X";
-                  Term.Var "Y";
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X"; Var "Y"];
-                          },
-                        Constructor {
-                            name = "nil";
-                            args = [];
-                          }));
-                ];
-            };
-    } in
+    ("LNC-MAP-UPDATE-1",
+     "lnc_map_update"
+     $ ["nil" @ [];
+        v "X";
+        v "Y";
+        ("lnc_pair" @ [v "X"; v "Y"]) ++ ("nil" @ [])]) <-- []
+  in
   let lnc_map_update_2 =
-    Rule.{
-        name = "LNC-MAP-UPDATE-2";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_update";
-              args = [
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X"; Var "Y"];
-                          },
-                        Var "L"));
-                  Term.Var "X";
-                  Term.Var "Y'";
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X"; Var "Y'"];
-                          },
-                        Var "L"));
-                ];
-            };
-    } in
+    ("LNC-MAP-UPDATE-2",
+     "lnc_map_update"
+     $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "L";
+        v "X";
+        v "Y'";
+        ("lnc_pair" @ [v "X"; v "Y'"]) ++ v "L"]) <-- []
+  in
   let lnc_map_update_3 =
-    Rule.{
-        name = "LNC-MAP-UPDATE-3";
-        premises = [
-            Prop.Prop {
-                name = "lnc_map_update";
-                args = [
-                    Term.Var "L";
-                    Term.Var "X";
-                    Term.Var "Y";
-                    Term.Var "L'";
-                  ];
-              };
-          ];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_update";
-              args = [
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X'"; Var "Y"];
-                          },
-                        Var "L"));
-                  Term.Var "X";
-                  Term.Var "Y'";
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X'"; Var "Y"];
-                          },
-                        Var "L'"));
-                ];
-            };
-    } in
+    ("LNC-MAP-UPDATE-3",
+     "lnc_map_update"
+     $ [("lnc_pair" @ [v "X'"; v "Y"]) ++ v "L";
+        v "X";
+        v "Y'";
+        ("lnc_pair" @ [v "X'"; v "Y"]) ++ v "L'"]) <-- [
+        "lnc_map_update" $ [v "L"; v "X"; v "Y'"; v "L'"];
+      ]
+  in
   let lnc_map_domain_1 =
-    Rule.{
-        name = "LNC-MAP-DOMAIN-1";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_domain";
-              args = [
-                  Term.Constructor {name = "nil"; args = []};
-                  Term.Constructor {name = "nil"; args = []};
-                ];
-            };
-    } in
+    ("LNC-MAP-DOMAIN-1",
+     "lnc_map_domain" $ ["nil" @ []; "nil" @ []]) <-- []
+  in
   let lnc_map_domain_2 =
-    Rule.{
-        name = "LNC-MAP-DOMAIN-2";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_domain";
-              args = [
-                  Term.(
-                    Cons
-                      (Constructor {
-                           name = "lnc_pair";
-                           args = [Var "X"; Var "Y"];
-                         },
-                       Var "M"));
-                  Term.(Cons (Var "X", Var "L"));
-                ];
-            };
-    } in
+    ("LNC-MAP-DOMAIN-2",
+     "lnc_map_domain"
+     $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "M";
+        v "X" ++ v "L"]) <-- []
+  in
   let lnc_map_range_1 =
-    Rule.{
-        name = "LNC-MAP-RANGE-1";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_range";
-              args = [
-                  Term.Constructor {name = "nil"; args = []};
-                  Term.Constructor {name = "nil"; args = []};
-                ];
-            };
-    } in
+    ("LNC-MAP-RANGE-1",
+     "lnc_map_range" $ ["nil" @ []; "nil" @ []]) <-- []
+  in
   let lnc_map_range_2 =
-    Rule.{
-        name = "LNC-MAP-RANGE-2";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_map_range";
-              args = [
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X"; Var "Y"];
-                          },
-                        Var "M"));
-                  Term.(Cons (Var "Y", Var "L"));
-                ];
-            };
-    } in
+    ("LNC-MAP-RANGE-2",
+     "lnc_map_range"
+     $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "M";
+        v "Y" ++ v "L"]) <-- []
+  in
   let lnc_subset_1 =
-    Rule.{
-        name = "LNC-SUBSET-1";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_subset";
-              args = [
-                  Term.Constructor {name = "nil"; args = []};
-                  Term.Constructor {name = "nil"; args = []};
-                ];
-            };
-    } in
+    ("LNC-SUBSET-1",
+     "lnc_subset" $ ["nil" @ []; "nil" @ []]) <-- []
+  in
   let lnc_subset_2 =
-    Rule.{
-        name = "LNC-SUBSET-2";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_subset";
-              args = [
-                  Term.Constructor {name = "nil"; args = []};
-                  Term.(Cons (Var "Y", Var "L"));
-                ];
-            };
-    } in
+    ("LNC-SUBSET-2",
+     "lnc_subset" $ ["nil" @ []; v "Y" ++ v "L"]) <-- []
+  in
   let lnc_subset_3 =
-    Rule.{
-        name = "LNC-SUBSET-3";
-        premises = [
-            Prop.Prop {
-                name = "lnc_subset";
-                args = Term.[Var "L1"; Var "L2"];
-              };
-          ];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_subset";
-              args = [
-                  Term.(Cons (Var "X", Var "L1"));
-                  Term.(Cons (Var "Y", Var "L2"));
-                ];
-            };
-    } in
+    ("LNC-SUBSET-3",
+     "lnc_subset" $ [v "X" ++ v "L1"; v "Y" ++ v "L2"]) <-- [
+        "lnc_subset" $ [v "L1"; v "L2"];
+      ]
+  in
   let lnc_subset_4 =
-    Rule.{
-        name = "LNC-SUBSET-4";
-        premises = [
-            Prop.Prop {
-                name = "lnc_member";
-                args = Term.[Var "X"; Var "L2"];
-              };
-            Prop.Prop {
-                name = "lnc_subset";
-                args = Term.[Var "L1"; Var "L2"];
-              };
-          ];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_subset";
-              args = [
-                  Term.(Cons (Var "X", Var "L1"));
-                  Term.(Cons (Var "Y", Var "L2"));
-                ];
-            };
-    } in
+    ("LNC-SUBSET-4",
+     "lnc_subset" $ [v "X" ++ v "L1"; v "Y" ++ v "L2"]) <-- [
+        "lnc_member" $ [v "X"; v "L2"];
+        "lnc_subset" $ [v "L1"; v "L2"];
+      ]
+  in
   let lnc_zip_1 =
-    Rule.{
-        name = "LNC-ZIP-1";
-        premises = [];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_zip";
-              args = [
-                  Term.Constructor {name = "nil"; args = []};
-                  Term.Constructor {name = "nil"; args = []};
-                  Term.Constructor {name = "nil"; args = []};
-                ];
-            };
-    } in
+    ("LNC-ZIP-1",
+     "lnc_zip" $ ["nil" @ []; "nil" @ []; "nil" @ []]) <-- []
+  in
   let lnc_zip_2 =
-    Rule.{
-        name = "LNC-ZIP-2";
-        premises = [
-            Prop.Prop {
-                name = "lnc_zip";
-                args = [
-                    Term.Var "L1";
-                    Term.Var "L2";
-                    Term.Var "M";
-                  ];
-              };
-          ];
-        conclusion =
-          Prop.Prop {
-              name = "lnc_zip";
-              args = [
-                  Term.(Cons (Var "X", Var "L1"));
-                  Term.(Cons (Var "Y", Var "L2"));
-                  Term.(
-                    Cons (
-                        Constructor {
-                            name = "lnc_pair";
-                            args = [Var "X"; Var "Y"];
-                          },
-                        Var "M"));
-                ];
-            };
-    } in
+    ("LNC-ZIP-2",
+     "lnc_zip"
+     $ [v "X" ++ v "L1";
+        v "Y" ++ v "L2";
+        ("lnc_pair" @ [v "X"; v "Y"]) ++ v "M"]) <-- [
+        "lnc_zip" $ [v "L1"; v "L2"; v "M"];
+      ]
+  in
   String.Map.of_alist_exn
     [(lnc_member_1.name, lnc_member_1);
      (lnc_member_2.name, lnc_member_2);
@@ -805,7 +611,7 @@ type t = {
 let of_language (lan: L.t) =
   let (sigs, subsets) = Sigs.of_language lan in
   let new_wildcard wildcard =
-    let v = Term.Var ("_" ^ Int.to_string !wildcard) in
+    let v = Syntax.v ("_" ^ Int.to_string !wildcard) in
     wildcard := succ !wildcard; v
   in
   let fresh_var vars v =
@@ -814,7 +620,7 @@ let of_language (lan: L.t) =
       let v' = v ^ Int.to_string i in
       if Hash_set.mem vars v'
       then aux (succ i)
-      else (Hash_set.add vars v'; Term.Var v')
+      else (Hash_set.add vars v'; Syntax.v v')
     in aux 0
   in
   (* generate terms along with additional propositions
@@ -825,11 +631,10 @@ let of_language (lan: L.t) =
   let aux_term wildcard vars rule_name depth t =
     let rec aux_term depth t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
-      | T.Nil ->
-         ([Term.Constructor {name = "nil"; args = []}], [])
+      | T.Nil -> (Syntax.["nil" @ []], [])
       | T.Var v ->
          let k = L.kind_of_var lan v in
-         let def = Term.Var (String.capitalize v) in
+         let def = Syntax.v (String.capitalize v) in
          let t' = match k with
            | None -> [def]
            | Some kind ->
@@ -840,10 +645,7 @@ let of_language (lan: L.t) =
                  * a variable in a constructor (we should
                  * look at the signatures instead) *)
                 let kind = kind_name kind in
-                [Term.Constructor {
-                     name = kind ^ "_var";
-                     args = [def];
-                   }]
+                Syntax.[(kind ^ "_var") @ [def]]
               else [def]
          in
          let prop = match k with
@@ -860,10 +662,10 @@ let of_language (lan: L.t) =
            |> List.unzip
          in
          let (args, props) = (List.concat args, List.concat props) in
-         ([Term.Constructor {name; args}], props)
+         (Syntax.[name @ args], props)
       | T.Binding {var; body} ->
          let (ts, props) = aux_term (succ depth) body in
-         (Term.Var (String.capitalize var) :: ts, props)
+         (Syntax.(v (String.capitalize var)) :: ts, props)
       | T.Subst {body; substs} ->
          let subst_kind s = function
            | T.Var v ->
@@ -929,12 +731,8 @@ let of_language (lan: L.t) =
                             (T.to_string t) rule_name)
                      else
                        let term = List.hd_exn terms in
-                       let var = Term.Var (String.capitalize var) in
-                       let arg =
-                         let name = "lnc_pair" in
-                         let args = [term; var] in
-                         Term.Constructor {name; args}
-                       in
+                       let var = Syntax.(v (String.capitalize var)) in
+                       let arg = Syntax.("lnc_pair" @ [term; var]) in
                        let body = match List.hd subs with
                          | None -> body'
                          | Some sub -> sub
@@ -944,7 +742,7 @@ let of_language (lan: L.t) =
                          Printf.sprintf "lnc_subst_%s_%s"
                            body_kind term_kind
                        in
-                       let prop = Prop.Prop {name; args} in
+                       let prop = Syntax.(name $ args) in
                        Hashtbl.add_multi subst_kinds body_kind term_kind;
                        aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
                   | T.Subst_var s ->
@@ -953,13 +751,13 @@ let of_language (lan: L.t) =
                        | None -> body'
                        | Some sub -> sub
                      in
-                     let args = [body; Term.Var (String.capitalize s); sub] in
+                     let args = Syntax.[body; v (String.capitalize s); sub] in
                      (* fixme: how do we infer the kind of the substitution? *)
                      let name =
                        Printf.sprintf "lnc_subst_list_%s_%s"
                          body_kind body_kind
                      in
-                     let prop = Prop.Prop {name; args} in
+                     let prop = Syntax.(name $ args) in
                      Hashtbl.add_multi subst_kinds body_kind body_kind;
                      Hashtbl.add_multi subst_list_kinds body_kind body_kind;
                      aux (prop :: props) (sub :: subs) xs
@@ -993,11 +791,8 @@ let of_language (lan: L.t) =
                let map' = List.hd_exn map' in
                let m = fresh_var vars "Map" in
                let prop =
-                 Prop.Prop {
-                     name = "lnc_map_update";
-                     args = [key'; value'; map'; m];
-                 } in
-               ([m], ps1 @ ps2 @ ps3 @ [prop])
+                 Syntax.("lnc_map_update" $ [key'; value'; map'; m])
+               in ([m], ps1 @ ps2 @ ps3 @ [prop])
       | T.Map_domain t ->
          let (t', ps) = aux_term (succ depth) t in
          if List.length t' > 1 then
@@ -1008,11 +803,7 @@ let of_language (lan: L.t) =
          else
            let t' = List.hd_exn t' in
            let m = fresh_var vars "List" in
-           let prop =
-             Prop.Prop {
-                 name = "lnc_map_domain";
-                 args = [t'; m];
-               } in
+           let prop = Syntax.("lnc_map_domain" $ [t'; m]) in
            ([m], ps @ [prop])
       | T.Map_range t ->
          let (t', ps) = aux_term (succ depth) t in
@@ -1024,11 +815,7 @@ let of_language (lan: L.t) =
          else
            let t' = List.hd_exn t' in
            let m = fresh_var vars "List" in
-           let prop =
-             Prop.Prop {
-                 name = "lnc_map_range";
-                 args = [t'; m];
-               } in
+           let prop = Syntax.("lnc_map_range" $ [t'; m]) in
            ([m], ps @ [prop])
       | T.Tuple ts ->
          let (ts', props) =
@@ -1040,7 +827,7 @@ let of_language (lan: L.t) =
            | 2 -> "lnc_pair"
            | n -> Printf.sprintf "lnc_%dtuple" n
          in
-         ([Term.Constructor {name; args}], props)
+         (Syntax.[name @ args], props)
       | T.Zip (t1, t2) ->
          let (t1', ps1) = aux_term (succ depth) t1 in
          if List.length t1' > 1 then
@@ -1059,11 +846,7 @@ let of_language (lan: L.t) =
            else
              let t2' = List.hd_exn t2' in
              let m = fresh_var vars "Map" in
-             let prop =
-               Prop.Prop {
-                   name = "lnc_zip";
-                   args = [t1'; t2'; m];
-                 } in
+             let prop = Syntax.("lnc_zip" $ [t1'; t2'; m]) in
              ([m], ps1 @ ps2 @ [prop])
       | _ ->
          invalid_arg
@@ -1080,7 +863,7 @@ let of_language (lan: L.t) =
            invalid_arg
              (Printf.sprintf "invalid 'not' formula %s of rule %s"
                 (F.to_string f) rule_name)
-         else [Prop.Not (List.hd_exn ps)]
+         else Syntax.[!(List.hd_exn ps)]
       | F.Eq (t1, t2) ->
          let (t1', ps1) = aux_term wildcard vars rule_name 0 t1 in
          if List.length t1' > 1 then
@@ -1096,14 +879,14 @@ let of_language (lan: L.t) =
            else
              let t1 = List.hd_exn t1' in
              let t2 = List.hd_exn t2' in
-             ps1 @ ps2 @ [Prop.Eq (t1, t2)]
+             ps1 @ ps2 @ Syntax.[t1 = t2]
       | F.Prop {predicate; args} ->
          let (args, ps) =
            List.map args ~f:(aux_term wildcard vars rule_name 0)
            |> List.unzip
          in
          let (args, ps) = (List.concat args, List.concat ps) in
-         ps @ [Prop.Prop {name = predicate; args}]
+         ps @ Syntax.[predicate $ args]
       | F.Member {element; collection} ->
          let (t1', ps1) = aux_term wildcard vars rule_name 1 element in
          if List.length t1' > 1 then
@@ -1119,9 +902,7 @@ let of_language (lan: L.t) =
            else
              let t1 = List.hd_exn t1' in
              let t2 = List.hd_exn t2' in
-             let name = "lnc_member" in
-             let args = [t1; t2] in
-             ps1 @ ps2 @ [Prop.Prop {name; args}]
+             ps1 @ ps2 @ Syntax.["lnc_member" $ [t1; t2]]
       | F.Subset {sub; super} ->
          let (t1', ps1) = aux_term wildcard vars rule_name 1 sub in
          if List.length t1' > 1 then
@@ -1137,9 +918,7 @@ let of_language (lan: L.t) =
            else
              let t1 = List.hd_exn t1' in
              let t2 = List.hd_exn t2' in
-             let name = "lnc_subset" in
-             let args = [t1; t2] in
-             ps1 @ ps2 @ [Prop.Prop {name; args}]
+             ps1 @ ps2 @ Syntax.["lnc_subset" $ [t1; t2]]
     in aux_formula f
   in
   (* compile the inference rules of the language *)
@@ -1203,18 +982,8 @@ let of_language (lan: L.t) =
                               (T.to_string t) name)
                        else
                          let t' = List.hd_exn t' in
-                         let conclusion =
-                           Prop.Prop {
-                               name = name';
-                               args = [t'];
-                             } in
-                         let rule =
-                           Rule.{
-                               name = rule_name;
-                               premises = props;
-                               conclusion;
-                           } in
-                         Map.set rules rule_name rule
+                         Map.set rules rule_name
+                           Syntax.((rule_name, name' $ [t']) <-- props)
                     | _ -> rules))
   in
   (* update the signatures with substitutions *)
@@ -1269,20 +1038,12 @@ let of_language (lan: L.t) =
                   if String.is_prefix orig ~prefix:meta_var_body then
                     let sub = orig ^ "'" in
                     Some
-                      (Prop.Prop {
-                           name;
-                           args = [
-                               Term.Var orig;
-                               Term.Constructor {
-                                   name = "lnc_pair";
-                                   args = [
-                                       Term.Var meta_var_term;
-                                       Term.Var var;
-                                     ];
-                                 };
-                               Term.Var sub;
-                             ];
-                         }, (T.Var v, T.Var (v ^ "'")))
+                      (Syntax.(
+                         name
+                         $ [v orig;
+                            "lnc_pair" @ [v meta_var_term; v var];
+                            v sub]),
+                       (T.Var v, T.Var (v ^ "'")))
                   else None
                | _ -> None)
            |> List.unzip
@@ -1293,25 +1054,12 @@ let of_language (lan: L.t) =
           (T.substitute t sub)
       in
       let t'' = List.hd_exn t'' in
-      Rule.{
-          name = rule_name;
-          premises;
-          conclusion =
-            Prop.Prop {
-                name;
-                args = [
-                    t';
-                    Term.Constructor {
-                        name = "lnc_pair";
-                        args = [
-                            Term.Var meta_var_term;
-                            Term.Var var;
-                          ];
-                      };
-                    t'';
-                  ];
-              };
-      }
+      Syntax.(
+        (rule_name,
+         name
+         $ [t';
+            "lnc_pair" @ [v meta_var_term; v var];
+            t'']) <-- premises)
     in
     Hashtbl.to_alist subst_kinds
     |> List.fold ~init:rules ~f:(fun rules (body, terms) ->
@@ -1383,95 +1131,34 @@ let of_language (lan: L.t) =
                          in Map.set rules rule_name rule
                        else if String.equal body term then
                          let rule1 =
-                           Rule.{
-                               name = rule_name ^ "-EQ";
-                               premises = [];
-                               conclusion =
-                                 Prop.Prop {
-                                     name;
-                                     args = [
-                                         Term.Constructor {
-                                             name = body ^ "_var";
-                                             args = [
-                                                 Term.Var var_body;
-                                               ];
-                                           };
-                                         Term.Constructor {
-                                             name = "lnc_pair";
-                                             args = [
-                                                 Term.Var meta_var_term;
-                                                 Term.Var var_term;
-                                               ];
-                                           };
-                                         Term.Var meta_var_body;
-                                       ];
-                                   };
-                           } in
+                           Syntax.(
+                             (rule_name ^ "-EQ",
+                              name
+                              $ [(body ^ "_var") @ [v var_body];
+                                 "lnc_pair" @ [v meta_var_term; v var_term];
+                                 v meta_var_body]) <-- [])
+                         in
                          let rule2 =
-                           Rule.{
-                               name = rule_name ^ "-NEQ";
-                               premises = [];
-                               conclusion =
-                                 Prop.Prop {
-                                     name;
-                                     args = [
-                                         Term.Constructor {
-                                             name = body ^ "_var";
-                                             args = [
-                                                 Term.Var var_body;
-                                               ];
-                                           };
-                                         Term.Constructor {
-                                             name = "lnc_pair";
-                                             args = [
-                                                 Term.Var meta_var_body;
-                                                 Term.Var (var_term ^ "'");
-                                               ];
-                                           };
-                                         Term.Constructor {
-                                             name = body ^ "_var";
-                                             args = [
-                                                 Term.Var var_body;
-                                               ];
-                                           };
-                                       ];
-                                   };
-                           } in
+                           let var_term' = var_term ^ "'" in
+                           Syntax.(
+                             (rule_name ^ "-NEQ",
+                              name
+                              $ [(body ^ "_var") @ [v var_body];
+                                 "lnc_pair" @ [v meta_var_body; v var_term'];
+                                 (body ^ "_var") @ [v var_body]]) <-- [])
+                         in
                          Map.set
                            (Map.set rules rule1.name rule1)
                            rule2.name rule2
                        else
                          let rule =
-                           Rule.{
-                               name = rule_name;
-                               premises = [];
-                               conclusion =
-                                 Prop.Prop {
-                                     name;
-                                     args = [
-                                         Term.Constructor {
-                                             name = body ^ "_var";
-                                             args = [
-                                                 Term.Var var_body;
-                                               ];
-                                           };
-                                         Term.Constructor {
-                                             name = "lnc_pair";
-                                             args = [
-                                                 Term.Var meta_var_term;
-                                                 Term.Var var_term;
-                                               ];
-                                           };
-                                         Term.Constructor {
-                                             name = body ^ "_var";
-                                             args = [
-                                                 Term.Var var_body;
-                                               ];
-                                           };
-                                       ];
-                                   };
-                           } in
-                         Map.set rules rule_name rule))
+                           Syntax.(
+                             (rule_name,
+                              name
+                              $ [(body ^ "_var") @ [v var_body];
+                                 "lnc_pair" @ [v meta_var_term; v var_term];
+                                 (body ^ "_var") @ [v var_body]]) <-- [])
+                         in Map.set rules rule_name rule))
                 in List.fold (Set.to_list bc.terms) ~init:rules ~f
            in List.fold terms ~init:rules ~f)
   in
@@ -1500,54 +1187,27 @@ let of_language (lan: L.t) =
                   in
                   let meta_var = String.capitalize tc.meta_var in
                   let meta_var_s = meta_var ^ "1" in
+                  let meta_var_s' = meta_var_s ^ "'" in
+                  let meta_var_s'' = meta_var_s' ^ "'" in
                   let rule1 =
-                    Rule.{
-                        name = rule_name ^ "-1";
-                        premises = [];
-                        conclusion =
-                          Prop.Prop {
-                              name;
-                              args = [
-                                  Term.Var meta_var_s;
-                                  Term.Constructor {
-                                      name = "nil";
-                                      args = [];
-                                    };
-                                  Term.Var meta_var_s;
-                                ];
-                            };
-                    } in
+                    Syntax.(
+                      (rule_name ^ "-1",
+                       name
+                       $ [v meta_var_s;
+                          "nil" @ [];
+                          v meta_var_s]) <-- [])
+                  in
                   let rule2 =
-                    Rule.{
-                        name = rule_name ^ "-2";
-                        premises = [
-                            Prop.Prop {
-                                name = name';
-                                args = [
-                                    Term.Var meta_var_s;
-                                    Term.Var "Sub";
-                                    Term.Var (meta_var_s ^ "'");
-                                  ];
-                              };
-                            Prop.Prop {
-                                name;
-                                args = [
-                                    Term.Var (meta_var_s ^ "'");
-                                    Term.Var "L";
-                                    Term.Var (meta_var_s ^ "''");
-                                  ];
-                              };
-                          ];
-                        conclusion =
-                          Prop.Prop {
-                              name;
-                              args = [
-                                  Term.Var meta_var_s;
-                                  Term.(Cons (Var "Sub", Var "L"));
-                                  Term.Var (meta_var_s ^ "''");
-                                ];
-                            };
-                    } in
+                    Syntax.(
+                      (rule_name ^ "-2",
+                       name
+                       $ [v meta_var_s;
+                          v "Sub" ++ v "L";
+                          v meta_var_s'']) <-- [
+                        name' $ [v meta_var_s; v "Sub"; v meta_var_s'];
+                        name $ [v meta_var_s'; v "L"; v meta_var_s''];
+                      ])
+                  in
                   Map.set
                     (Map.set rules rule1.name rule1)
                     rule2.name rule2))

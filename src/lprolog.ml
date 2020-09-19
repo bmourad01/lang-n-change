@@ -241,7 +241,7 @@ module Sigs = struct
       |> List.fold ~init ~f:(fun terms' C.{name; meta_var; terms} ->
              let name' = kind_name name in
              if not (Map.mem kinds name') then terms' else
-               let rec aux = function
+               let rec aux t = match t with
                  | T.Var v ->
                     begin match L.kind_of_var lan v with
                     | None ->
@@ -258,8 +258,27 @@ module Sigs = struct
                     end
                  | T.Str _ -> ["string"]
                  | T.Binding {var; body} -> "string" :: aux body
-                 | T.List t -> aux t
-                 | T.Map {key; value} -> aux_map key value
+                 | T.List t ->
+                    let t' = aux t in
+                    begin match List.length t' with
+                    | 1 -> [Printf.sprintf "list %s" (List.hd_exn t')]
+                    | 2 ->
+                       [Printf.sprintf "list (lnc_pair %s)"
+                          (String.concat t' ~sep:" ")]
+                    | _ ->
+                       invalid_arg
+                         (Printf.sprintf "bad list kind %s in category %s"
+                            (T.to_string t) name)
+                    end
+                 | T.Map {key; value} ->
+                    let t' = aux_map key value in
+                    if List.length t' <> 2 then
+                      invalid_arg
+                        (Printf.sprintf "bad map %s in category %s"
+                           (T.to_string t) name)
+                    else
+                      [Printf.sprintf "list (lnc_pair %s)"
+                         (String.concat t' ~sep:" ")]
                  | T.Tuple ts ->
                     let ts' =
                       List.map ts ~f:aux
@@ -271,8 +290,8 @@ module Sigs = struct
                     let ctor = match len with
                       | 2 -> "lnc_pair"
                       | n -> Printf.sprintf "lnc_%dtuple" n
-                    in [Printf.sprintf "(%s %s)" ctor ts']
-                 | t ->
+                    in [Printf.sprintf "%s %s" ctor ts']
+                 | _ ->
                     invalid_arg
                       (Printf.sprintf "invalid term %s in category %s"
                          (T.to_string t) name)
@@ -828,6 +847,8 @@ let of_language (lan: L.t) =
            | n -> Printf.sprintf "lnc_%dtuple" n
          in
          (Syntax.[name @ args], props)
+      | T.Map _ -> ([fresh_var vars "Map"], [])
+      | T.List _ -> ([fresh_var vars "List"], [])
       | T.Zip (t1, t2) ->
          let (t1', ps1) = aux_term (succ depth) t1 in
          if List.length t1' > 1 then
@@ -1052,6 +1073,7 @@ let of_language (lan: L.t) =
         | _ -> ([], [])
       in
       let (t'', _) =
+        Hash_set.clear vars;
         aux_term wildcard vars rule_name 0
           (T.substitute t sub)
       in

@@ -84,7 +84,7 @@ hint:
     }
 
 grammar_category:
-  | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_list(MID, grammar_term)
+  | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_list(MID, term)
     {
       let open Core_kernel in
       if String.(equal name (capitalize name)) then
@@ -123,14 +123,6 @@ subst:
   | NAME
     { Term.Subst_var $1 }
 
-grammar_term:
-  | LSQUARE term DOT DOT DOT RSQUARE
-    { Term.List $2 }
-  | LBRACE key = NAME MAPSTO value = term RBRACE
-    { Term.Map {key; value} }
-  | term
-    { $1 }
-
 term:
   | DOM LPAREN term RPAREN
     { Term.Map_domain $3 }
@@ -160,6 +152,10 @@ term:
     { Term.Map_update {map; key; value} }
   | NIL
     { Term.Nil }
+  | LSQUARE term DOT DOT DOT RSQUARE
+    { Term.List $2 }
+  | LBRACE key = NAME MAPSTO value = term RBRACE
+    { Term.Map {key; value} }
   | LPAREN element = term CONS list = term RPAREN
     { Term.Cons {element; list} }
   | LANGLE t1 = term COMMA t2 = term RANGLE

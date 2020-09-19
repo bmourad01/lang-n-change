@@ -95,7 +95,7 @@ module Sigs = struct
        (lnc_map_range.name, lnc_map_range);
        (lnc_subset.name, lnc_subset);
        (lnc_zip.name, lnc_zip);
-       ]
+      ]
 
   type t = {
       kinds: int String.Map.t;
@@ -973,7 +973,7 @@ let of_language (lan: L.t) =
                        in
                        let (t', props) =
                          aux_term (ref 0) (String.Hash_set.create ())
-                            rule_name 0 t
+                           rule_name 0 t
                        in
                        if List.length t' > 1 then
                          invalid_arg
@@ -1206,7 +1206,7 @@ let of_language (lan: L.t) =
                           v meta_var_s'']) <-- [
                         name' $ [v meta_var_s; v "Sub"; v meta_var_s'];
                         name $ [v meta_var_s'; v "L"; v meta_var_s''];
-                      ])
+                    ])
                   in
                   Map.set
                     (Map.set rules rule1.name rule1)

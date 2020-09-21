@@ -66,7 +66,7 @@ module Sigs = struct
     let lnc_map_update =
       Prop.{
           name = "lnc_map_update";
-          args = ["A"; "B"; "list (lnc_pair A B)"; "list (lnc_pair A B)"];
+          args = ["list (lnc_pair A B)"; "A"; "B"; "list (lnc_pair A B)"];
       } in
     let lnc_map_domain =
       Prop.{
@@ -845,7 +845,7 @@ let of_language (lan: L.t) =
                let map' = List.hd_exn map' in
                let m = fresh_var vars "Map" in
                let prop =
-                 Syntax.("lnc_map_update" $ [key'; value'; map'; m])
+                 Syntax.("lnc_map_update" $ [map'; key'; value'; m])
                in ([m], ps1 @ ps2 @ ps3 @ [prop])
       | T.Map_domain t ->
          let (t', ps) = aux_term (succ depth) t in

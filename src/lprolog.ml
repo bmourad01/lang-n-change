@@ -88,6 +88,16 @@ module Sigs = struct
           name = "lnc_zip";
           args = ["list A"; "list B"; "list (lnc_pair A B)"];
       } in
+    let lnc_join =
+      Prop.{
+          name = "lnc_join";
+          args = ["list A"; "list A"; "list A"];
+      } in
+    let lnc_union =
+      Prop.{
+          name = "lnc_union";
+          args = ["list (list A)"; "list A"; "list A"];
+      } in
     String.Map.of_alist_exn
       [(lnc_member.name, lnc_member);
        (lnc_map_update.name, lnc_map_update);
@@ -95,6 +105,8 @@ module Sigs = struct
        (lnc_map_range.name, lnc_map_range);
        (lnc_subset.name, lnc_subset);
        (lnc_zip.name, lnc_zip);
+       (lnc_join.name, lnc_join);
+       (lnc_union.name, lnc_union);
       ]
 
   type t = {
@@ -598,6 +610,30 @@ let builtin_rules =
         "lnc_zip" $ [v "L1"; v "L2"; v "M"];
       ]
   in
+  let lnc_join_1 =
+    ("LNC-JOIN-1",
+     "lnc_join" $ ["nil" @ []; v "K"; v "K"]) <-- []
+  in
+  let lnc_join_2 =
+    ("LNC-JOIN-2",
+     "lnc_join"
+     $ [v "X" ++ v "L"; v "K"; v "X" ++ v "L'"]) <-- [
+        !("lnc_member" $ [v "X"; v "K"]);
+        "lnc_join" $ [v "L"; v "K"; v "L'"];
+      ]
+  in
+  let lnc_union_1 =
+    ("LNC-UNION-1",
+     "lnc_union" $ ["nil" @ []; v "K"; v "K"]) <-- []
+  in
+  let lnc_union_2 =
+    ("LNC-UNION-2",
+     "lnc_union"
+     $ [v "X" ++ v "L"; v "K"; v "M2"]) <-- [
+        "lnc_join" $ [v "X"; v "K"; v "M1"];
+        "lnc_union" $ [v "L"; v "M1"; v "M2"];
+      ]
+  in
   String.Map.of_alist_exn
     [(lnc_member_1.name, lnc_member_1);
      (lnc_member_2.name, lnc_member_2);
@@ -614,6 +650,10 @@ let builtin_rules =
      (lnc_map_update_1.name, lnc_map_update_1);
      (lnc_map_update_2.name, lnc_map_update_2);
      (lnc_map_update_3.name, lnc_map_update_3);
+     (lnc_join_1.name, lnc_join_1);
+     (lnc_join_2.name, lnc_join_2);
+     (lnc_union_1.name, lnc_union_1);
+     (lnc_union_2.name, lnc_union_2);
     ]
 
 type t = {

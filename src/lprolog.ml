@@ -884,6 +884,19 @@ let of_language (lan: L.t) =
          (Syntax.[name @ args], props)
       | T.Map _ -> ([fresh_var vars "Map"], [])
       | T.List _ -> ([fresh_var vars "List"], [])
+      | T.Union ts -> 
+         let (ts', props) =
+           List.map ts ~f:(aux_term (succ depth))
+           |> List.unzip
+         in
+         let (ts', props) = (List.concat ts', List.concat props) in
+         let l = fresh_var vars "List" in
+         let t' =
+           List.fold_right ts' ~init:Syntax.("nil" @ [])
+             ~f:(fun t t' -> Syntax.(t ++ t'))
+         in
+         let prop = Syntax.("lnc_union" $ [t'; "nil" @ []; l]) in
+         ([l], props @ [prop])
       | T.Zip (t1, t2) ->
          let (t1', ps1) = aux_term (succ depth) t1 in
          if List.length t1' > 1 then

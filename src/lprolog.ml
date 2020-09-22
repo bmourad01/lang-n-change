@@ -242,8 +242,14 @@ module Sigs = struct
                     if Set.mem ops name' then props else
                       let args = [kind_name C.(c.name)] in
                       let prop = Prop.{name = name'; args} in
+                      let prop_list =
+                        Prop.{
+                            name = name' ^ "_list";
+                            args = ["list " ^ kind_name C.(c.name)];
+                        } in
                       Hashtbl.set subsets name C.(c.name);
-                      Map.set props name' prop)
+                      let props = Map.set props name' prop in
+                      Map.set props prop_list.name prop_list)
     in
     (* generate term constructor types from the grammar *)
     let aliases = Hashtbl.create (module String) in
@@ -1054,6 +1060,33 @@ let of_language (lan: L.t) =
                          Map.set rules rule_name
                            Syntax.((rule_name, name' $ [t']) <-- props)
                     | _ -> rules))
+  in
+  let rules =
+    let init = rules in
+    Hashtbl.keys subsets
+    |> List.fold ~init ~f:(fun rules name ->
+           let name' = kind_name name in             
+           let name_list = name' ^ "_list" in
+           let rule_name =
+             Printf.sprintf "%s-LIST"
+               (String.uppercase name)
+           in
+           let rule1_list =
+             Syntax.(
+               (rule_name ^ "-1",
+                name_list $ ["nil" @ []]) <-- [])
+           in
+           let rule2_list =
+             Syntax.(
+               (rule_name ^ "-2",
+                name_list $ [v "X" ++ v "L"]) <-- [
+                 name' $ [v "X"];
+                 name_list $ [v "L"];
+             ])
+           in
+           let rules = Map.set rules rule1_list.name rule1_list in
+           let rules = Map.set rules rule2_list.name rule2_list in
+           rules)
   in
   (* update the signatures with substitutions *)
   let sigs =

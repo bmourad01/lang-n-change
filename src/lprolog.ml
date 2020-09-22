@@ -1038,18 +1038,40 @@ let of_language (lan: L.t) =
              let name' = kind_name name in             
              Set.to_list terms
              |> List.fold ~init:rules ~f:(fun rules t ->
+                    let t = T.uniquify t in
                     match t with
                     | T.Constructor c ->
-                       let t = T.uniquify t in
                        let rule_name =
                          Printf.sprintf "%s-%s"
                            (String.uppercase name)
                            (String.uppercase c.name)
                        in
+                       let vars = Hashtbl.create (module String) in
+                       let wildcard = ref 0 in
                        let (t', props) =
-                         let vars = Hashtbl.create (module String) in
-                         aux_term (ref 0) vars rule_name 0 t
+                         aux_term wildcard vars rule_name 0 t
                        in
+                       let lprops =
+                         List.fold c.args ~init:[] ~f:(fun props t ->
+                             match t with
+                             | T.(List (Var lv))
+                                  when String.is_prefix lv ~prefix:meta_var ->
+                                Hashtbl.to_alist vars
+                                |> List.find_map ~f:(fun (v, t') ->
+                                       match t' with
+                                       | Some t' when phys_equal t t' ->
+                                          Some v
+                                       | _ -> None)
+                                |> (function
+                                    | None -> props
+                                    | Some v' ->
+                                       let prop =
+                                         Syntax.(
+                                           name' ^ "_list" $ [v v'])
+                                       in prop :: props)
+                             | _ -> props)
+                       in
+                       let props = props @ (List.rev lprops) in
                        if List.length t' > 1 then
                          invalid_arg
                            (Printf.sprintf

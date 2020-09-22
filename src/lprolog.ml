@@ -442,7 +442,7 @@ module Sigs = struct
                let term = Term.{name; args = ["string"]; typ = kind} in
                Map.set terms' name term
              else terms')
-    in             
+    in
     ({kinds; terms; props}, subsets)
 end
 

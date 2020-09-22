@@ -1295,7 +1295,9 @@ let of_language (lan: L.t) =
                               name
                               $ [(body ^ "_var") @ [v var_body];
                                  "lnc_pair" @ [v meta_var_body; v var_term'];
-                                 (body ^ "_var") @ [v var_body]]) <-- [])
+                                 (body ^ "_var") @ [v var_body]]) <-- [
+                               !(v var_body = v var_term');
+                           ])
                          in
                          Map.set
                            (Map.set rules rule1.name rule1)

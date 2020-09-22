@@ -160,7 +160,7 @@ module Sigs = struct
       let init = (String.Map.empty, builtin_props) in
       Map.to_alist lan.relations
       |> List.fold ~init ~f:(fun (kinds, props) (pred, ts) ->
-             let (kinds, args) =
+             let aux ts =
                let init = (kinds, []) in
                List.fold ts ~init ~f:(fun (kinds, args) t ->
                    let rec aux kinds t =  match t with
@@ -206,7 +206,34 @@ module Sigs = struct
                          Map.set kinds k 0)
                    in (kinds, arg :: args))
              in
+             let (kinds, args) = aux ts in
              let prop = Prop.{name = pred; args = List.rev args} in
+             let props = Map.set props pred prop in
+             let props =
+               (* hardcode step for lists, but assume that if we
+                * have a tuple configuration then the first
+                * element is the actual "list" to evaluate *)
+               if String.equal pred L.Predicate.Builtin.step then
+                 let t1 = List.hd_exn ts in
+                 let sub = match t1 with
+                   | T.Var _ -> [(t1, T.List t1)]
+                   | T.(Tuple (Var v :: _)) -> [(T.Var v, T.(List (Var v)))]
+                   | _ ->
+                      invalid_arg
+                        (Printf.sprintf
+                           "invalid term %s for relation %s_list"
+                           (T.to_string t1) pred)
+                 in
+                 let ts = List.map ts ~f:(fun t -> T.substitute t sub) in
+                 let (_, args) = aux ts in
+                 let prop =
+                   Prop.{
+                       name = pred ^ "_list";
+                       args = List.rev args;
+                   } in
+                 Map.set props prop.name prop
+               else props
+             in
              (kinds, Map.set props pred prop))
     in
     (* infer additional propositions based on
@@ -1441,16 +1468,18 @@ let of_language (lan: L.t) =
                     ev pred)
           in
           let step_term (props, no_tick) t
-                wildcard vars rule_name = match t with
-            | T.Var vv ->
-               begin match L.kind_of_var lan vv with
+                wildcard vars rule_name =
+            let f ?(suff = "") vv =
+               match L.kind_of_var lan vv with
                | None -> (props, no_tick)
                | Some kind ->
                   match Hashtbl.find subsets kind with
                   | Some _ ->
                      let kind = kind_name kind in
-                     let vv' = String.capitalize vv in
-                     let prop = Syntax.(kind $ [v vv']) in
+                     let kind = kind ^ suff in
+                     let (t', _) = aux_term wildcard vars rule_name 0 t in
+                     let t' = List.hd_exn t' in
+                     let prop = Syntax.(kind $ [t']) in
                      (prop :: props, t :: no_tick)
                   | None ->
                      if String.equal kind ev_kind then
@@ -1462,11 +1491,15 @@ let of_language (lan: L.t) =
                        let (rhs, _) = aux_term wildcard vars rule_name 0 rhs in
                        let lhs = List.hd_exn lhs in
                        let rhs = List.hd_exn rhs in
+                       let pred = pred ^ suff in
                        let prop = Syntax.(pred $ [lhs; rhs]) in
                        (prop :: props, no_tick)
                      else
                        (props, t :: no_tick)
-               end
+            in
+            match t with
+            | T.Var vv -> f vv
+            | T.(List (Var vv)) -> f vv ~suff:"_list"
             | _ -> (props, no_tick)
           in
           List.foldi (Set.to_list ctx.terms) ~init:rules ~f:(fun i rules t -> 
@@ -1493,9 +1526,9 @@ let of_language (lan: L.t) =
                         (String.uppercase c.name)
                         (String.uppercase pred) i
                     in
+                    let vars = Hashtbl.create (module String) in
                     let (props, no_tick) =
                       let wildcard = ref 0 in
-                      let vars = Hashtbl.create (module String) in
                       List.fold args ~init:([], []) ~f:(fun a t ->
                           step_term a t wildcard vars rule_name)
                     in 
@@ -1509,6 +1542,8 @@ let of_language (lan: L.t) =
                     let wildcard = ref 0 in
                     let vars = Hashtbl.create (module String) in
                     let (lhs', _) = aux_term wildcard vars rule_name 0 lhs in
+                    (* fixme maybe: is this OK? *)
+                    Hashtbl.clear vars;
                     let (rhs', _) = aux_term wildcard vars rule_name 0 rhs in
                     let (lhs', rhs') = (List.hd_exn lhs', List.hd_exn rhs') in
                     let rule =
@@ -1520,5 +1555,5 @@ let of_language (lan: L.t) =
                  | _ -> rules
                  end
               | _ -> rules)
-  in    
+  in
   {sigs; rules}

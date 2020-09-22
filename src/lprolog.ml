@@ -1425,6 +1425,11 @@ let of_language (lan: L.t) =
                     in
                     let t = T.Constructor {c with args} in
                     let rule_name =
+                      (* we include a "Z" at the beginning just
+                       * so that these rules appear AFTER the
+                       * actual reduction rules, since it assumed that
+                       * no pattern-matching occurs on these rules
+                       * that we are generating here *)
                       Printf.sprintf
                         "Z-%s-%s-%s-%d"
                         (String.uppercase ctx.name)

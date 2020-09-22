@@ -667,13 +667,13 @@ let of_language (lan: L.t) =
     let v = Syntax.v ("_" ^ Int.to_string !wildcard) in
     wildcard := succ !wildcard; v
   in
-  let fresh_var vars v =
+  let fresh_var vars v t =
     let v = String.capitalize v in
     let rec aux i =
       let v' = v ^ Int.to_string i in
-      if Hash_set.mem vars v'
+      if Hashtbl.mem vars v'
       then aux (succ i)
-      else (Hash_set.add vars v'; Syntax.v v')
+      else (Hashtbl.set vars v' t; Syntax.v v')
     in aux 0
   in
   (* generate terms along with additional propositions
@@ -774,7 +774,7 @@ let of_language (lan: L.t) =
                   match x with
                   | T.Subst_pair {term; var} ->
                      let (term_kind, wrap) = subst_kind "term" term in
-                     let sub = fresh_var vars "sub" in
+                     let sub = fresh_var vars "Sub" None in
                      (* fixme: this is a hack *)
                      let depth' = if wrap then 0 else succ depth in
                      let (terms, props') = aux_term depth' term in
@@ -800,7 +800,7 @@ let of_language (lan: L.t) =
                        Hashtbl.add_multi subst_kinds body_kind term_kind;
                        aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
                   | T.Subst_var s ->
-                     let sub = fresh_var vars "sub" in
+                     let sub = fresh_var vars "Sub" None in
                      let body = match List.hd subs with
                        | None -> body'
                        | Some sub -> sub
@@ -843,7 +843,7 @@ let of_language (lan: L.t) =
                     (T.to_string map) rule_name)
              else
                let map' = List.hd_exn map' in
-               let m = fresh_var vars "Map" in
+               let m = fresh_var vars "Map" None in
                let prop =
                  Syntax.("lnc_map_update" $ [map'; key'; value'; m])
                in ([m], ps1 @ ps2 @ ps3 @ [prop])
@@ -856,7 +856,7 @@ let of_language (lan: L.t) =
                 (T.to_string t) rule_name)
          else
            let t' = List.hd_exn t' in
-           let m = fresh_var vars "List" in
+           let m = fresh_var vars "List" None in
            let prop = Syntax.("lnc_map_domain" $ [t'; m]) in
            ([m], ps @ [prop])
       | T.Map_range t ->
@@ -868,7 +868,7 @@ let of_language (lan: L.t) =
                 (T.to_string t) rule_name)
          else
            let t' = List.hd_exn t' in
-           let m = fresh_var vars "List" in
+           let m = fresh_var vars "List" None in
            let prop = Syntax.("lnc_map_range" $ [t'; m]) in
            ([m], ps @ [prop])
       | T.Tuple ts ->
@@ -882,15 +882,15 @@ let of_language (lan: L.t) =
            | n -> Printf.sprintf "lnc_%dtuple" n
          in
          (Syntax.[name @ args], props)
-      | T.Map _ -> ([fresh_var vars "Map"], [])
-      | T.List _ -> ([fresh_var vars "List"], [])
+      | T.Map _ -> ([fresh_var vars "Map" (Some t)], [])
+      | T.List _ -> ([fresh_var vars "List" (Some t)], [])
       | T.Union ts -> 
          let (ts', props) =
            List.map ts ~f:(aux_term (succ depth))
            |> List.unzip
          in
          let (ts', props) = (List.concat ts', List.concat props) in
-         let l = fresh_var vars "List" in
+         let l = fresh_var vars "List" None in
          let t' =
            List.fold_right ts' ~init:Syntax.("nil" @ [])
              ~f:(fun t t' -> Syntax.(t ++ t'))
@@ -914,7 +914,7 @@ let of_language (lan: L.t) =
                   (T.to_string t2) rule_name)
            else
              let t2' = List.hd_exn t2' in
-             let m = fresh_var vars "Map" in
+             let m = fresh_var vars "Map" None in
              let prop = Syntax.("lnc_zip" $ [t1'; t2'; m]) in
              ([m], ps1 @ ps2 @ [prop])
       | _ ->
@@ -999,9 +999,9 @@ let of_language (lan: L.t) =
            let vars =
              R.vars r
              |> List.filter_map ~f:(function
-                    | T.Var v -> Some v
+                    | T.Var v -> Some (v, None)
                     | _ -> None)
-             |> String.Hash_set.of_list 
+             |> Hashtbl.of_alist_exn (module String)
            in
            let premises =
              List.map premises ~f:(aux_formula wildcard vars name)
@@ -1041,8 +1041,8 @@ let of_language (lan: L.t) =
                            (String.uppercase c.name)
                        in
                        let (t', props) =
-                         aux_term (ref 0) (String.Hash_set.create ())
-                           rule_name 0 t
+                         let vars = Hashtbl.create (module String) in
+                         aux_term (ref 0) vars rule_name 0 t
                        in
                        if List.length t' > 1 then
                          invalid_arg
@@ -1061,16 +1061,23 @@ let of_language (lan: L.t) =
     |> List.fold ~init:sigs ~f:(fun sigs (body, terms) ->
            List.fold terms ~init:sigs ~f:(fun sigs term ->
                let name = Printf.sprintf "lnc_subst_%s_%s" body term in
+               let name_list =
+                 Printf.sprintf "lnc_subst_%s_list_%s" body term
+               in
+               let arg = Printf.sprintf "lnc_pair %s string" term in
                let prop =
                  Sigs.Prop.{
                      name;
-                     args = [
-                         body;
-                         Printf.sprintf "lnc_pair %s string" term;
-                         body;
-                       ];
+                     args = [body; arg; body];
                  } in
                let props = Map.set sigs.props name prop in
+               let prop =
+                 let body = "list " ^ body in
+                 Sigs.Prop.{
+                     name = name_list;
+                     args = [body; arg; body];
+                 } in
+               let props = Map.set props name_list prop in
                {sigs with props}))
   in
   let sigs =
@@ -1078,22 +1085,29 @@ let of_language (lan: L.t) =
     |> List.fold ~init:sigs ~f:(fun sigs (body, terms) ->
            List.fold terms ~init:sigs ~f:(fun sigs term ->
                let name = Printf.sprintf "lnc_subst_list_%s_%s" body term in
+               let name_list =
+                 Printf.sprintf "lnc_subst_list_%s_list_%s" body term
+               in
+               let arg =  Printf.sprintf "list (lnc_pair %s string)" term in
                let prop =
                  Sigs.Prop.{
                      name;
-                     args = [
-                         body;
-                         Printf.sprintf "list (lnc_pair %s string)" term;
-                         body;
-                       ];
+                     args = [body; arg; body];
                  } in
                let props = Map.set sigs.props name prop in
+               let prop =
+                 let body = "list " ^ body in
+                 Sigs.Prop.{
+                     name = name_list;
+                     args = [body; arg; body];
+                 } in
+               let props = Map.set props name_list prop in
                {sigs with props}))
   in
   (* generate substitution rules *)
   let rules =
-    let subst_rule wildcard vars rule_name name t
-          meta_var_body meta_var_term var =
+    let subst_rule wildcard vars rule_name name name_list
+          t meta_var_body meta_var_term var =
       let t = T.uniquify t ~min:0 in
       let (t', _) = aux_term wildcard vars rule_name 0 t in
       let t' = List.hd_exn t' in
@@ -1101,9 +1115,10 @@ let of_language (lan: L.t) =
         | T.Constructor c ->
            (* fixme: this assumes that constructors in the
             * grammar will have a maximum term depth of 1 *)
-           List.filter_map c.args ~f:(function
+           let open Option.Let_syntax in
+           List.filter_map c.args ~f:(fun t ->
+               match t with
                | T.Var v ->
-                  let open Option.Let_syntax in
                   let orig = String.capitalize v in
                   let%map _ =
                     Option.some_if
@@ -1116,12 +1131,38 @@ let of_language (lan: L.t) =
                         "lnc_pair" @ [v meta_var_term; v var];
                         v sub]),
                    (T.Var v, T.Var (v ^ "'")))
+               | T.(List (Var v)) ->
+                  let orig = String.capitalize v in
+                  let%map _ =
+                    Option.some_if
+                      (String.is_prefix orig ~prefix:meta_var_body) ()
+                  in
+                  let (lv, lv') =
+                    Hashtbl.to_alist vars
+                    |> List.find_map ~f:(fun (lv, t') ->
+                           match t' with
+                           | Some t' when phys_equal t' t -> Some lv
+                           | _ -> None)
+                    |> (function
+                        | None ->
+                           invalid_arg
+                             (Printf.sprintf
+                                "invalid list argument %s for constructor %s"
+                                (T.to_string t) c.name)
+                        | Some lv -> (lv, lv ^ "'"))
+                  in 
+                  (Syntax.(
+                     name_list
+                     $ [v lv;
+                        "lnc_pair" @ [v meta_var_term; v var];
+                        v lv']),
+                   (t, T.Var lv'))
                | _ -> None)
            |> List.unzip
         | _ -> ([], [])
       in
       let (t'', _) =
-        Hash_set.clear vars;
+        Hashtbl.clear vars;
         aux_term wildcard vars rule_name 0
           (T.substitute t sub)
       in
@@ -1137,6 +1178,14 @@ let of_language (lan: L.t) =
     |> List.fold ~init:rules ~f:(fun rules (body, terms) ->
            let body_cat = cat_name lan body in
            let f rules term =
+             let name =
+               Printf.sprintf "lnc_subst_%s_%s"
+                 body term
+             in
+             let name_list =
+               Printf.sprintf "lnc_subst_%s_list_%s"
+                 body term
+             in
              let term_cat = cat_name lan term in
              match (Map.find lan.grammar body_cat,
                     Map.find lan.grammar term_cat) with
@@ -1178,10 +1227,6 @@ let of_language (lan: L.t) =
                   Option.(
                     value ~default:rules
                       (suffix >>| fun suffix ->
-                       let name =
-                         Printf.sprintf "lnc_subst_%s_%s"
-                           body term
-                       in
                        let rule_name =
                          Printf.sprintf "LNC-SUBST-%s-%s-%s"
                            (String.uppercase body)
@@ -1196,10 +1241,10 @@ let of_language (lan: L.t) =
                        in
                        if T.is_constructor t then
                          let rule =
+                           let vars = Hashtbl.create (module String) in
                            subst_rule
-                             (ref 0) (String.Hash_set.create ())
-                             rule_name name t meta_var_body
-                             meta_var_term var_body
+                             (ref 0) vars rule_name name name_list
+                             t meta_var_body meta_var_term var_body
                          in Map.set rules rule_name rule
                        else if String.equal body term then
                          let rule1 =
@@ -1231,7 +1276,34 @@ let of_language (lan: L.t) =
                                  "lnc_pair" @ [v meta_var_term; v var_term];
                                  (body ^ "_var") @ [v var_body]]) <-- [])
                          in Map.set rules rule_name rule))
-                in List.fold (Set.to_list bc.terms) ~init:rules ~f
+                in
+                let rule_name_list =
+                  Printf.sprintf "LNC-SUBST-%s-LIST-%s"
+                    (String.uppercase body)
+                    (String.uppercase term)
+                in
+                let rule1 =
+                  Syntax.(
+                    (rule_name_list ^ "-1",
+                     name_list $ ["nil" @ []; v "_"; "nil" @ []]) <-- [])
+                in
+                let rule2 =
+                  Syntax.(
+                    let arg = "lnc_pair" @ [v "A"; v "B"] in
+                    (rule_name_list ^ "-2",
+                     name_list
+                     $ [v "X" ++ v "L"; arg; v "X'" ++ v "L'"]) <-- [
+                      name $ [v "X"; arg; v "X'"];
+                      name_list $ [v "L"; arg; v "L'"];                              
+                  ])
+                in
+                let rules =
+                  Set.to_list bc.terms
+                  |> List.fold ~init:rules ~f
+                in
+                let rules = Map.set rules rule1.name rule1 in
+                let rules = Map.set rules rule2.name rule2 in
+                rules
            in List.fold terms ~init:rules ~f)
   in
   let rules =

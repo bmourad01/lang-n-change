@@ -1426,8 +1426,9 @@ let of_language (lan: L.t) =
                     let t = T.Constructor {c with args} in
                     let rule_name =
                       Printf.sprintf
-                        "Z-%s-%s-%d"
+                        "Z-%s-%s-%s-%d"
                         (String.uppercase ctx.name)
+                        (String.uppercase c.name)
                         (String.uppercase pred) i
                     in
                     let (props, no_tick) =

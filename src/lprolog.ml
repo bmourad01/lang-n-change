@@ -1356,4 +1356,106 @@ let of_language (lan: L.t) =
                     (Map.set rules rule1.name rule1)
                     rule2.name rule2))
   in
+  (* ad-hoc: generate evaluation context rules, which we
+   * assume is hardcoded in the Context grammar category *)
+  let rules = match Map.find lan.grammar "Context" with
+    | None -> rules 
+    | Some ctx ->
+       let pred = L.Predicate.Builtin.step in
+       match Map.find lan.relations pred with
+       | None -> rules
+       | Some step ->
+          let step_lhs = List.hd_exn step in
+          let ev = match step_lhs with
+            | T.Var v -> v
+            | T.(Tuple (Var v :: _)) -> v
+            | _ ->
+               invalid_arg
+                 (Printf.sprintf
+                    "invalid %s relation for %s grammar"
+                    pred ctx.name)
+          in
+          let ev_kind = match L.kind_of_var lan ev with
+            | Some kind -> kind
+            | None ->
+               invalid_arg
+                 (Printf.sprintf
+                    "invalid kind for '%s' in %s relation"
+                    ev pred)
+          in
+          let step_term (props, no_tick) t
+                wildcard vars rule_name = match t with
+            | T.Var vv ->
+               begin match L.kind_of_var lan vv with
+               | None -> (props, no_tick)
+               | Some kind ->
+                  match Hashtbl.find subsets kind with
+                  | Some _ ->
+                     let kind = kind_name kind in
+                     let vv' = String.capitalize vv in
+                     let prop = Syntax.(kind $ [v vv']) in
+                     (prop :: props, t :: no_tick)
+                  | None ->
+                     if String.equal kind ev_kind then
+                       (props, T.Var vv :: no_tick)
+                     else if L.is_meta_var_of lan vv ctx.name then
+                       let lhs = T.substitute step_lhs [(T.Var ev, t)] in
+                       let rhs = T.ticked lhs in
+                       let (lhs, _) = aux_term wildcard vars rule_name 0 lhs in
+                       let (rhs, _) = aux_term wildcard vars rule_name 0 rhs in
+                       let lhs = List.hd_exn lhs in
+                       let rhs = List.hd_exn rhs in
+                       let prop = Syntax.(pred $ [lhs; rhs]) in
+                       (prop :: props, no_tick)
+                     else
+                       (props, t :: no_tick)
+               end
+            | _ -> (props, no_tick)
+          in
+          List.foldi (Set.to_list ctx.terms) ~init:rules ~f:(fun i rules t -> 
+              match t with
+              | T.Constructor c ->
+                 begin match L.kind_of_op lan c.name with
+                 | Some kind when String.equal ev_kind kind ->
+                    let args =
+                      List.mapi c.args ~f:(fun i t ->
+                          match t with
+                          | T.Var v -> T.Var (v ^ Int.to_string i)
+                          | _ -> t)
+                    in
+                    let t = T.Constructor {c with args} in
+                    let rule_name =
+                      Printf.sprintf
+                        "Z-%s-%s-%d"
+                        (String.uppercase ctx.name)
+                        (String.uppercase pred) i
+                    in
+                    let (props, no_tick) =
+                      let wildcard = ref 0 in
+                      let vars = Hashtbl.create (module String) in
+                      List.fold args ~init:([], []) ~f:(fun a t ->
+                          step_term a t wildcard vars rule_name)
+                    in 
+                    let (props, no_tick) = (List.rev props, List.rev no_tick) in
+                    let lhs = T.substitute step_lhs [(T.Var ev, t)] in
+                    let vars =
+                      List.filter (T.vars lhs) ~f:(fun t ->
+                          not (List.mem no_tick t ~equal:T.equal))
+                    in
+                    let rhs = T.ticked_restricted lhs vars in
+                    let wildcard = ref 0 in
+                    let vars = Hashtbl.create (module String) in
+                    let (lhs', _) = aux_term wildcard vars rule_name 0 lhs in
+                    let (rhs', _) = aux_term wildcard vars rule_name 0 rhs in
+                    let (lhs', rhs') = (List.hd_exn lhs', List.hd_exn rhs') in
+                    let rule =
+                      Syntax.(
+                        (rule_name,
+                         pred $ [lhs'; rhs']) <-- props)
+                    in
+                    Map.set rules rule_name rule
+                 | _ -> rules
+                 end
+              | _ -> rules)
+  in    
   {sigs; rules}

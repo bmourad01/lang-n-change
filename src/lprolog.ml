@@ -1397,7 +1397,7 @@ let of_language (lan: L.t) =
                      (prop :: props, t :: no_tick)
                   | None ->
                      if String.equal kind ev_kind then
-                       (props, T.Var vv :: no_tick)
+                       (props, t :: no_tick)
                      else if L.is_meta_var_of lan vv ctx.name then
                        let lhs = T.substitute step_lhs [(T.Var ev, t)] in
                        let rhs = T.ticked lhs in

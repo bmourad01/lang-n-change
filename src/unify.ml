@@ -137,21 +137,23 @@ let unify t (lan: L.t) =
               |> List.concat
               |> L.Term_set.of_list
             in
-            let state =
-              if Set.mem vars var then
-                let sub = [(var, t)] in
-                Solution_set.map state ~f:(function
-                    | Solution.Term_sub (t1, t2) ->
-                       let t1 = T.substitute t1 sub in
-                       let t2 = T.substitute t2 sub in
-                       Solution.Term_sub (t1, t2)
-                    | (Solution.Formula_sub _) as f -> f
-                    | Solution.Candidate f ->
+            (* if the variable appears in the set of
+             * solutions, then apply the substitution
+             * to the set and keep it in the set *)
+            if Set.mem vars var then
+              let sub = [(var, t)] in
+              Solution_set.map state ~f:(function
+                  | Solution.Term_sub (t1, t2) ->
+                     let t1 = T.substitute t1 sub in
+                     let t2 = T.substitute t2 sub in
+                     Solution.Term_sub (t1, t2)
+                  | (Solution.Formula_sub _) as f -> f
+                  | Solution.Candidate f ->
                        Solution.Candidate (F.substitute f sub)
-                    | Solution.Proven f ->
-                       Solution.Proven (F.substitute f sub))
-              else state'
-            in loop state
+                  | Solution.Proven f ->
+                     Solution.Proven (F.substitute f sub))
+              |> loop
+            else loop state'
           else incompat ()
        | _ -> loop state'
        end

@@ -1572,8 +1572,7 @@ let of_language (lan: L.t) =
                       |> List.fold ~init:String.Set.empty ~f:(fun s p ->
                              Set.union s (Prop.vars p))
                     in
-                    Hashtbl.filter_keys_inplace vars ~f:(fun v ->
-                        Set.mem prop_vars_step v);
+                    Hashtbl.filter_keys_inplace vars ~f:(Set.mem prop_vars_step);
                     let (rhs', _) = aux_term wildcard vars rule_name 0 rhs in
                     let (lhs', rhs') = (List.hd_exn lhs', List.hd_exn rhs') in
                     let rule =

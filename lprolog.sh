@@ -3,7 +3,7 @@
 BASEDIR="./lprolog/"
 
 if [ "$1" = "--clear" ]; then
-    rm -rf "${BASEDIR}/*"
+    rm -rf "${BASEDIR}"
     exit 0
 fi
 

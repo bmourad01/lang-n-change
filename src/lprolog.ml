@@ -495,6 +495,13 @@ module Term = struct
     | Cons (t1, t2) ->
        Printf.sprintf "(%s :: %s)"
          (to_string t1) (to_string t2)
+
+  let rec vars = function
+    | Var v -> String.Set.singleton v
+    | Constructor {name; args} ->
+       List.fold args ~init:String.Set.empty ~f:(fun s t ->
+           Set.union s (vars t))
+    | Cons (t1, t2) -> Set.union (vars t1) (vars t2)
 end
 
 module Prop = struct
@@ -518,6 +525,13 @@ module Prop = struct
           Printf.sprintf "%s %s" name
             (List.map args ~f:Term.to_string
              |> String.concat ~sep:" ")
+
+  let rec vars = function
+    | Not p -> vars p
+    | Eq (t1, t2) -> Set.union (Term.vars t1) (Term.vars t2)
+    | Prop {name; args} ->
+       List.fold args ~init:String.Set.empty ~f:(fun s t ->
+           Set.union s (Term.vars t))
 end
 
 module Rule = struct
@@ -1548,8 +1562,18 @@ let of_language (lan: L.t) =
                     let wildcard = ref 0 in
                     let vars = Hashtbl.create (module String) in
                     let (lhs', _) = aux_term wildcard vars rule_name 0 lhs in
-                    (* fixme maybe: is this OK? *)
-                    Hashtbl.clear vars;
+                    (* this is a hack to prevent generation of fresh
+                     * variables for terms that were not part of the step *)
+                    let prop_vars_step =
+                      List.filter props ~f:(function
+                          | Prop.Prop {name; _} ->
+                             String.is_prefix name ~prefix:pred
+                          | _ -> false)
+                      |> List.fold ~init:String.Set.empty ~f:(fun s p ->
+                             Set.union s (Prop.vars p))
+                    in
+                    Hashtbl.filter_keys_inplace vars ~f:(fun v ->
+                        Set.mem prop_vars_step v);
                     let (rhs', _) = aux_term wildcard vars rule_name 0 rhs in
                     let (lhs', rhs') = (List.hd_exn lhs', List.hd_exn rhs') in
                     let rule =
@@ -1562,8 +1586,7 @@ let of_language (lan: L.t) =
                  end
               | _ -> rules)
   in
-  (* generate "step_list" if it exists in the relations
-   * fixme: this is really hacky and needs to be refined *)
+  (* generate "step_list" if it exists in the relations *)
   let rules =
     let pred = L.Predicate.Builtin.step in
     match Map.find lan.relations pred with
@@ -1575,15 +1598,17 @@ let of_language (lan: L.t) =
        let rule_name_2 = rule_name ^ "-2" in
        let rule_name_3 = rule_name ^ "-3" in
        let t1 = List.hd_exn ts in
+       let err () = 
+         invalid_arg
+           (Printf.sprintf
+              "unsupported term %s for relation %s_list"
+              (T.to_string t1) pred)
+       in
        let ts_1 = match t1 with
          | T.Var _ -> T.Nil
          | T.(Tuple (Var _ :: rest)) ->
             T.(Tuple (T.Nil :: rest))
-         | _ ->
-            invalid_arg
-              (Printf.sprintf
-                 "invalid term %s for relation %s_list"
-                 (T.to_string t1) pred)
+         | _ -> err ()
        in
        let rule1 =
          let (ts_1', _) =
@@ -1597,32 +1622,41 @@ let of_language (lan: L.t) =
             pred' $ args) <-- [])
        in
        let rule2 =
-         let ts_2 = match t1 with
+         let subkind v = match L.kind_of_var lan v with
+           | None -> v
+           | Some kind ->
+              (* fixme: what if there are multiple
+               * kinds that are subsets of this kind? *)
+              Hashtbl.to_alist subsets
+              |> List.find_map ~f:(fun (k, k') ->
+                     Option.some_if (String.equal kind k') k)
+              |> (function
+                  | None -> v
+                  | Some kind ->
+                     match Map.find lan.grammar kind with
+                     | None -> v
+                     | Some cat -> cat.meta_var)
+         in
+         let (ts_2, v) = match t1 with
            | T.Var v ->
-              T.(Cons {element = Var "v"; list = Var "L"})
+              let v = subkind v in
+              (T.(Cons {element = Var v; list = Var "L"}), v)
            | T.(Tuple (Var v :: rest)) ->
-              let element = T.Var "v" in
+              let v = subkind v in
+              let element = T.Var v in
               let list = T.Var "L" in
-              T.(Tuple ((Cons {element; list}) :: rest))
-           | _ ->
-              invalid_arg
-                (Printf.sprintf
-                   "invalid term %s for relation %s_list"
-                   (T.to_string t1) pred)
+              (T.(Tuple ((Cons {element; list}) :: rest)), v)
+           | _ -> err ()
          in
          let ts_2_l = match t1 with
-           | T.Var v -> T.Var "L"
+           | T.Var _ -> T.Var "L"
            | T.(Tuple (Var v :: rest)) -> T.(Tuple (Var "L" :: rest))
-           | _ ->
-              invalid_arg
-                (Printf.sprintf
-                   "invalid term %s for relation %s_list"
-                   (T.to_string t1) pred)
+           | _ -> err ()
          in
          let vs = T.vars ts_2 in
          let ts_2_t =
            let vs =
-             List.filter vs ~f:(fun t -> not (T.(equal t (Var "v"))))
+             List.filter vs ~f:(fun t -> not (T.(equal t (Var v))))
            in T.ticked_restricted ts_2 vs
          in
          let ts_2_l_t = T.ticked ts_2_l in
@@ -1640,25 +1674,16 @@ let of_language (lan: L.t) =
        let rule3 =
          let ts_3 = match t1 with
            | T.Var v ->
-              T.(Cons {element = Var "e"; list = Var "L"})
-           | T.(Tuple (Var v :: rest)) ->
-              let element = T.Var "e" in
+              T.(Cons {element = t1; list = Var "L"})
+           | T.(Tuple (((Var v) as element) :: rest)) ->
               let list = T.Var "L" in
               T.(Tuple ((Cons {element; list}) :: rest))
-           | _ ->
-              invalid_arg
-                (Printf.sprintf
-                   "invalid term %s for relation %s_list"
-                   (T.to_string t1) pred)
+           | _ -> err ()
          in
          let ts_3_l = match t1 with
            | T.Var v -> T.Var "L"
            | T.(Tuple (Var v :: rest)) -> T.(Tuple (Var "L" :: rest))
-           | _ ->
-              invalid_arg
-                (Printf.sprintf
-                   "invalid term %s for relation %s_list"
-                   (T.to_string t1) pred)
+           | _ -> err ()
          in
          let ts_3_t =
            let vs = T.vars ts_3 in

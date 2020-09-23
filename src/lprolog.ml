@@ -28,76 +28,122 @@ let cat_name (lan: L.t) name =
   | _ -> name
 
 module Sigs = struct
+  module Type = struct
+    type t =
+      | Var of string
+      | Constructor of {
+          name: string;
+          args: t list;
+        } [@@deriving equal, compare, hash, sexp]
+
+    let rec to_string ?(parens = false) = function
+      | Var v -> v
+      | Constructor {name; args} ->
+         let s =
+           Printf.sprintf "%s %s" name
+             (List.map args ~f:(to_string ~parens:true)
+              |> String.concat ~sep:" ")
+         in if parens then Printf.sprintf "(%s)" s else s
+
+    let rec substitute t ((t', t'') as sub) =
+      if equal t t' then t'' else
+        match t with
+        | Var _ -> t
+        | Constructor {name; args} ->
+           let args = List.map args ~f:(fun t -> substitute t sub) in
+           Constructor {name; args}
+  end
+  
   module Term = struct
     type t = {
-        name: string; 
-        args: string list;
-        typ: string;
+        name: string;
+        args: Type.t list;
+        typ: Type.t;
       }
     
     let to_string {name; args; typ} =
       let args_str = match args with
         | [] -> ""
         | args ->
+           let args = List.map args ~f:Type.to_string in
            (String.concat args ~sep:" -> ") ^ " -> "
-      in Printf.sprintf "type %s %s%s." name args_str typ
+      in Printf.sprintf "type %s %s%s."
+           name args_str (Type.to_string typ)
   end
 
   module Prop = struct
     type t = {
         name: string;
-        args: string list;
+        args: Type.t list;
       }
     
     let to_string {name; args} =
       let args_str = match args with
         | [] -> ""
         | args ->
+           let args = List.map args ~f:Type.to_string in
            (String.concat args ~sep:" -> ") ^ " -> "
       in Printf.sprintf "type %s %so." name args_str
   end
 
+  module Syntax = struct
+    let v v = Type.Var v [@@inline]
+    let (@) name args = Type.Constructor {name; args} [@@inline]
+    
+    let (&) name (args, typ) = Term.{name; args; typ} [@@inline]
+    let ($) name args = Prop.{name; args} [@@inline]
+  end
+
   let builtin_props =
-    let lnc_member =
-      Prop.{
-          name = "lnc_member";
-          args = ["A"; "list A"];
-      } in
+    let open Syntax in
+    let lnc_member = "lnc_member" $ [v "A"; "list" @ [v "A"]] in
     let lnc_map_update =
-      Prop.{
-          name = "lnc_map_update";
-          args = ["list (lnc_pair A B)"; "A"; "B"; "list (lnc_pair A B)"];
-      } in
+      "lnc_map_update" $ [
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+          v "A";
+          v "B";
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+        ]
+    in
     let lnc_map_domain =
-      Prop.{
-          name = "lnc_map_domain";
-          args = ["list (lnc_pair A B)"; "list A"];
-      } in
+      "lnc_map_domain" $ [
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+          "list" @ [v "A"];
+        ]
+    in
     let lnc_map_range =
-      Prop.{
-          name = "lnc_map_range";
-          args = ["list (lnc_pair A B)"; "list A"];
-      } in
+      "lnc_map_range" $ [
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+          "list" @ [v "B"];
+        ]
+    in
     let lnc_subset =
-      Prop.{
-          name = "lnc_subset";
-          args = ["list A"; "list A"]
-      } in
+      "lnc_subset" $ [
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+        ]
+    in
     let lnc_zip =
-      Prop.{
-          name = "lnc_zip";
-          args = ["list A"; "list B"; "list (lnc_pair A B)"];
-      } in
+      "lnc_zip" $ [
+          "list" @ [v "A"];
+          "list" @ [v "B"];
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+        ]
+    in
     let lnc_join =
-      Prop.{
-          name = "lnc_join";
-          args = ["list A"; "list A"; "list A"];
-      } in
+      "lnc_join" $ [
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+        ]
+    in
     let lnc_union =
-      Prop.{
-          name = "lnc_union";
-          args = ["list (list A)"; "list A"; "list A"];
-      } in
+      "lnc_union" $ [
+          "list" @ ["list" @ [v "A"]];
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+        ]
+    in
     String.Map.of_alist_exn
       [(lnc_member.name, lnc_member);
        (lnc_map_update.name, lnc_map_update);
@@ -166,16 +212,15 @@ module Sigs = struct
                    let rec aux kinds t =  match t with
                      | T.Var v ->
                         let k = kind_of_var_rel pred v in
-                        (k :: kinds, k)
+                        (k :: kinds, Syntax.v k)
                      | T.List t ->
                         let (kinds, arg) = aux kinds t in
-                        (kinds, Printf.sprintf "(list %s)" arg)
+                        (kinds, Syntax.("list" @ [arg]))
                      | T.Map {key; value} ->
                         let key = kind_of_var_rel pred key in
                         let (kinds, arg) = aux kinds value in
                         (key :: kinds,
-                         Printf.sprintf "(list (lnc_pair %s %s))"
-                           key arg)
+                         Syntax.("list" @ ["lnc_pair" @ [v key; arg]]))
                      | T.Tuple ts ->
                         let (kinds, args) =
                           let init = (kinds, []) in
@@ -183,13 +228,12 @@ module Sigs = struct
                               let (kinds, arg) = aux kinds t in
                               (kinds, args @ [arg]))
                         in
-                        let args = String.concat args ~sep:" " in
                         let len = List.length ts in
                         tuple_sizes := Set.add !tuple_sizes len;
                         let ctor = match len with
                           | 2 -> "lnc_pair"
                           | n -> Printf.sprintf "lnc_%dtuple" n
-                        in (kinds, Printf.sprintf "(%s %s)" ctor args)
+                        in (kinds, Syntax.(ctor @ args))
                      | _ ->
                         invalid_arg
                           (Printf.sprintf "bad arg %s in relation %s"
@@ -207,7 +251,7 @@ module Sigs = struct
                    in (kinds, arg :: args))
              in
              let (kinds, args) = aux ts in
-             let prop = Prop.{name = pred; args = List.rev args} in
+             let prop = Syntax.(pred $ (List.rev args)) in
              let props = Map.set props pred prop in
              let props =
                (* hardcode step for lists, but assume that if we
@@ -221,7 +265,7 @@ module Sigs = struct
                    | _ ->
                       invalid_arg
                         (Printf.sprintf
-                           "invalid term %s for relation %s_list"
+                           "unsupported term %s for relation %s_list"
                            (T.to_string t1) pred)
                  in
                  let ts = List.map ts ~f:(fun t -> T.substitute t sub) in
@@ -267,19 +311,17 @@ module Sigs = struct
                  | Some c ->
                     let name' = kind_name name in
                     if Set.mem ops name' then props else
-                      let args = [kind_name C.(c.name)] in
-                      let prop = Prop.{name = name'; args} in
+                      let args = Syntax.[v (kind_name C.(c.name))] in
+                      let prop = Syntax.(name' $ args) in
                       let prop_list =
-                        Prop.{
-                            name = name' ^ "_list";
-                            args = ["list " ^ kind_name C.(c.name)];
-                        } in
+                        Syntax.((name' ^ "_list") $ ["list" @ args])
+                      in
                       Hashtbl.set subsets name C.(c.name);
                       let props = Map.set props name' prop in
                       Map.set props prop_list.name prop_list)
     in
     (* generate term constructor types from the grammar *)
-    let aliases = Hashtbl.create (module String) in
+    let aliases = Hashtbl.create (module Type) in
     let terms = 
       let init = String.Map.empty in
       Map.data lan.grammar
@@ -297,40 +339,34 @@ module Sigs = struct
                        if L.is_meta_var_of lan v kind then
                          let kind = kind_name kind in
                          if Map.mem kinds kind
-                         then [kind]
-                         else ["string"]
-                       else ["string"]
+                         then Syntax.[v kind]
+                         else Syntax.[v "string"]
+                       else Syntax.[v "string"]
                     end
-                 | T.Str _ -> ["string"]
-                 | T.Binding {var; body} -> "string" :: aux body
+                 | T.Str _ -> Syntax.[v "string"]
+                 | T.Binding {var; body} -> Syntax.v "string" :: aux body
                  | T.List t ->
                     let t' = aux t in
                     if List.length t' > 1 then
                       invalid_arg
                         (Printf.sprintf "bad list kind %s in category %s"
                            (T.to_string t) name)
-                    else [Printf.sprintf "list %s" (List.hd_exn t')]
+                    else Syntax.["list" @ [List.hd_exn t']]
                  | T.Map {key; value} ->
                     let t' = aux_map key value in
                     if List.length t' <> 2 then
                       invalid_arg
                         (Printf.sprintf "bad map %s in category %s"
                            (T.to_string t) name)
-                    else
-                      [Printf.sprintf "list (lnc_pair %s)"
-                         (String.concat t' ~sep:" ")]
+                    else Syntax.["list" @ ["lnc_pair" @ t']]
                  | T.Tuple ts ->
-                    let ts' =
-                      List.map ts ~f:aux
-                      |> List.concat
-                    in
+                    let ts' = List.map ts ~f:aux |> List.concat in
                     let len = List.length ts' in
-                    let ts' = String.concat ts' ~sep:" " in
                     tuple_sizes := Set.add !tuple_sizes len;
                     let ctor = match len with
                       | 2 -> "lnc_pair"
                       | n -> Printf.sprintf "lnc_%dtuple" n
-                    in [Printf.sprintf "%s %s" ctor ts']
+                    in Syntax.[ctor @ ts']
                  | _ ->
                     invalid_arg
                       (Printf.sprintf "invalid term %s in category %s"
@@ -345,9 +381,9 @@ module Sigs = struct
                       if L.is_meta_var_of lan key kind then
                         let kind = kind_name kind in
                         if Map.mem kinds kind
-                        then kind
-                        else "string"
-                      else "string"
+                        then Syntax.v kind
+                        else Syntax.v "string"
+                      else Syntax.v "string"
                  in
                  let value' = aux value in
                  if List.length value' > 1 then
@@ -360,8 +396,7 @@ module Sigs = struct
                  | T.Constructor {name; args} ->
                     let name = kind_name name in
                     let args = List.map args ~f:aux |> List.concat in
-                    let typ = name' in
-                    let term = Term.{name; args; typ} in
+                    let term = Syntax.(name & (args, v name')) in
                     Map.set terms' name term
                  | T.Map {key; value} ->
                     if not (Map.is_empty terms') then
@@ -371,10 +406,8 @@ module Sigs = struct
                            (T.to_string t) name)
                     else
                       let typ =
-                        Printf.sprintf
-                          "list (lnc_pair %s)"
-                          (String.concat (aux_map key value) ~sep:" ")
-                      in Hashtbl.set aliases name' typ; terms'
+                        Syntax.("list" @ ["lnc_pair" @ (aux_map key value)])
+                      in Hashtbl.set aliases (Syntax.v name') typ; terms'
                  | T.List t' ->
                     if not (Map.is_empty terms') then
                       invalid_arg
@@ -389,10 +422,8 @@ module Sigs = struct
                              "bad list term %s in category %s"
                              (T.to_string t') name)
                       else
-                        let typ =
-                          Printf.sprintf "list %s"
-                            (String.concat t'' ~sep:" ")
-                        in Hashtbl.set aliases name' typ; terms'
+                        let typ = Syntax.("list" @ t'') in
+                        Hashtbl.set aliases (Syntax.v name') typ; terms'
                  | T.Tuple ts ->
                     if not (Map.is_empty terms') then
                       invalid_arg
@@ -403,10 +434,9 @@ module Sigs = struct
                       let ts' = List.map ts ~f:aux |> List.concat in
                       let len = List.length ts' in
                       tuple_sizes := Set.add !tuple_sizes len;
-                      let typ =                           
-                        Printf.sprintf "lnc_%dtuple %s" len
-                          (String.concat ts' ~sep:" ")
-                      in Hashtbl.set aliases name' typ; terms'
+                      let ctor = Printf.sprintf "lnc_%dtuple" len in
+                      let typ = Syntax.(ctor @ ts') in
+                      Hashtbl.set aliases (Syntax.v name') typ; terms'
                  | _ -> terms'
                in List.fold (Set.to_list terms) ~init:terms' ~f)
     in
@@ -414,26 +444,25 @@ module Sigs = struct
     let (kinds, terms, props) =
       let init = (kinds, terms, props) in
       Hashtbl.to_alist aliases
-      |> List.fold ~init ~f:(fun (kinds, terms, props) (k, ty) ->
-             let kinds = Map.remove kinds k in
+      |> List.fold ~init ~f:(fun (kinds, terms, props) ((k, _) as sub) ->
+             let kinds = match k with
+               | Type.Var v -> Map.remove kinds v
+               | _ -> kinds
+             in
              let terms =
                Map.map terms ~f:(fun ({name; args; typ} as term) ->
                    let args =
                      List.map args ~f:(fun a ->
-                         String.substr_replace_all a
-                           ~pattern:k ~with_:ty)
+                         Type.substitute a sub)
                    in
-                   let typ =
-                     String.substr_replace_all typ
-                       ~pattern:k ~with_:ty
-                   in {term with args; typ})
+                   let typ = Type.substitute typ sub in
+                   {term with args; typ})
              in
              let props =
                Map.map props ~f:(fun ({name; args} as prop) ->
                    let args =
                      List.map args ~f:(fun a ->
-                         String.substr_replace_all a
-                           ~pattern:k ~with_:ty)
+                         Type.substitute a sub)
                    in {prop with args})
              in (kinds, terms, props))
     in           
@@ -449,12 +478,12 @@ module Sigs = struct
                | n -> Printf.sprintf "lnc_%dtuple" n
              in
              let kinds = Map.set kinds name n in
-             let args = List.init n ~f:(fun n -> Printf.sprintf "A%d" n) in
-             let typ =
-               Printf.sprintf "%s %s" name
-                 (String.concat args ~sep:" ")
-             in                   
-             let term = Term.{name; args; typ} in
+             let args =
+               List.init n ~f:(fun n ->
+                   Syntax.(v (Printf.sprintf "A%d" n)))
+             in
+             let typ = Syntax.(name @ args) in
+             let term = Syntax.(name & (args, typ)) in
              let terms = Map.set terms name term in
              (kinds, terms))
     in
@@ -466,7 +495,7 @@ module Sigs = struct
              if Set.exists terms ~f:T.is_var then
                let kind = kind_name name in
                let name = kind ^ "_var" in
-               let term = Term.{name; args = ["string"]; typ = kind} in
+               let term = Syntax.(name & ([v "string"], v kind)) in
                Map.set terms' name term
              else terms')
     in
@@ -1166,19 +1195,13 @@ let of_language (lan: L.t) =
                let name_list =
                  Printf.sprintf "lnc_subst_%s_list_%s" body term
                in
-               let arg = Printf.sprintf "lnc_pair %s string" term in
-               let prop =
-                 Sigs.Prop.{
-                     name;
-                     args = [body; arg; body];
-                 } in
+               let arg = Sigs.Syntax.("lnc_pair" @ [v term; v "string"]) in
+               let prop = Sigs.Syntax.(name $ [v body; arg; v body]) in
                let props = Map.set sigs.props name prop in
                let prop =
-                 let body = "list " ^ body in
-                 Sigs.Prop.{
-                     name = name_list;
-                     args = [body; arg; body];
-                 } in
+                 let body = Sigs.Syntax.("list" @ [v body]) in
+                 Sigs.Syntax.(name_list $ [body; arg; body])
+               in
                let props = Map.set props name_list prop in
                {sigs with props}))
   in
@@ -1190,19 +1213,16 @@ let of_language (lan: L.t) =
                let name_list =
                  Printf.sprintf "lnc_subst_list_%s_list_%s" body term
                in
-               let arg =  Printf.sprintf "list (lnc_pair %s string)" term in
-               let prop =
-                 Sigs.Prop.{
-                     name;
-                     args = [body; arg; body];
-                 } in
+               let arg =
+                 Sigs.Syntax.(
+                   "list" @ ["lnc_pair" @ [v term; v "string"]])
+               in
+               let prop = Sigs.Syntax.(name $ [v body; arg; v body]) in
                let props = Map.set sigs.props name prop in
                let prop =
-                 let body = "list " ^ body in
-                 Sigs.Prop.{
-                     name = name_list;
-                     args = [body; arg; body];
-                 } in
+                 let body = Sigs.Syntax.("list" @ [v body]) in
+                 Sigs.Syntax.(name_list $ [body; arg; body])
+               in
                let props = Map.set props name_list prop in
                {sigs with props}))
   in

@@ -1,11 +1,22 @@
 open Core_kernel
 
 module Sigs: sig
+  module Type: sig
+    type t =
+      | Var of string
+      | Constructor of {
+          name: string;
+          args: t list;
+        }
+
+    val to_string: ?parens:bool -> t -> string
+  end
+  
   module Term: sig
     type t = {
         name: string; 
-        args: string list;
-        typ: string;
+        args: Type.t list;
+        typ: Type.t;
       }
 
     val to_string: t -> string
@@ -14,7 +25,7 @@ module Sigs: sig
   module Prop: sig
     type t = {
         name: string;
-        args: string list;
+        args: Type.t list;
       }
 
     val to_string: t -> string
@@ -36,7 +47,7 @@ module Term: sig
         name: string;
         args: t list;
       }
-    | Cons of t * t [@@deriving equal, compare]
+    | Cons of t * t
 
   val to_string: t -> string
 end
@@ -48,7 +59,7 @@ module Prop: sig
     | Prop of {
         name: string;
         args: Term.t list;
-      } [@@deriving equal, compare]
+      }
 
   val to_string: t -> string
 end

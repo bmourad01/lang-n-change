@@ -12,6 +12,7 @@ depends: [
   "core_kernel" {>= "0.14.0"}
   "menhir"
   "ppx_compare"
+  "ppx_hash"
   "ppx_let"
   "ppx_sexp_conv"
 ]

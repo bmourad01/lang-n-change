@@ -138,6 +138,10 @@ module Term = struct
     | _ -> t
 
   let rec unbind_rec t = match t with
+    | Wildcard
+      | Nil
+      | Var _
+      | Str _ -> t
     | Constructor {name; args} ->
        Constructor {name; args = List.map args ~f:unbind_rec}
     | Binding {var; body} -> unbind_rec body
@@ -150,17 +154,23 @@ module Term = struct
        in Subst {body = unbind_rec body; substs}
     | Map_update {key; value; map} ->
        Map_update {key; value = unbind_rec value; map}
+    | Map_domain t -> Map_domain (unbind_rec t)
+    | Map_range t -> Map_range (unbind_rec t)
+    | Cons {element; list} ->
+       let element = unbind_rec element in
+       let list = unbind_rec list in
+       Cons {element; list}
     | List t -> List (unbind_rec t)
     | Map {key; value} -> Map {key; value = unbind_rec value}
     | Tuple ts -> Tuple (List.map ts ~f:unbind_rec)
     | Union ts -> Union (List.map ts ~f:unbind_rec)
     | Zip (t1, t2) -> Zip (unbind_rec t1, unbind_rec t2)
-    | _ -> t
 
   let rec vars_dup t = match t with
+    | Wildcard
+      | Nil
+      | Str _ -> []
     | Var _ -> [t]
-    | Cons {element; list} ->
-       List.map [element; list] ~f:vars_dup |> List.concat
     | Constructor {name; args} ->
        List.map args ~f:vars_dup |> List.concat
     | Binding {var; body} -> vars_dup body
@@ -174,12 +184,13 @@ module Term = struct
     | Map_update {key; value; map} ->
        (vars_dup key) @ (vars_dup value) @ (vars_dup map)
     | Map_domain m | Map_range m -> vars_dup m
+    | Cons {element; list} ->
+       List.map [element; list] ~f:vars_dup |> List.concat
     | List s -> vars_dup s
     | Map {key; value} -> vars_dup value
     | Tuple ts | Union ts ->
        List.map ts ~f:vars_dup |> List.concat
     | Zip (t1, t2) -> vars_dup t1 @ vars_dup t2
-    | _ -> []
 
   let vars t =
     vars_dup t |> List.dedup_and_sort ~compare
@@ -189,11 +200,10 @@ module Term = struct
     List.filter (vars t2) ~f:(fun v -> List.mem vs v ~equal)
 
   let rec ticked t = match t with
+    | Wildcard
+      | Nil
+      | Str _ -> t
     | Var v -> Var (v ^ "'")
-    | Cons {element; list} ->
-       let element = ticked element in
-       let list = ticked list in
-       Cons {element; list}
     | Constructor {name; args} ->
        Constructor {name; args = List.map args ~f:ticked}
     | Binding {var; body} ->
@@ -213,12 +223,15 @@ module Term = struct
          }
     | Map_domain m -> Map_domain (ticked m)
     | Map_range m -> Map_range (ticked m)
+    | Cons {element; list} ->
+       let element = ticked element in
+       let list = ticked list in
+       Cons {element; list}
     | List s -> List (ticked s)
     | Map {key; value} -> Map {key; value = ticked value}
     | Tuple ts -> Tuple (List.map ts ~f:ticked)
     | Union ts -> Union (List.map ts ~f:ticked)
     | Zip (t1, t2) -> Zip (ticked t1, ticked t2)
-    | _ -> t
 
   let rec unticked t =
     let f v = match String.index v '\'' with
@@ -227,6 +240,9 @@ module Term = struct
          String.sub v ~pos:0 ~len
     in
     match t with
+    | Wildcard
+      | Nil
+      | Str _ -> t
     | Var v -> Var (f v)
     | Constructor {name; args} ->
        Constructor {name; args = List.map args ~f:unticked}
@@ -247,21 +263,24 @@ module Term = struct
          }
     | Map_domain m -> Map_domain (unticked m)
     | Map_range m -> Map_range (unticked m)
+    | Cons {element; list} ->
+       let element = unticked element in
+       let list = unticked list in
+       Cons {element; list}
     | List s -> List (unticked s)
     | Map {key; value} -> Map {key; value = unticked value}
     | Tuple ts -> Tuple (List.map ts ~f:unticked)
     | Union ts -> Union (List.map ts ~f:unticked)
     | Zip (t1, t2) -> Zip (unticked t1, unticked t2)
-    | _ -> t
 
   let rec ticked_restricted t ts =
     let f t = ticked_restricted t ts in
     match t with
+    | Wildcard
+      | Nil
+      | Str _ -> t
     | Var v when List.mem ts t ~equal -> Var (v ^ "'")
-    | Cons {element; list} ->
-       let element = f element in
-       let list = f list in
-       Cons {element; list}
+    | Var _ -> t
     | Constructor {name; args} ->
        Constructor {name; args = List.map args ~f}
     | Binding {var; body} ->
@@ -282,22 +301,27 @@ module Term = struct
            value = f value;
            map = f map;
          }
-    | Map_domain m ->
-       Map_domain (ticked_restricted m ts)
-    | Map_range m ->
-       Map_range (ticked_restricted m ts)
+    | Map_domain m -> Map_domain (ticked_restricted m ts)
+    | Map_range m -> Map_range (ticked_restricted m ts)
+    | Cons {element; list} ->
+       let element = f element in
+       let list = f list in
+       Cons {element; list}
     | List s -> List (f s)
     | Map {key; value} -> Map {key; value = f value}
     | Tuple ts -> Tuple (List.map ts ~f)
     | Union ts -> Union (List.map ts ~f)
     | Zip (t1, t2) -> Zip (f t1, f t2)
-    | _ -> t
 
   let rec substitute t sub = match List.Assoc.find sub ~equal t with
     | Some t' -> t'
     | None ->
        let f t = substitute t sub in
        match t with
+       | Wildcard
+         | Nil
+         | Var _
+         | Str _ -> t
        | Constructor {name; args} ->
           Constructor {name; args = List.map args ~f}
        | Binding {var; body} ->
@@ -320,12 +344,15 @@ module Term = struct
             }
        | Map_domain m -> Map_domain (f m)
        | Map_range m -> Map_range (f m)
+       | Cons {element; list} ->
+          let element = f element in
+          let list = f list in
+          Cons {element; list}
        | List s -> List (f s)
        | Map {key; value} -> Map {key; value = f value}
        | Tuple ts -> Tuple (List.map ts ~f)
        | Union ts -> Union (List.map ts ~f)
        | Zip (t1, t2) -> Zip (f t1, f t2)
-       | _ -> t
 
   let uniquify_map min t =
     let vars = vars_dup t in

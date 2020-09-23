@@ -8,6 +8,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.08"}
+  "dune" {>= "2.7.1"}
   "core_kernel" {>= "0.14.0"}
   "menhir"
   "ppx_compare"

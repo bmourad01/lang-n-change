@@ -158,6 +158,9 @@ let unify t (lan: L.t) =
        | _ -> loop state'
        end
     | _ ->
+       (* next we try to find a formula
+        * substitution in the set and use
+        * them to produce new term substitutions *)
        match Set.find state ~f:Solution.is_formula_sub with
        | Some ((Solution.Formula_sub (f1, f2)) as fsub) ->
           let incompat () = raise (Incompatible_formulae (f1, f2)) in
@@ -180,6 +183,10 @@ let unify t (lan: L.t) =
           | _ -> incompat ()
           end
        | _ ->
+          (* finally, try to find a formula that
+           * is provable given the set of inference rules
+           * and collect new candidate formulae as well
+           * as new formula substitutions *)
           match Set.find state ~f:is_provable with
           | Some ((Solution.Candidate f) as candidate) ->
              let vars =
@@ -207,6 +214,8 @@ let unify t (lan: L.t) =
                let r = R.substitute r subs in
                (Solution.Formula_sub (r.conclusion, f), r.premises)
              in
+             (* find the first rule where we can unify
+              * or give up if we cannot prove the formula *)
              let rec prove state = function
                | [] -> raise (Unprovable_formula f)
                | (fsub, prems) :: rest ->
@@ -224,6 +233,8 @@ let unify t (lan: L.t) =
              prove
                Set.(add (remove state candidate) (Solution.Proven f))
                (List.map (Map.data lan.rules) ~f:formula_sub_of_rule)
+          (* we've reached the fixed point,
+           * so there's nothing left to prove *)
           | _ -> state
   in
   Set.to_list (loop state)

@@ -159,6 +159,8 @@ module Term = struct
 
   let rec vars_dup t = match t with
     | Var _ -> [t]
+    | Cons {element; list} ->
+       List.map [element; list] ~f:vars_dup |> List.concat
     | Constructor {name; args} ->
        List.map args ~f:vars_dup |> List.concat
     | Binding {var; body} -> vars_dup body
@@ -188,6 +190,10 @@ module Term = struct
 
   let rec ticked t = match t with
     | Var v -> Var (v ^ "'")
+    | Cons {element; list} ->
+       let element = ticked element in
+       let list = ticked list in
+       Cons {element; list}
     | Constructor {name; args} ->
        Constructor {name; args = List.map args ~f:ticked}
     | Binding {var; body} ->
@@ -252,6 +258,10 @@ module Term = struct
     let f t = ticked_restricted t ts in
     match t with
     | Var v when List.mem ts t ~equal -> Var (v ^ "'")
+    | Cons {element; list} ->
+       let element = f element in
+       let list = f list in
+       Cons {element; list}
     | Constructor {name; args} ->
        Constructor {name; args = List.map args ~f}
     | Binding {var; body} ->

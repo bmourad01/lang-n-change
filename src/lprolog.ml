@@ -718,6 +718,12 @@ let of_language (lan: L.t) =
     let rec aux_term depth t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
       | T.Nil -> (Syntax.["nil" @ []], [])
+      | T.Cons {element; list} ->
+         let (element, ps1) = aux_term (succ depth) element in
+         let element = List.hd_exn element in
+         let (list, ps2) = aux_term (succ depth) list in
+         let list = List.hd_exn list in
+         (Syntax.[element ++ list], ps1 @ ps2)
       | T.Var v ->
          let k = L.kind_of_var lan v in
          let def = Syntax.v (String.capitalize v) in
@@ -1555,5 +1561,135 @@ let of_language (lan: L.t) =
                  | _ -> rules
                  end
               | _ -> rules)
+  in
+  (* generate "step_list" if it exists in the relations
+   * fixme: this is really hacky and needs to be refined *)
+  let rules =
+    let pred = L.Predicate.Builtin.step in
+    match Map.find lan.relations pred with
+    | None -> rules
+    | Some ts ->
+       let pred' = pred ^ "_list" in
+       let rule_name = Printf.sprintf "%s-LIST" (String.uppercase pred) in
+       let rule_name_1 = rule_name ^ "-1" in
+       let rule_name_2 = rule_name ^ "-2" in
+       let rule_name_3 = rule_name ^ "-3" in
+       let t1 = List.hd_exn ts in
+       let ts_1 = match t1 with
+         | T.Var _ -> T.Nil
+         | T.(Tuple (Var _ :: rest)) ->
+            T.(Tuple (T.Nil :: rest))
+         | _ ->
+            invalid_arg
+              (Printf.sprintf
+                 "invalid term %s for relation %s_list"
+                 (T.to_string t1) pred)
+       in
+       let rule1 =
+         let (ts_1', _) =
+           let wildcard = ref 0 in
+           let vars = Hashtbl.create (module String) in
+           aux_term wildcard vars rule_name_1 0 ts_1
+         in
+         let args = ts_1' @ ts_1' in
+         Syntax.(
+           (rule_name_1,
+            pred' $ args) <-- [])
+       in
+       let rule2 =
+         let ts_2 = match t1 with
+           | T.Var v ->
+              T.(Cons {element = Var "v"; list = Var "L"})
+           | T.(Tuple (Var v :: rest)) ->
+              let element = T.Var "v" in
+              let list = T.Var "L" in
+              T.(Tuple ((Cons {element; list}) :: rest))
+           | _ ->
+              invalid_arg
+                (Printf.sprintf
+                   "invalid term %s for relation %s_list"
+                   (T.to_string t1) pred)
+         in
+         let ts_2_l = match t1 with
+           | T.Var v -> T.Var "L"
+           | T.(Tuple (Var v :: rest)) -> T.(Tuple (Var "L" :: rest))
+           | _ ->
+              invalid_arg
+                (Printf.sprintf
+                   "invalid term %s for relation %s_list"
+                   (T.to_string t1) pred)
+         in
+         let vs = T.vars ts_2 in
+         let ts_2_t =
+           let vs =
+             List.filter vs ~f:(fun t -> not (T.(equal t (Var "v"))))
+           in T.ticked_restricted ts_2 vs
+         in
+         let ts_2_l_t = T.ticked ts_2_l in
+         let wildcard = ref 0 in
+         let vars = Hashtbl.create (module String) in
+         let (ts_2', props) = aux_term wildcard vars rule_name_2 0 ts_2 in
+         let (ts_2_l', _) = aux_term wildcard vars rule_name_2 0 ts_2_l in
+         let (ts_2_t', _) = aux_term wildcard vars rule_name_2 0 ts_2_t in
+         let (ts_2_l_t', _) = aux_term wildcard vars rule_name_2 0 ts_2_l_t in
+         let args = ts_2' @ ts_2_t' in
+         let args' = ts_2_l' @ ts_2_l_t' in
+         let props = props @ Syntax.[pred' $ args'] in
+         Syntax.((rule_name_2, pred' $ args) <-- props)
+       in
+       let rule3 =
+         let ts_3 = match t1 with
+           | T.Var v ->
+              T.(Cons {element = Var "e"; list = Var "L"})
+           | T.(Tuple (Var v :: rest)) ->
+              let element = T.Var "e" in
+              let list = T.Var "L" in
+              T.(Tuple ((Cons {element; list}) :: rest))
+           | _ ->
+              invalid_arg
+                (Printf.sprintf
+                   "invalid term %s for relation %s_list"
+                   (T.to_string t1) pred)
+         in
+         let ts_3_l = match t1 with
+           | T.Var v -> T.Var "L"
+           | T.(Tuple (Var v :: rest)) -> T.(Tuple (Var "L" :: rest))
+           | _ ->
+              invalid_arg
+                (Printf.sprintf
+                   "invalid term %s for relation %s_list"
+                   (T.to_string t1) pred)
+         in
+         let ts_3_t =
+           let vs = T.vars ts_3 in
+           let vs =
+             List.filter vs ~f:(fun t -> not (T.(equal t (Var "L"))))
+           in T.ticked_restricted ts_3 vs
+         in
+         let ts_3_l_t = T.ticked ts_3_l in
+         let ts_3_l_tt =
+           let vs = T.vars ts_3_l_t in
+           let vs =
+             List.filter vs ~f:(fun t -> not (T.(equal t (Var "L'"))))
+           in T.ticked_restricted ts_3_l_t vs
+         in
+         let t1_t = T.ticked t1 in
+         let wildcard = ref 0 in
+         let vars = Hashtbl.create (module String) in
+         let (ts_3', props) = aux_term wildcard vars rule_name_3 0 ts_3 in
+         let (t1', _) = aux_term wildcard vars rule_name_3 0 t1 in
+         let (t1_t', _) = aux_term wildcard vars rule_name_3 0 t1_t in
+         let (ts_3_t', _) = aux_term wildcard vars rule_name_3 0 ts_3_t in
+         let (ts_3_l_tt', _) = aux_term wildcard vars rule_name_3 0 ts_3_l_tt in
+         let args = ts_3' @ ts_3_l_tt' in
+         let args' = t1' @ t1_t' in
+         let args'' = ts_3_t' @ ts_3_l_tt' in
+         let props = props @ Syntax.[pred $ args'; pred' $ args''] in
+         Syntax.((rule_name_3, pred' $ args) <-- props)
+       in
+       let rules = Map.set rules rule1.name rule1 in
+       let rules = Map.set rules rule2.name rule2 in
+       let rules = Map.set rules rule3.name rule3 in
+       rules
   in
   {sigs; rules}

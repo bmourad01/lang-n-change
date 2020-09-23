@@ -1,7 +1,18 @@
 #!/bin/sh
 
 BASEDIR="./lprolog/"
-FILE=$1
+
+if [ "$1" = "--clear" ]; then
+    rm -rf "${BASEDIR}/*"
+    exit 0
+fi
+
+if [ "$1" != "--compile" ]; then
+    echo "invalid argument"
+    exit 1
+fi
+
+FILE=$2
 BASENAME="$(basename ${FILE})"
 MODNAME="${BASENAME%%.lan}"
 DIR="${BASEDIR}${MODNAME}/"

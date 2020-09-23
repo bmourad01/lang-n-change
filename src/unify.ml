@@ -209,10 +209,10 @@ let unify t (lan: L.t) =
                | [] -> raise (Unprovable_formula f)
                | (fsub, prems) :: rest ->
                   let state' =
-                    List.fold prems ~init:state ~f:(fun state f ->
+                    let init = Set.add state fsub in
+                    List.fold prems ~init ~f:(fun state f ->
                         Set.add state (Solution.Candidate f))
                   in
-                  let state' = Set.add state' fsub in
                   try
                     loop state'
                   with

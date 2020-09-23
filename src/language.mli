@@ -175,6 +175,7 @@ val kind_of_var: t -> string -> string option
 val kind_of_op: t -> string -> string option
 val is_var_kind: t -> string -> string -> bool
 val is_meta_var_of: t -> string -> string -> bool
+val is_const_var: t -> string -> bool
 val is_op_kind: t -> string -> string -> bool
 val reduction_rules_of: t -> Rule.t list
 val typing_rules_of: t -> Rule.t list

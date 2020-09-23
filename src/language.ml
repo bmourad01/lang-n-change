@@ -879,6 +879,14 @@ let is_meta_var_of lan v category_name =
   | None -> false
   | Some {name; meta_var; terms} ->
      String.is_prefix v ~prefix:meta_var
+
+let is_const_var lan v = match kind_of_var lan v with
+  | None -> false
+  | Some name ->
+     match Map.find lan.grammar name with
+     | None -> false
+     | Some {name; meta_var; terms} ->
+        not (String.is_prefix v ~prefix:meta_var)
     
 let is_op_kind lan op category_name =
   match Map.find lan.grammar category_name with

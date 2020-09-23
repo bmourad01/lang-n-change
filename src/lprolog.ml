@@ -282,13 +282,9 @@ module Sigs = struct
     in
     (* infer additional propositions based on
      * whether one category is a proper subset of another *)
-    let subsets =
-      L.subset_categories lan
-      |> Map.to_alist
-      |> Hashtbl.of_alist_exn (module String)
-    in
+    let subsets = L.subset_categories lan in
     let props =
-      Hashtbl.fold subsets ~init:props ~f:(fun ~key ~data props ->
+      Map.fold subsets ~init:props ~f:(fun ~key ~data props ->
           let key' = kind_name key in
           let data' = kind_name data in
           let args = Syntax.[v data'] in
@@ -790,7 +786,7 @@ let of_language (lan: L.t) =
                       "unknown kind of subst %s %s in rule %s"
                       s (T.to_string body) rule_name)
               | Some kind ->
-                 let kind = match Hashtbl.find subsets kind with
+                 let kind = match Map.find subsets kind with
                    | None -> kind
                    | Some kind -> kind
                  in (kind_name kind, not (L.is_meta_var_of lan v kind))
@@ -803,7 +799,7 @@ let of_language (lan: L.t) =
                       "unknown kind of subst %s %s in rule %s"
                       s (T.to_string body) rule_name)
               | Some kind ->
-                 let kind = match Hashtbl.find subsets kind with
+                 let kind = match Map.find subsets kind with
                    | None -> kind
                    | Some kind -> kind
                  in (kind_name kind, false)
@@ -1089,7 +1085,7 @@ let of_language (lan: L.t) =
     let init = rules in
     Map.data lan.grammar
     |> List.fold ~init ~f:(fun rules C.{name; meta_var; terms} ->
-           if not (Hashtbl.mem subsets name) then rules else
+           if not (Map.mem subsets name) then rules else
              let name' = kind_name name in             
              Set.to_list terms
              |> List.fold ~init:rules ~f:(fun rules t ->
@@ -1140,7 +1136,7 @@ let of_language (lan: L.t) =
   in
   let rules =
     let init = rules in
-    Hashtbl.keys subsets
+    Map.keys subsets
     |> List.fold ~init ~f:(fun rules name ->
            let name' = kind_name name in             
            let name_list = name' ^ "_list" in
@@ -1492,7 +1488,7 @@ let of_language (lan: L.t) =
                match L.kind_of_var lan vv with
                | None -> (props, no_tick)
                | Some kind ->
-                  match Hashtbl.find subsets kind with
+                  match Map.find subsets kind with
                   | Some _ ->
                      let kind = kind_name kind in
                      let kind = kind ^ suff in
@@ -1625,7 +1621,7 @@ let of_language (lan: L.t) =
            | Some kind ->
               (* fixme: what if there are multiple
                * kinds that are subsets of this kind? *)
-              Hashtbl.to_alist subsets
+              Map.to_alist subsets
               |> List.find_map ~f:(fun (k, k') ->
                      Option.some_if (String.equal kind k') k)
               |> (function

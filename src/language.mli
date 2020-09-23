@@ -106,6 +106,17 @@ module Formula: sig
   val substitute: t -> Term.subs -> t
 end
 
+module Formula_comparable: sig
+  type t = Formula.t
+
+  val compare: t -> t -> int
+  val equal: t -> t -> bool
+  val sexp_of_t: t -> Sexp.t
+  val t_of_sexp: Sexp.t -> t
+end
+
+module Formula_set: module type of Set.Make(Formula_comparable)
+
 val uniquify_formulae: Formula.t list
                        -> hint_map:((string, string list) List.Assoc.t)
                        -> hint_var:string
@@ -167,3 +178,4 @@ val is_meta_var_of: t -> string -> string -> bool
 val is_op_kind: t -> string -> string -> bool
 val reduction_rules_of: t -> Rule.t list
 val typing_rules_of: t -> Rule.t list
+val subset_categories: t -> string String.Map.t

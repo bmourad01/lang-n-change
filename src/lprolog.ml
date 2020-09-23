@@ -282,43 +282,22 @@ module Sigs = struct
     in
     (* infer additional propositions based on
      * whether one category is a proper subset of another *)
-    let subsets = Hashtbl.create (module String) in
+    let subsets =
+      L.subset_categories lan
+      |> Map.to_alist
+      |> Hashtbl.of_alist_exn (module String)
+    in
     let props =
-      let ctor_name = function
-        | T.Constructor {name; args} -> Some name
-        | _ -> None
-      in
-      Map.data lan.grammar
-      |> List.fold ~init:props ~f:(fun props C.{name; meta_var; terms} ->
-             let ops =
-               Set.to_list terms
-               |> List.filter_map ~f:ctor_name
-               |> String.Set.of_list
-             in
-             if Set.is_empty ops then props else
-               Map.remove lan.grammar name
-               |> Map.data
-               |> List.find ~f:(fun c ->
-                      let ops' =
-                        Set.to_list C.(c.terms)
-                        |> List.filter_map ~f:ctor_name
-                        |> String.Set.of_list
-                      in
-                      Set.length ops < Set.length ops'
-                      && Set.is_subset ops ops')
-               |> function
-                 | None -> props
-                 | Some c ->
-                    let name' = kind_name name in
-                    if Set.mem ops name' then props else
-                      let args = Syntax.[v (kind_name C.(c.name))] in
-                      let prop = Syntax.(name' $ args) in
-                      let prop_list =
-                        Syntax.((name' ^ "_list") $ ["list" @ args])
-                      in
-                      Hashtbl.set subsets name C.(c.name);
-                      let props = Map.set props name' prop in
-                      Map.set props prop_list.name prop_list)
+      Hashtbl.fold subsets ~init:props ~f:(fun ~key ~data props ->
+          let key' = kind_name key in
+          let data' = kind_name data in
+          let args = Syntax.[v data'] in
+          let prop = Syntax.(key' $ args) in
+          let prop_list =
+            Syntax.((key' ^ "_list") $ ["list" @ args])
+          in
+          let props = Map.set props key' prop in
+          Map.set props prop_list.name prop_list)
     in
     (* generate term constructor types from the grammar *)
     let aliases = Hashtbl.create (module Type) in

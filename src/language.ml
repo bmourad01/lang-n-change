@@ -586,6 +586,13 @@ module Formula = struct
          }
 end
 
+module Formula_comparable = struct
+  include Formula
+  include Comparable.Make(Formula)
+end
+
+module Formula_set = Set.Make(Formula_comparable)
+
 let hint_vars_of_formulae fs hint_map hint_var =
   let is_hint_constructor = function
     | Term.Constructor {name; _} ->
@@ -888,3 +895,32 @@ let reduction_rules_of lan =
 let typing_rules_of lan =
   Map.data lan.rules
   |> List.filter ~f:Rule.is_typing_rule
+
+let subset_categories lan =
+  let init = String.Map.empty in
+  let ctor_name = function
+    | Term.Constructor {name; args} -> Some name
+    | _ -> None
+  in
+  let module C = Grammar.Category in
+  Map.data lan.grammar
+  |> List.fold ~init ~f:(fun subsets C.{name; meta_var; terms} ->
+         let ops =
+           Set.to_list terms
+           |> List.filter_map ~f:ctor_name
+           |> String.Set.of_list
+         in
+         if Set.is_empty ops then subsets else
+           Map.remove lan.grammar name
+           |> Map.data
+           |> List.find ~f:(fun c ->
+                  let ops' =
+                    Set.to_list C.(c.terms)
+                    |> List.filter_map ~f:ctor_name
+                    |> String.Set.of_list
+                  in
+                  Set.length ops < Set.length ops'
+                  && Set.is_subset ops ops')
+           |> function
+             | None -> subsets
+             | Some c -> Map.set subsets name C.(c.name))

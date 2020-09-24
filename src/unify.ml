@@ -7,8 +7,6 @@ module F = L.Formula
 module R = L.Rule
 module C = L.Grammar.Category
 
-type t = L.Formula_set.t
-
 module Solution = struct
   type t =
     | Term_sub of T.t * T.t
@@ -48,16 +46,18 @@ end
 
 module Solution_set = Set.Make(Solution_comparable)
 
+type t = Solution_set.t
+
+let create fs =
+  Set.to_list fs
+  |> List.map ~f:(fun f -> Solution.Candidate f)
+  |> Solution_set.of_list
+
 exception Incompatible_terms of T.t * T.t
 exception Incompatible_formulae of F.t * F.t
 exception Unprovable_formula of F.t
 
-let unify t (lan: L.t) =
-  let state =
-    Set.to_list t
-    |> List.map ~f:(fun f -> Solution.Candidate f)
-    |> Solution_set.of_list
-  in
+let run ?(normalize = false) state (lan: L.t) =
   let rec fresh vars = function
     | T.Var v ->
       let var = T.Var (v ^ "`") in 
@@ -71,30 +71,27 @@ let unify t (lan: L.t) =
     | Some mode -> mode
   in
   let subsets = L.subset_categories lan in
+  let inputs predicate args = match Map.find mode.elements predicate with
+    | None -> []
+    | Some desc ->
+       match List.zip desc args with
+       | Unequal_lengths -> []
+       | Ok l ->
+          List.filter_map l ~f:(fun (m, t) ->
+              Option.some_if (String.equal m "inp") t)
+  in
   let is_provable = function
     (* only propositions can be provable
      * using the inference rule system *)
     | Solution.Candidate F.(Prop {predicate; args}) ->
-       (* for now, we will rely on the language designer
-        * to specify the modes for each relation *)
-       begin match Map.find mode.elements predicate with
-       | None -> false
-       | Some desc ->
-          match List.zip desc args with
-          | Unequal_lengths -> false
-          | Ok l ->
-             let rec matches_pattern ts =
-               List.exists ts ~f:(function
-                   | T.Nil
-                     | T.Constructor _
-                     | T.Cons _ -> true
-                   | T.Tuple ts -> matches_pattern ts
-                   | _ -> false)
-             in
-             List.filter_map l ~f:(fun (m, t) ->
-                 Option.some_if (String.equal m "inp") t)
-             |> matches_pattern
-       end
+       let rec matches_pattern ts =
+         List.exists ts ~f:(function
+             | T.Nil
+               | T.Constructor _
+               | T.Cons _ -> true
+             | T.Tuple ts -> matches_pattern ts
+             | _ -> false)
+       in inputs predicate args |> matches_pattern
     | _ -> false
   in
   let rec loop state =
@@ -278,9 +275,36 @@ let unify t (lan: L.t) =
            * so there's nothing left to prove *)
           | _ -> state
   in
-  Set.to_list (loop state)
-  |> List.filter_map ~f:(function
-         | Solution.Candidate f
-           | Solution.Proven f -> Some f
-         | _ -> None)
-  |> L.Formula_set.of_list
+  if normalize then
+    let rec loop' state =
+      let rec find = function
+        | [] -> None
+        | f :: fs ->
+           match f with
+           | Solution.Candidate (F.Prop p)
+             | Solution.Proven (F.Prop p) ->
+              let ins = inputs p.predicate p.args in
+              let rec find' = function
+                | [] -> None
+                | f' :: fs' ->
+                   match f' with
+                   | Solution.Candidate (F.Prop p')
+                     | Solution.Proven (F.Prop p')
+                        when P.equal p.predicate p'.predicate ->
+                      let ins' = inputs p'.predicate p'.args in
+                      if List.equal T.equal ins ins' then
+                        Some (Solution.Formula_sub (F.Prop p, F.Prop p'))
+                      else find' fs'
+                   | _ -> find' fs'
+              in
+              begin match find' Set.(to_list (remove state f)) with
+              | None -> find fs
+              | Some s -> Some s
+              end
+           | _ -> find fs
+      in
+      match find (Set.to_list state) with
+      | None -> state
+      | Some s -> loop' (loop (Set.add state s))
+    in loop' state
+  else loop state

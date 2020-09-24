@@ -53,6 +53,12 @@ let create fs =
   |> List.map ~f:(fun f -> Solution.Candidate f)
   |> Solution_set.of_list
 
+let is_valid t =
+  Set.exists t ~f:(fun s ->
+      Solution.is_term_sub s
+      || Solution.is_formula_sub s)
+  |> not
+
 exception Incompatible_terms of T.t * T.t
 exception Incompatible_formulae of F.t * F.t
 exception Unprovable_formula of F.t

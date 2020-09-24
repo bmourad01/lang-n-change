@@ -28,6 +28,7 @@ module Solution_set: module type of Set.Make(Solution_comparable)
 type t = Solution_set.t
 
 val create: Language.Formula_set.t -> t
+val is_valid: t -> bool
 
 exception Incompatible_terms of Language.Term.t * Language.Term.t
 exception Incompatible_formulae of Language.Formula.t * Language.Formula.t

@@ -258,13 +258,11 @@ let unify t (lan: L.t) =
              let rec prove state = function
                | [] -> raise (Unprovable_formula f)
                | (fsub, prems) :: rest ->
-                  let state' =
+                  try
                     let init = Set.add state fsub in
                     List.fold prems ~init ~f:(fun state f ->
                         Set.add state (Solution.Candidate f))
-                  in
-                  try
-                    loop state'
+                    |> loop
                   with
                   | Incompatible_terms _
                     | Incompatible_formulae _ -> prove state rest

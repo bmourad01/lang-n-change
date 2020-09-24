@@ -302,15 +302,13 @@ let run ?(normalize = false) state (lan: L.t) =
                         Some (Solution.Formula_sub (F.Prop p, F.Prop p'))
                       else find' fs'
                    | _ -> find' fs'
-              in
-              begin match find' Set.(to_list (remove state f)) with
-              | None -> find fs
-              | Some s -> Some s
-              end
+              in begin match find' Set.(to_list (remove state f)) with
+                 | None -> find fs
+                 | Some s -> Some s
+                 end
            | _ -> find fs
-      in
-      match find (Set.to_list state) with
-      | None -> state
-      | Some s -> loop' (loop (Set.add state s))
+      in match find (Set.to_list state) with
+         | None -> state
+         | Some s -> Set.add state s |> loop |> loop'
     in loop' state
   else loop state

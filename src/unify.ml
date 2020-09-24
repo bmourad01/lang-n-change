@@ -66,6 +66,10 @@ let unify t (lan: L.t) =
       else (vars := Set.add !vars var; var)
     | _ -> failwith "unreachable"
   in
+  let mode = match Map.find lan.hints "mode" with
+    | None -> invalid_arg "'mode' hint is required"
+    | Some mode -> mode
+  in
   let subsets = L.subset_categories lan in
   let is_provable = function
     (* only propositions can be provable
@@ -73,26 +77,23 @@ let unify t (lan: L.t) =
     | Solution.Candidate F.(Prop {predicate; args}) ->
        (* for now, we will rely on the language designer
         * to specify the modes for each relation *)
-       begin match Map.find lan.hints "mode" with
+       begin match Map.find mode.elements predicate with
        | None -> false
-       | Some mode ->
-          match Map.find mode.elements predicate with
-          | None -> false
-          | Some desc ->
-             match List.zip desc args with
-             | Unequal_lengths -> false
-             | Ok l ->
-                let rec matches_pattern ts =
-                  List.exists ts ~f:(function
-                      | T.Nil
-                        | T.Constructor _
-                        | T.Cons _ -> true
-                      | T.Tuple ts -> matches_pattern ts
-                      | _ -> false)
-                in
-                List.filter_map l ~f:(fun (m, t) ->
-                    Option.some_if (String.equal m "inp") t)
-                |> matches_pattern
+       | Some desc ->
+          match List.zip desc args with
+          | Unequal_lengths -> false
+          | Ok l ->
+             let rec matches_pattern ts =
+               List.exists ts ~f:(function
+                   | T.Nil
+                     | T.Constructor _
+                     | T.Cons _ -> true
+                   | T.Tuple ts -> matches_pattern ts
+                   | _ -> false)
+             in
+             List.filter_map l ~f:(fun (m, t) ->
+                 Option.some_if (String.equal m "inp") t)
+             |> matches_pattern
        end
     | _ -> false
   in

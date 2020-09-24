@@ -165,6 +165,11 @@ typeof (Gamma, e, (all (Z)T2))
 typeof (Gamma, (appT e T1), T2[T1/Z])
 .
 
+[T-ERROR]
+--------------------------------
+typeof (Gamma, (error.), T)
+.
+
 [R-BETA]
 --------------------------------
 step ((app (abs T (x)e) v), e[v/x])
@@ -212,12 +217,12 @@ step ((snd (pair v2 v2)), v2)
 
 [R-IF-TRUE]
 --------------------------------
-step ((ite (tt.) e1 e2), e1)
+step ((ite (tt.) e_true e_false), e_true)
 .
 
 [R-IF-FALSE]
 --------------------------------
-step ((ite (ff.) e1 e2), e2)
+step ((ite (ff.) e_true e_false), e_false)
 .
 
 [R-PRED-ZERO]

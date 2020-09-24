@@ -39,7 +39,7 @@ Environment Gamma ::= {x => T}
 
 step (e, e)
 typeof (Gamma, e, T)
-  
+
 %
 
 [T-VAR]

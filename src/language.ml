@@ -910,13 +910,6 @@ let subset_categories lan =
     | Term.Constructor {name; args} -> Some name
     | _ -> None
   in
-  let kind_name name =
-    let name = String.uncapitalize name in
-    match name with
-    | "type" -> "typ"
-    | "kind" -> "knd"
-    | _ -> name
-  in
   let module C = Grammar.Category in
   Map.data lan.grammar
   |> List.fold ~init ~f:(fun subsets C.{name; meta_var; terms} ->
@@ -938,7 +931,4 @@ let subset_categories lan =
                   && Set.is_subset ops ops')
            |> function
              | None -> subsets
-             | Some c ->
-                if Set.mem ops (kind_name name)
-                then subsets
-                else Map.set subsets name C.(c.name))
+             | Some c -> Map.set subsets name C.(c.name))

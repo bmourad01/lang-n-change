@@ -1,13 +1,13 @@
 Expression e ::= x | (abs T (x)e) | (app e e)
                    | (cons e e) | (nill.) | (head e) | (tail e) | (nill.) | (filter e e)
                    | (pair e e) | (fst e) | (snd e)
-                   | (error.)
+                   | (err.)
                    | (tt.) | (ff.) | (ite e e e)
                    | (zero.) | (succ e) | (pred e)
                    | (let e (x)e)
                    | (absT (Z)e) | (appT e T)
 
-Error err ::= (error.)
+Error er ::= (err.)
 
 Value v ::= (abs T (x)e)
             | (cons v v) | (nill.)
@@ -165,9 +165,9 @@ typeof (Gamma, e, (all (Z)T2))
 typeof (Gamma, (appT e T1), T2[T1/Z])
 .
 
-[T-ERROR]
+[T-ERR]
 --------------------------------
-typeof (Gamma, (error.), T)
+typeof (Gamma, (err.), T)
 .
 
 [R-BETA]
@@ -177,12 +177,12 @@ step ((app (abs T (x)e) v), e[v/x])
     
 [R-HEAD-NIL]
 --------------------------------
-step ((head (nill.)), (error.))
+step ((head (nill.)), (err.))
 .
 
 [R-TAIL-NIL]
 --------------------------------
-step ((tail (nill.)), (error.))
+step ((tail (nill.)), (err.))
 .
     
 [R-HEAD-CONS]
@@ -227,7 +227,7 @@ step ((ite (ff.) e_true e_false), e_false)
 
 [R-PRED-ZERO]
 --------------------------------
-step ((pred (zero.)), (error.))
+step ((pred (zero.)), (err.))
 .
 
 [R-PRED-SUCC]

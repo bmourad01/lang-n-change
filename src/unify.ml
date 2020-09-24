@@ -68,9 +68,32 @@ let unify t (lan: L.t) =
   in
   let subsets = L.subset_categories lan in
   let is_provable = function
+    (* only propositions can be provable
+     * using the inference rule system *)
     | Solution.Candidate F.(Prop {predicate; args}) ->
-       (* todo: reason about principal args *)
-       true
+       (* for now, we will rely on the language designer
+        * to specify the modes for each relation *)
+       begin match Map.find lan.hints "mode" with
+       | None -> false
+       | Some mode ->
+          match Map.find mode.elements predicate with
+          | None -> false
+          | Some desc ->
+             match List.zip desc args with
+             | Unequal_lengths -> false
+             | Ok l ->
+                let rec matches_pattern ts =
+                  List.exists ts ~f:(function
+                      | T.Nil
+                        | T.Constructor _
+                        | T.Cons _ -> true
+                      | T.Tuple ts -> matches_pattern ts
+                      | _ -> false)
+                in
+                List.filter_map l ~f:(fun (m, t) ->
+                    Option.some_if (String.equal m "inp") t)
+                |> matches_pattern
+       end
     | _ -> false
   in
   let rec loop state =
@@ -107,10 +130,25 @@ let unify t (lan: L.t) =
        (* add new substitutions and continue the loop *)
        let state' = Set.remove state tsub in
        begin match (t1, t2) with
+       | (T.Map _, _)
+         | (_, T.Map _)
+         | (T.List _, _)
+         | (_, T.List _) ->
+          (* these shouldn't appear in formulae *)
+          incompat () 
        | (T.Constructor c1, T.Constructor c2) ->
           if String.equal c1.name c2.name
           then zip_and_loop state' incompat c1.args c2.args
           else incompat ()
+       | (T.Cons c1, T.Cons c2) ->
+          let ts = [c1.element; c1.list] in
+          let ts' = [c2.element; c2.list] in
+          zip_and_loop state' incompat ts ts'
+       | (T.Tuple ts, T.Tuple ts')
+         | (T.Union ts, T.Union ts') ->
+          zip_and_loop state' incompat ts ts'
+       | (T.Zip (t1, t2), T.Zip (t1', t2')) ->
+          zip_and_loop state' incompat [t1; t2] [t1'; t2']
        | (T.Binding b1, T.Binding b2) ->
           loop (Set.add state' (Solution.Term_sub (b1.body, b2.body)))
        | (T.Var v1, T.Var v2) when String.equal v1 v2 ->
@@ -239,6 +277,7 @@ let unify t (lan: L.t) =
   in
   Set.to_list (loop state)
   |> List.filter_map ~f:(function
-         | Solution.Proven f -> Some f
+         | Solution.Candidate f
+           | Solution.Proven f -> Some f
          | _ -> None)
   |> L.Formula_set.of_list

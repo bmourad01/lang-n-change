@@ -228,6 +228,8 @@ let unify t (lan: L.t) =
            * as new formula substitutions *)
           match Set.find state ~f:is_provable with
           | Some ((Solution.Candidate f) as candidate) ->
+             (* collect all mentioned variables in
+              * the set so we can manage conflicts *)
              let vars =
                Set.to_list state
                |> List.map ~f:(function
@@ -240,36 +242,38 @@ let unify t (lan: L.t) =
                       | _ -> false)
                |> L.Term_set.of_list
              in
-             let formula_sub_of_rule (r: R.t) =
-               let vars = ref vars in
-               let make_sub = function
-                 | (T.Var v) as var ->
-                    if not (L.is_const_var lan v) && Set.mem !vars var
-                    then [(var, fresh vars var)]
-                    else []
-                 | _ -> []
-               in
-               let subs = List.map (R.vars r) ~f:make_sub |> List.concat in
-               let r = R.substitute r subs in
-               (Solution.Formula_sub (r.conclusion, f), r.premises)
-             in
              (* find the first rule where we can unify
               * or give up if we cannot prove the formula *)
-             let rec prove state = function
+             let rec prove = function
                | [] -> raise (Unprovable_formula f)
-               | (fsub, prems) :: rest ->
+               | state' :: rest ->
                   try
-                    let init = Set.add state fsub in
-                    List.fold prems ~init ~f:(fun state f ->
-                        Set.add state (Solution.Candidate f))
-                    |> loop
+                    loop state'
                   with
                   | Incompatible_terms _
-                    | Incompatible_formulae _ -> prove state rest
+                    | Incompatible_formulae _ -> prove rest
              in
-             prove
+             let state =
                Set.(add (remove state candidate) (Solution.Proven f))
-               (List.map (Map.data lan.rules) ~f:formula_sub_of_rule)
+             in
+             (* construct candidate states for each rule *)
+             List.map (Map.data lan.rules) ~f:(fun r ->
+                 let vars = ref vars in
+                 let make_sub = function
+                   | (T.Var v) as var ->
+                      if not (L.is_const_var lan v) && Set.mem !vars var
+                      then [(var, fresh vars var)]
+                      else []
+                   | _ -> []
+                 in
+                 let subs = List.map (R.vars r) ~f:make_sub |> List.concat in
+                 let r = R.substitute r subs in
+                 let init =
+                   Set.add state (Solution.Formula_sub (r.conclusion, f))
+                 in
+                 List.fold r.premises ~init ~f:(fun state f ->
+                     Set.add state (Solution.Candidate f)))
+             |> prove
           (* we've reached the fixed point,
            * so there's nothing left to prove *)
           | _ -> state

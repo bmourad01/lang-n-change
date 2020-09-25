@@ -45,14 +45,14 @@ module Term: sig
   val is_zip: t -> bool
   val unbind: t -> t
   val unbind_rec: t -> t
-  val vars_dup: t -> t list
-  val vars: t -> t list
+  val vars_dup: ?include_bindings:bool -> t -> t list
+  val vars: ?include_bindings:bool -> t -> t list
   val var_overlap: t -> t -> t list
   val ticked: t -> t
   val unticked: t -> t
   val ticked_restricted: t -> t list -> t
   val substitute: t -> subs -> t 
-  val uniquify: ?min:int -> t -> t
+  val uniquify: ?include_bindings:bool -> ?min:int -> t -> t
 end
 
 module Term_comparable: sig

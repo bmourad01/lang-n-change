@@ -171,34 +171,42 @@ module Term = struct
     | Union ts -> Union (List.map ts ~f:unbind_rec)
     | Zip (t1, t2) -> Zip (unbind_rec t1, unbind_rec t2)
 
-  let rec vars_dup t = match t with
+  let rec vars_dup ?(include_bindings = false) t =
+    let f t = vars_dup t ~include_bindings in
+    match t with
     | Wildcard
       | Nil
       | Str _ -> []
     | Var _ -> [t]
     | Constructor {name; args} ->
-       List.map args ~f:vars_dup |> List.concat
-    | Binding {var; body} -> vars_dup body
+       List.map args ~f |> List.concat
+    | Binding {var; body} ->
+       if include_bindings
+       then Var var :: f body
+       else f body
     | Subst {body; substs} ->
        let substs_vars =
          List.map substs ~f:(function
-             | Subst_pair (term, var) -> vars_dup term
+             | Subst_pair (term, var) ->
+                if include_bindings
+                then Var var :: f term
+                else f term
              | Subst_var v -> [Var v])
          |> List.concat
-       in vars_dup body @ substs_vars
+       in f body @ substs_vars
     | Map_update {key; value; map} ->
-       (vars_dup key) @ (vars_dup value) @ (vars_dup map)
-    | Map_domain m | Map_range m -> vars_dup m
+       (f key) @ (f value) @ (f map)
+    | Map_domain m | Map_range m -> f m
     | Cons (element, lst) ->
-       List.map [element; lst] ~f:vars_dup |> List.concat
-    | List s -> vars_dup s
-    | Map {key; value} -> vars_dup value
+       List.map [element; lst] ~f |> List.concat
+    | List s -> f s
+    | Map {key; value} -> f value
     | Tuple ts | Union ts ->
-       List.map ts ~f:vars_dup |> List.concat
-    | Zip (t1, t2) -> vars_dup t1 @ vars_dup t2
+       List.map ts ~f |> List.concat
+    | Zip (t1, t2) -> f t1 @ f t2
 
-  let vars t =
-    vars_dup t |> List.dedup_and_sort ~compare
+  let vars ?(include_bindings = false) t =
+    vars_dup t ~include_bindings |> List.dedup_and_sort ~compare
 
   let var_overlap t1 t2 =
     let vs = vars t1 in
@@ -347,8 +355,8 @@ module Term = struct
        | Union ts -> Union (List.map ts ~f)
        | Zip (t1, t2) -> Zip (f t1, f t2)
 
-  let uniquify_map min t =
-    let vars = vars_dup t in
+  let uniquify_map include_bindings min t =
+    let vars = vars_dup t ~include_bindings in
     let vars' =
       List.fold vars ~init:[] ~f:(fun vars t ->
           if List.mem vars t ~equal
@@ -366,8 +374,8 @@ module Term = struct
         let l = aux t 1 vars in
         Option.some_if (List.length l > min) (t, l))
 
-  let uniquify' t m =
-    let var t m = match List.Assoc.find m t ~equal with
+  let uniquify' ?(include_bindings = false) t m =
+    let make_var t m = match List.Assoc.find m t ~equal with
       | None -> (t, m)
       | Some ts ->
          let m = List.Assoc.remove m t ~equal in
@@ -379,7 +387,7 @@ module Term = struct
     in
     let rec aux t m = match t with
       | Wildcard | Nil | Str _ -> (t, m)
-      | Var v -> var t m
+      | Var v -> make_var t m
       | Constructor {name; args} ->
          let rec aux' m = function
            | [] -> ([], m)
@@ -391,6 +399,13 @@ module Term = struct
          let (args, m) = aux' m args in
          (Constructor {name; args}, m)
       | Binding {var; body} ->
+         let (var, m) =
+           if include_bindings then
+             match make_var (Var var) m with
+             | (Var v, m) -> (v, m)
+             | (_, m) -> (var, m)
+           else (var, m)
+         in
          let (body, m) = aux body m in
          (Binding {var; body}, m)
       | Subst {body; substs} ->
@@ -399,10 +414,17 @@ module Term = struct
            | x :: xs ->
               let (x, m) = match x with
                 | Subst_pair (term, var) ->              
+                   let (var, m) =
+                     if include_bindings then
+                       match make_var (Var var) m with
+                       | (Var v, m) -> (v, m)
+                       | (_, m) -> (var, m)
+                     else (var, m)
+                   in
                    let (term, m) = aux term m in
                    (Subst_pair (term, var), m)
                 | Subst_var v ->
-                   match var (Var v) m with
+                   match make_var (Var v) m with
                    | (Var v, m) ->
                       (Subst_var v, m)
                    | _ -> (x, m)
@@ -432,7 +454,7 @@ module Term = struct
          let (t, m) = aux t m in
          (List t, m)
       | Map {key; value} ->
-         let (key, m) = match var (Var key) m with
+         let (key, m) = match make_var (Var key) m with
            | (Var v, m) -> (v, m)
            | _ -> (key, m)
          in
@@ -464,8 +486,10 @@ module Term = struct
          (Zip (t1, t2), m)
     in aux t m
 
-  let uniquify ?(min = 1) t =
-    uniquify_map min t |> uniquify' t |> fst [@@inline]
+  let uniquify ?(include_bindings = false) ?(min = 1) t =
+    uniquify_map include_bindings min t
+    |> uniquify' t ~include_bindings
+    |> fst [@@inline]
 end
 
 module Term_comparable = struct

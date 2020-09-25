@@ -8,6 +8,7 @@ Expression e ::= x
                  | (let e (x)e)
                  | (absT (Z)e) | (appT e T)
                  | (none.) | (some e) | (get e) | (is_none e) | (is_some e)
+                 | (inl e) | (inr e) | (case e (x)e (x)e)
 
 Error er ::= (err.)
 
@@ -18,6 +19,7 @@ Value v ::= (abs T (x)e)
             | (zero.) | (succ v)
             | (absT (Z)e)
             | (none.) | (some v)
+            | (inl v) | (inr v)
 
 Type T ::= Z
            | (arrow T T)
@@ -27,6 +29,7 @@ Type T ::= Z
            | (nat.)
            | (all (Z)T)
            | (option T)
+           | (sum T T)
 
 Context E ::= (hole.)
               | (app E e) | (app v E)
@@ -38,6 +41,7 @@ Context E ::= (hole.)
               | (let E (x)e)
               | (appT E T)
               | (some E) | (get E) | (is_some E) | (is_none E)
+              | (inl E) | (inr E) | (case E (x)e (x)e)
 
 Environment Gamma ::= {x => T}
     
@@ -259,6 +263,26 @@ typeof (Gamma, e, (option T))
 typeof (Gamma, (is_some e), (bool.))
 .
 
+[T-INL]
+typeof (Gamma, e, T1)
+--------------------------------
+typeof (Gamma, (inl e), (sum T1 T2))
+.
+
+[T-INR]
+typeof (Gamma, e, T2)
+--------------------------------
+typeof (Gamma, (inr e), (sum T1 T2))
+.
+
+[T-CASE]
+typeof (Gamma, e1, (sum T1 T2)),
+typeof ([x1 => T1]Gamma, e2, T),
+typeof ([x2 => T2]Gamma, e3, T)
+--------------------------------
+typeof (Gamma, (case e1 (x1)e2 (x2)e3), T)
+.
+
 [T-ERR]
 --------------------------------
 typeof (Gamma, (err.), T)
@@ -474,7 +498,17 @@ step ((is_some (some v)), (tt.))
 step ((is_some (none.)), (ff.))
 .
 
+[R-CASE-INL]
+--------------------------------
+step ((case (inl v) (x1)e1 (x2)e2), e1[v/x1])
+.
+
+[R-CASE-INR]
+--------------------------------
+step ((case (inr v) (x1)e1 (x2)e2), e2[v/x2])
+.
+
 %
 
 mode: typeof => inp inp out | step => inp out.
-variance: arrow => contra cov | list => cov | times => cov cov | option => cov.
+variance: arrow => contra cov | list => cov | times => cov cov | option => cov | sum => cov cov.

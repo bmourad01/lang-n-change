@@ -251,7 +251,9 @@ let run ?(normalize = false) state (lan: L.t) =
              (* find the first rule where we can unify
               * or give up if we cannot prove the formula *)
              let rec prove = function
-               | [] -> raise (Unprovable_formula f)
+               | [] ->
+                  Printf.eprintf "%s\n" (F.to_string f);
+                  raise (Unprovable_formula f)
                | state' :: rest ->
                   try
                     loop state'

@@ -1205,7 +1205,7 @@ let of_language (lan: L.t) =
   let rules =
     let subst_rule wildcard vars rule_name name name_list
           t meta_var_body meta_var_term var =
-      let t = T.uniquify t ~min:0 in
+      let t = T.uniquify t ~min:0 ~include_bindings:true in
       let (t', _) = aux_term wildcard vars rule_name 0 t in
       let t' = List.hd_exn t' in
       let (premises, sub) = match t with

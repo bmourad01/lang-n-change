@@ -10,6 +10,7 @@ Expression e ::= x
                  | (absT (Z)e) | (appT e T)
                  | (none.) | (some e) | (get e) | (is_none e) | (is_some e)
                  | (inl e) | (inr e) | (case e (x)e (x)e)
+                 | (fold e (Z)T) | (unfold e)
 
 Error er ::= (err.)
 
@@ -21,6 +22,7 @@ Value v ::= (abs T (x)e)
             | (absT (Z)e)
             | (none.) | (some v)
             | (inl v) | (inr v)
+            | (fold v (Z)T)
 
 Type T ::= Z
            | (arrow T T)
@@ -31,6 +33,7 @@ Type T ::= Z
            | (all (Z)T)
            | (option T)
            | (sum T T)
+           | (mu (Z)T)
 
 Context E ::= (hole.)
               | (app E e) | (app v E)
@@ -44,6 +47,7 @@ Context E ::= (hole.)
               | (some E) | (get E) | (is_some E) | (is_none E)
               | (inl E) | (inr E) | (case E (x)e (x)e)
               | (fix E)
+              | (fold E (Z)T) | (unfold E)
 
 Environment Gamma ::= {x => T}
     
@@ -298,6 +302,18 @@ typeof ([x => T1]Gamma, e2, T2)
 typeof (Gamma, (letrec T1 (x)e1 (x)e2), T2)
 .
 
+[T-FOLD]
+typeof (Gamma, e, T[(mu (Z)T)/Z])
+--------------------------------
+typeof (Gamma, (fold e (Z)T), (mu (Z)T))
+.
+
+[T-UNFOLD]
+typeof (Gamma, e, (mu (Z)T))
+--------------------------------
+typeof (Gamma, (unfold e), T[(mu (Z)T)/Z])
+.
+
 [T-ERR]
 --------------------------------
 typeof (Gamma, (err.), T)
@@ -531,6 +547,11 @@ step ((fix (abs T (x)e)), e[(fix (abs T (x)e))/x])
 [R-LETREC]
 --------------------------------
 step ((letrec T (x)e1 (x)e2), (let (fix (abs T (x)e1)) (x)e2))
+.
+
+[R-UNFOLD]
+--------------------------------
+step ((unfold (fold v (Z)T)), v)
 .
 
 %

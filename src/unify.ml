@@ -156,17 +156,19 @@ let run ?(normalize = false) state (lan: L.t) =
           zip_and_loop state' incompat [t1; t2] [t1'; t2']
        | (T.Binding b1, T.Binding b2) ->
           loop (Set.add state' (Solution.Term_sub (b1.body, b2.body)))
+       | (T.Subst s1, T.Subst s2) ->
+          loop (Set.add state' (Solution.Term_sub (s1.body, s2.body)))
        | (T.Var v1, T.Var v2) when String.equal v1 v2 ->
           loop state'
        | (T.Var v1, T.Var v2)
             when not (String.equal v1 v2)
                  && L.is_const_var lan v1
                  && L.is_const_var lan v2 -> incompat ()
-       | (t, ((T.Var v) as var))
+       | (t, (T.Var v as var))
             when L.is_const_var lan v
                  || not (T.is_var t) ->
           loop (Set.add state' (Solution.Term_sub (var, t)))
-       | (((T.Var v) as var), t) ->
+       | ((T.Var v as var), t) ->
           let vars = T.vars t in
           if not (L.is_const_var lan v)
              && not (List.mem vars var ~equal:T.equal) then

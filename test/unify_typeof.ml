@@ -170,7 +170,10 @@ let () =
                       let assume = List.hd_exn p2.args in
                       let typ = List.last_exn p2.args in
                       aux ((T.Var var, typ, assume, term) :: res) rest
-                   | _ -> None
+                   | _ ->
+                      invalid_arg
+                        (Printf.sprintf "no typing rule found for %s"
+                           (T.to_string term))
                    end
                 (* for now we won't try to reason about
                  * substitution variables since that requires
@@ -207,7 +210,10 @@ let () =
               let fs = F.(Prop {p1 with args}) :: fs in
               let args = [assume; rhs; List.last_exn p1.args] in
               return (F.(Prop {p1 with args}) :: fs)
-           | _ -> None
+           | _ ->
+              invalid_arg
+                 (Printf.sprintf "no typing rule found for %s"
+                    (T.to_string s.body))
            end
         | Some ((T.Constructor c) as rhs) ->
            begin match typeof_for_op c.name with

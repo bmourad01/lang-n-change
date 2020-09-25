@@ -6,6 +6,7 @@ Expression e ::= x
                  | (tt.) | (ff.) | (ite e e e)
                  | (zero.) | (succ e) | (pred e) | (is_zero e) | (is_succ e) | (add e e) | (sub e e)
                  | (let e (x)e)
+                 | (fix e) | (letrec T (x)e (x)e)
                  | (absT (Z)e) | (appT e T)
                  | (none.) | (some e) | (get e) | (is_none e) | (is_some e)
                  | (inl e) | (inr e) | (case e (x)e (x)e)
@@ -42,6 +43,7 @@ Context E ::= (hole.)
               | (appT E T)
               | (some E) | (get E) | (is_some E) | (is_none E)
               | (inl E) | (inr E) | (case E (x)e (x)e)
+              | (fix E)
 
 Environment Gamma ::= {x => T}
     
@@ -283,6 +285,19 @@ typeof ([x2 => T2]Gamma, e3, T)
 typeof (Gamma, (case e1 (x1)e2 (x2)e3), T)
 .
 
+[T-FIX]
+typeof (Gamma, e, (arrow T T))
+--------------------------------
+typeof (Gamma, (fix e), T)
+.
+
+[T-LETREC]
+typeof ([x => T1]Gamma, e1, T1),
+typeof ([x => T1]Gamma, e2, T2)
+--------------------------------
+typeof (Gamma, (letrec T1 (x)e1 (x)e2), T2)
+.
+
 [T-ERR]
 --------------------------------
 typeof (Gamma, (err.), T)
@@ -292,7 +307,7 @@ typeof (Gamma, (err.), T)
 --------------------------------
 step ((app (abs T (x)e) v), e[v/x])
 .
-    
+
 [R-HEAD-NIL]
 --------------------------------
 step ((head (nill.)), (err.))
@@ -506,6 +521,16 @@ step ((case (inl v) (x1)e1 (x2)e2), e1[v/x1])
 [R-CASE-INR]
 --------------------------------
 step ((case (inr v) (x1)e1 (x2)e2), e2[v/x2])
+.
+
+[R-FIX]
+--------------------------------
+step ((fix (abs T (x)e)), e[(fix (abs T (x)e))/x])
+.
+
+[R-LETREC]
+--------------------------------
+step ((letrec T (x)e1 (x)e2), (let (fix (abs T (x)e1)) (x)e2))
 .
 
 %

@@ -103,9 +103,7 @@ let () =
         | _ -> failwith "unreachable"
       in
       let state =
-        let prems = L.Formula_set.of_list r.premises in
-        L.Formula_set.singleton start_lhs
-        |> Set.union prems
+        L.Formula_set.of_list (start_lhs :: r.premises)
         |> U.create
       in
       let state = U.run state lan in

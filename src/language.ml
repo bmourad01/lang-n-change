@@ -358,7 +358,8 @@ module Term = struct
     let rec aux t n = function
       | [] -> []
       | ((Var v) as x) :: xs when equal x t ->
-         Var (v ^ Int.to_string n) :: aux t (succ n) xs
+         let v = Printf.sprintf "%s_%d" v n in
+         Var v :: aux t (succ n) xs
       | _ :: xs -> aux t n xs
     in
     List.filter_map vars' ~f:(fun t ->

@@ -77,7 +77,8 @@ let run ?(normalize = false) state (lan: L.t) =
     | Some mode -> mode
   in
   let subsets = L.subset_categories lan in
-  let inputs predicate args = match Map.find mode.elements predicate with
+  let inputs predicate args =
+    match Map.find mode.elements predicate with
     | None -> []
     | Some desc ->
        match List.zip desc args with

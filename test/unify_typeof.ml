@@ -12,14 +12,28 @@ module S = U.Solution
 let () =
   let lan = Parse_language.parse Sys.argv.(1) in
   let subsets = L.subset_categories lan in
-  (* let rec fresh vars = function
-   *   | T.Var v ->
-   *     let var = T.Var (v ^ "`") in 
-   *     if Set.mem !vars var
-   *     then fresh vars var
-   *     else (vars := Set.add !vars var; var)
-   *   | _ -> failwith "unreachable"
-   * in *)
+  let rec fresh vars = function
+    | T.Var v ->
+      let var = T.Var (v ^ "`") in 
+      if Set.mem !vars var
+      then fresh vars var
+      else (vars := Set.add !vars var; var)
+    | _ -> failwith "unreachable"
+  in
+  let mode = match Map.find lan.hints "mode" with
+    | None -> invalid_arg "'mode' hint is required"
+    | Some mode -> mode
+  in
+  let outputs predicate args =
+    match Map.find mode.elements predicate with
+    | None -> []
+    | Some desc ->
+       match List.zip desc args with
+       | Unequal_lengths -> []
+       | Ok l ->
+          List.filter_map l ~f:(fun (m, t) ->
+              Option.some_if (String.equal m "out") t)
+  in
   List.iter (L.reduction_rules_of lan) ~f:(fun r ->
       let lhs = match r.conclusion with
         | F.Prop p ->
@@ -75,7 +89,7 @@ let () =
            [t1; t; t3]
         | _ -> failwith "unreachable"
       in
-      let start_typeof = match lhs with
+      let start_lhs = match lhs with
         | T.Constructor c ->
            typeof_for_op c.name
            |> (function
@@ -89,32 +103,20 @@ let () =
         | _ -> failwith "unreachable"
       in
       let state =
-        L.Formula_set.singleton start_typeof
+        L.Formula_set.singleton start_lhs
         |> U.create
       in
       let state = U.run state lan in
+      let lhs_vars =
+        List.map (Set.to_list state) ~f:(function
+            | S.Candidate f 
+              | S.Proven f -> F.vars f
+            | _ -> [])
+        |> List.concat
+        |> L.Term_set.of_list
+      in
+      let lhs_vars_ref = ref lhs_vars in
       let start_rhs =
-        (* let vars =
-         *   List.map (Set.to_list state) ~f:(function
-         *       | S.Candidate f 
-         *         | S.Proven f -> F.vars f
-         *       | _ -> [])
-         *   |> List.concat
-         *   |> L.Term_set.of_list
-         *   |> ref
-         * in *)
-        (* let new_term ?(typ = None) t =
-         *   if T.is_var t && Set.mem !vars t then
-         *     fresh vars t
-         *   else
-         *     match typ with
-         *     | Some (T.Constructor c1, T.Constructor c2) ->
-         *        if not (List.equal T.equal c1.args c2.args) then
-         *          let sub = List.zip_exn c2.args c1.args in
-         *          T.substitute t sub
-         *        else t
-         *     | _ -> t
-         * in *)
         let find_formula t = match t with
           | T.Var _ ->
              List.find_map (Set.to_list state) ~f:(function
@@ -230,9 +232,29 @@ let () =
     let state = match start_rhs with
       | None -> state
       | Some start_rhs ->
+         (* uniquify the outputs *)
+         let sub =
+           List.filter_map start_rhs ~f:(function
+               | F.Prop {predicate; args} ->
+                  Some (outputs predicate args)
+               | _ -> None)
+           |> List.concat
+           |> List.map ~f:T.vars
+           |> List.concat
+           |> List.dedup_and_sort ~compare:T.compare
+           |> List.filter_map ~f:(fun t ->
+                  if Set.mem !lhs_vars_ref t
+                  then Some (t, fresh lhs_vars_ref t)
+                  else None)
+         in
+         let start_rhs =
+           List.map start_rhs ~f:(fun f ->
+               F.substitute f sub)
+         in
          let state' = U.create (L.Formula_set.of_list start_rhs) in
-         let state' = U.run state' lan in
-         U.run (Set.union state state') lan ~normalize:true
+         let state = Set.union state state' in
+         let state = U.run state lan in
+         U.run state lan ~normalize:true
     in
     Printf.printf "===========================================\n\n%s\n\nSOLUTION:\n\n" (R.to_string r);
     Set.iter state ~f:(fun s ->

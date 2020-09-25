@@ -736,12 +736,12 @@ let of_language (lan: L.t) =
     let rec aux_term depth t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
       | T.Nil -> (Syntax.["nil" @ []], [])
-      | T.Cons {element; list} ->
+      | T.Cons (element, lst) ->
          let (element, ps1) = aux_term (succ depth) element in
          let element = List.hd_exn element in
-         let (list, ps2) = aux_term (succ depth) list in
-         let list = List.hd_exn list in
-         (Syntax.[element ++ list], ps1 @ ps2)
+         let (lst, ps2) = aux_term (succ depth) lst in
+         let lst = List.hd_exn lst in
+         (Syntax.[element ++ lst], ps1 @ ps2)
       | T.Var v ->
          let k = L.kind_of_var lan v in
          let def = Syntax.v (String.capitalize v) in
@@ -829,7 +829,7 @@ let of_language (lan: L.t) =
                | [] -> (List.rev props, List.rev subs)
                | x :: xs ->
                   match x with
-                  | T.Subst_pair {term; var} ->
+                  | T.Subst_pair (term, var) ->
                      let (term_kind, wrap) = subst_kind "term" term in
                      let sub = fresh_var vars "Sub" None in
                      (* fixme: this is a hack *)
@@ -1634,12 +1634,10 @@ let of_language (lan: L.t) =
          let (ts_2, v) = match t1 with
            | T.Var v ->
               let v = subkind v in
-              (T.(Cons {element = Var v; list = Var "L"}), v)
+              (T.(Cons (Var v, Var "L")), v)
            | T.(Tuple (Var v :: rest)) ->
               let v = subkind v in
-              let element = T.Var v in
-              let list = T.Var "L" in
-              (T.(Tuple ((Cons {element; list}) :: rest)), v)
+              (T.(Tuple ((Cons (Var v, Var "L")) :: rest)), v)
            | _ -> err ()
          in
          let ts_2_l = match t1 with
@@ -1667,11 +1665,9 @@ let of_language (lan: L.t) =
        in
        let rule3 =
          let ts_3 = match t1 with
-           | T.Var v ->
-              T.(Cons {element = t1; list = Var "L"})
-           | T.(Tuple (((Var v) as element) :: rest)) ->
-              let list = T.Var "L" in
-              T.(Tuple ((Cons {element; list}) :: rest))
+           | T.Var v -> T.(Cons (t1, Var "L"))
+           | T.(Tuple ((Var v as element) :: rest)) ->
+              T.(Tuple ((Cons (element, Var "L")) :: rest))
            | _ -> err ()
          in
          let ts_3_l = match t1 with

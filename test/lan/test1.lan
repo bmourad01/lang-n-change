@@ -212,17 +212,17 @@ step ((fst (pair v1 v2)), v1)
 
 [R-SND]
 --------------------------------
-step ((snd (pair v2 v2)), v2)
+step ((snd (pair v1 v2)), v2)
 .
 
 [R-IF-TRUE]
 --------------------------------
-step ((ite (tt.) e_true e_false), e_true)
+step ((ite (tt.) e1 e2), e1)
 .
 
 [R-IF-FALSE]
 --------------------------------
-step ((ite (ff.) e_true e_false), e_false)
+step ((ite (ff.) e1 e2), e2)
 .
 
 [R-PRED-ZERO]

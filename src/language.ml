@@ -12,14 +12,14 @@ module Term = struct
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
-    | Cons of {element: t; list: t}
+    | Cons of t * t
     | List of t
     | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
     | Zip of t * t
   and subst =
-    | Subst_pair of {term: t; var: string}
+    | Subst_pair of t * string
     | Subst_var of string [@@deriving equal, compare, sexp]
 
   type subs = (t, t) List.Assoc.t
@@ -45,7 +45,7 @@ module Term = struct
          if List.is_empty substs then "" else
            Printf.sprintf "[%s]"
              (List.map substs ~f:(function
-                  | Subst_pair {term; var} ->
+                  | Subst_pair (term, var) ->
                      Printf.sprintf "%s/%s"
                        (to_string term) var
                   | Subst_var v -> v)
@@ -56,8 +56,8 @@ module Term = struct
          (to_string key) (to_string value) (to_string map)
     | Map_domain m -> Printf.sprintf "dom(%s)" (to_string m)
     | Map_range m -> Printf.sprintf "range(%s)" (to_string m)
-    | Cons {element; list} ->
-       Printf.sprintf "(%s :: %s)" (to_string element) (to_string list)
+    | Cons (element, lst) ->
+       Printf.sprintf "(%s :: %s)" (to_string element) (to_string lst)
     | List t -> Printf.sprintf "[%s...]" (to_string t)
     | Map {key; value} ->
        Printf.sprintf "{%s => %s}" key (to_string value)
@@ -93,6 +93,14 @@ module Term = struct
     | Subst _ -> true
     | _ -> false
 
+  let is_subst_pair = function
+    | Subst_pair _ -> true
+    | _ -> false
+
+  let is_subst_var = function
+    | Subst_var _ -> true
+    | _ -> false
+  
   let is_map_update = function
     | Map_update _ -> true
     | _ -> false
@@ -148,18 +156,15 @@ module Term = struct
     | Subst {body; substs} ->
        let substs =
          List.map substs ~f:(function
-             | Subst_pair {term; var} ->
-                Subst_pair {term = unbind_rec term; var}
+             | Subst_pair (term, var) ->
+                Subst_pair (unbind_rec term, var)
              | Subst_var v -> Subst_var v)
        in Subst {body = unbind_rec body; substs}
     | Map_update {key; value; map} ->
        Map_update {key; value = unbind_rec value; map}
     | Map_domain t -> Map_domain (unbind_rec t)
     | Map_range t -> Map_range (unbind_rec t)
-    | Cons {element; list} ->
-       let element = unbind_rec element in
-       let list = unbind_rec list in
-       Cons {element; list}
+    | Cons (element, lst) -> Cons (unbind_rec element, unbind_rec lst)
     | List t -> List (unbind_rec t)
     | Map {key; value} -> Map {key; value = unbind_rec value}
     | Tuple ts -> Tuple (List.map ts ~f:unbind_rec)
@@ -177,15 +182,15 @@ module Term = struct
     | Subst {body; substs} ->
        let substs_vars =
          List.map substs ~f:(function
-             | Subst_pair {term; var} -> vars_dup term
+             | Subst_pair (term, var) -> vars_dup term
              | Subst_var v -> [Var v])
          |> List.concat
        in vars_dup body @ substs_vars
     | Map_update {key; value; map} ->
        (vars_dup key) @ (vars_dup value) @ (vars_dup map)
     | Map_domain m | Map_range m -> vars_dup m
-    | Cons {element; list} ->
-       List.map [element; list] ~f:vars_dup |> List.concat
+    | Cons (element, lst) ->
+       List.map [element; lst] ~f:vars_dup |> List.concat
     | List s -> vars_dup s
     | Map {key; value} -> vars_dup value
     | Tuple ts | Union ts ->
@@ -211,8 +216,8 @@ module Term = struct
     | Subst {body; substs} ->
        let substs =
          List.map substs ~f:(function
-             | Subst_pair {term; var} ->
-                Subst_pair {term = ticked term; var}
+             | Subst_pair (term, var) ->
+                Subst_pair (ticked term, var)
              | Subst_var v -> Subst_var (v ^ "'"))
        in Subst {body = ticked body; substs}
     | Map_update {key; value; map} ->
@@ -223,10 +228,7 @@ module Term = struct
          }
     | Map_domain m -> Map_domain (ticked m)
     | Map_range m -> Map_range (ticked m)
-    | Cons {element; list} ->
-       let element = ticked element in
-       let list = ticked list in
-       Cons {element; list}
+    | Cons (element, lst) -> Cons (ticked element, ticked lst)
     | List s -> List (ticked s)
     | Map {key; value} -> Map {key; value = ticked value}
     | Tuple ts -> Tuple (List.map ts ~f:ticked)
@@ -251,8 +253,8 @@ module Term = struct
     | Subst {body; substs} ->
        let substs =
          List.map substs ~f:(function
-             | Subst_pair {term; var} ->
-                Subst_pair {term = unticked term; var}
+             | Subst_pair (term, var) ->
+                Subst_pair (unticked term, var)
              | Subst_var v -> Subst_var (f v))
        in Subst {body = unticked body; substs}
     | Map_update {key; value; map} ->
@@ -263,10 +265,7 @@ module Term = struct
          }
     | Map_domain m -> Map_domain (unticked m)
     | Map_range m -> Map_range (unticked m)
-    | Cons {element; list} ->
-       let element = unticked element in
-       let list = unticked list in
-       Cons {element; list}
+    | Cons (element, lst) -> Cons (unticked element, unticked lst)
     | List s -> List (unticked s)
     | Map {key; value} -> Map {key; value = unticked value}
     | Tuple ts -> Tuple (List.map ts ~f:unticked)
@@ -288,8 +287,8 @@ module Term = struct
     | Subst {body; substs} ->
        let substs =
          List.map substs ~f:(function
-             | Subst_pair {term; var} ->
-                Subst_pair {term = f term; var}
+             | Subst_pair (term, var) ->
+                Subst_pair (f term, var)
              | Subst_var v ->
                 if List.mem ts (Var v) ~equal
                 then Subst_var (v ^ "'")
@@ -303,10 +302,7 @@ module Term = struct
          }
     | Map_domain m -> Map_domain (ticked_restricted m ts)
     | Map_range m -> Map_range (ticked_restricted m ts)
-    | Cons {element; list} ->
-       let element = f element in
-       let list = f list in
-       Cons {element; list}
+    | Cons (element, lst) -> Cons (f element, f lst)
     | List s -> List (f s)
     | Map {key; value} -> Map {key; value = f value}
     | Tuple ts -> Tuple (List.map ts ~f)
@@ -329,8 +325,8 @@ module Term = struct
        | Subst {body; substs} ->
           let substs =
             List.map substs ~f:(function
-                | Subst_pair {term; var} ->
-                   Subst_pair {term = f term; var}
+                | Subst_pair (term, var) ->
+                   Subst_pair (f term, var)
                 | Subst_var v ->
                    match List.Assoc.find sub ~equal (Var v) with
                    | Some (Var v') -> Subst_var v'
@@ -344,10 +340,7 @@ module Term = struct
             }
        | Map_domain m -> Map_domain (f m)
        | Map_range m -> Map_range (f m)
-       | Cons {element; list} ->
-          let element = f element in
-          let list = f list in
-          Cons {element; list}
+       | Cons (element, lst) -> Cons (f element, f lst)
        | List s -> List (f s)
        | Map {key; value} -> Map {key; value = f value}
        | Tuple ts -> Tuple (List.map ts ~f)
@@ -404,9 +397,9 @@ module Term = struct
            | [] -> ([], m)
            | x :: xs ->
               let (x, m) = match x with
-                | Subst_pair {term; var} ->              
+                | Subst_pair (term, var) ->              
                    let (term, m) = aux term m in
-                   (Subst_pair {term; var}, m)
+                   (Subst_pair (term, var), m)
                 | Subst_var v ->
                    match var (Var v) m with
                    | (Var v, m) ->
@@ -430,10 +423,10 @@ module Term = struct
       | Map_range t ->
          let (t, m) = aux t m in
          (Map_range t, m)
-      | Cons {element; list} ->
+      | Cons (element, lst) ->
          let (element, m) = aux element m in
-         let (list, m) = aux list m in
-         (Cons {element; list}, m)
+         let (lst, m) = aux lst m in
+         (Cons (element, lst), m)
       | List t ->
          let (t, m) = aux t m in
          (List t, m)
@@ -724,18 +717,18 @@ module Rule = struct
 
   let is_reduction_rule r = match r.conclusion with
     | Formula.Prop {predicate; _} ->
-       String.is_prefix predicate ~prefix:Predicate.Builtin.step
+       Predicate.(equal predicate Builtin.step)
     | _ -> false
 
   let is_typing_rule r = match r.conclusion with
     | Formula.Prop {predicate; _} ->
-       String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
+       Predicate.(equal predicate Builtin.typeof)
     | _ -> false
 
   let has_typing_premises r =
     List.exists r.premises ~f:(function
         | Formula.Prop {predicate; args} ->
-           String.is_prefix predicate ~prefix:Predicate.Builtin.typeof
+           Predicate.(equal predicate Builtin.typeof)
         | _ -> false)
 
   let vars r =

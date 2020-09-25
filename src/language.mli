@@ -12,14 +12,14 @@ module Term: sig
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
-    | Cons of {element: t; list: t}
+    | Cons of t * t
     | List of t
     | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
     | Zip of t * t
   and subst =
-    | Subst_pair of {term: t; var: string}
+    | Subst_pair of t * string
     | Subst_var of string [@@deriving equal, compare, sexp]
 
   type subs = (t, t) List.Assoc.t
@@ -31,6 +31,8 @@ module Term: sig
   val is_constructor: t -> bool
   val is_binding: t -> bool
   val is_subst: t -> bool
+  val is_subst_pair: subst -> bool
+  val is_subst_var: subst -> bool
   val is_map_update: t -> bool
   val is_map_domain: t -> bool
   val is_map_range: t -> bool

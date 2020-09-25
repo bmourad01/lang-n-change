@@ -2,4 +2,5 @@
  (names parse_lan compile_lprolog unify_typeof)
  (flags -w -33)
  (modes byte native)
- (libraries core_kernel lang-n-change))
+ (libraries core_kernel lang-n-change)
+ (preprocess (pps ppx_let)))

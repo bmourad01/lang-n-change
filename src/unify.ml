@@ -144,9 +144,9 @@ let run ?(normalize = false) state (lan: L.t) =
           if String.equal c1.name c2.name
           then zip_and_loop state' incompat c1.args c2.args
           else incompat ()
-       | (T.Cons c1, T.Cons c2) ->
-          let ts = [c1.element; c1.list] in
-          let ts' = [c2.element; c2.list] in
+       | (T.Cons (element, lst), T.Cons (element', lst')) ->
+          let ts = [element; lst] in
+          let ts' = [element'; lst'] in
           zip_and_loop state' incompat ts ts'
        | (T.Tuple ts, T.Tuple ts')
          | (T.Union ts, T.Union ts') ->
@@ -230,7 +230,7 @@ let run ?(normalize = false) state (lan: L.t) =
            * and collect new candidate formulae as well
            * as new formula substitutions *)
           match Set.find state ~f:is_provable with
-          | Some ((Solution.Candidate f) as candidate) ->
+          | Some ((Solution.Candidate (F.Prop p as f) as candidate)) ->
              (* collect all mentioned variables in
               * the set so we can manage conflicts *)
              let vars =

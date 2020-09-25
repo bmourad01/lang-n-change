@@ -118,8 +118,8 @@ formula:
     { Formula.Prop {predicate; args} }
 
 subst:
-  | term = term FSLASH var = NAME
-    { Term.Subst_pair {term; var} }
+  | term FSLASH NAME
+    { Term.Subst_pair ($1, $3) }
   | NAME
     { Term.Subst_var $1 }
 
@@ -156,8 +156,8 @@ term:
     { Term.List $2 }
   | LBRACE key = NAME MAPSTO value = term RBRACE
     { Term.Map {key; value} }
-  | LPAREN element = term CONS list = term RPAREN
-    { Term.Cons {element; list} }
+  | LPAREN term CONS term RPAREN
+    { Term.Cons ($2, $4) }
   | LANGLE t1 = term COMMA t2 = term RANGLE
     { Term.Tuple ([t1; t2]) }
   | LANGLE t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RANGLE

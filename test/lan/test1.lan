@@ -1,11 +1,13 @@
-Expression e ::= x | (abs T (x)e) | (app e e)
-                   | (cons e e) | (nill.) | (head e) | (tail e) | (nill.) | (filter e e)
-                   | (pair e e) | (fst e) | (snd e)
-                   | (err.)
-                   | (tt.) | (ff.) | (ite e e e)
-                   | (zero.) | (succ e) | (pred e) | (add e e) | (sub e e)
-                   | (let e (x)e)
-                   | (absT (Z)e) | (appT e T)
+Expression e ::= x
+                 | (abs T (x)e) | (app e e)
+                 | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (map e e) | (append e e)
+                 | (pair e e) | (fst e) | (snd e)
+                 | (err.)
+                 | (tt.) | (ff.) | (ite e e e)
+                 | (zero.) | (succ e) | (pred e) | (is_zero e) | (is_succ e) | (add e e) | (sub e e)
+                 | (let e (x)e)
+                 | (absT (Z)e) | (appT e T)
+                 | (none.) | (some e) | (get e) | (is_none e) | (is_some e)
 
 Error er ::= (err.)
 
@@ -15,23 +17,27 @@ Value v ::= (abs T (x)e)
             | (tt.) | (ff.)
             | (zero.) | (succ v)
             | (absT (Z)e)
+            | (none.) | (some v)
 
-Type T ::= Z | (arrow T T)
-             | (list T)
-             | (times T T)
-             | (bool.)
-             | (nat.)
-             | (all (Z)T)
+Type T ::= Z
+           | (arrow T T)
+           | (list T)
+           | (times T T)
+           | (bool.)
+           | (nat.)
+           | (all (Z)T)
+           | (option T)
 
-Context E ::= (hole.) | (app E e) | (app v E)
-                      | (cons E e) | (cons v E)
-                      | (head E) | (tail E)
-                      | (filter E e) | (filter v E)
-                      | (pair E e) | (pair v E) | (fst E) | (snd E)
-                      | (ite E e e)
-                      | (succ E) | (pred E) | (add E e) | (add v E) | (sub E e) | (sub v E)
-                      | (let E (x)e)
-                      | (appT E T)
+Context E ::= (hole.)
+              | (app E e) | (app v E)
+              | (cons E e) | (cons v E) | (head E) | (tail E) | (is_nil E) | (is_cons E)
+              | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (map E e) | (map v E) | (append E e) | (append v E)
+              | (pair E e) | (pair v E) | (fst E) | (snd E)
+              | (ite E e e)
+              | (succ E) | (pred E) | (is_zero E) | (is_succ E) | (add E e) | (add v E) | (sub E e) | (sub v E)
+              | (let E (x)e)
+              | (appT E T)
+              | (some E) | (get E) | (is_some E) | (is_none E)
 
 Environment Gamma ::= {x => T}
     
@@ -72,11 +78,44 @@ typeof (Gamma, e, (list T))
 typeof (Gamma, (tail e), (list T))
 .
 
+[T-IS-NIL]
+typeof (Gamma, e, (list T))
+--------------------------------
+typeof (Gamma, (is_nil e), (bool.))
+.
+
+[T-IS-CONS]
+typeof (Gamma, e, (list T))
+--------------------------------
+typeof (Gamma, (is_cons e), (bool.))
+.
+
 [T-FILTER]
 typeof (Gamma, e1, (list T)),
 typeof (Gamma, e2, (arrow T (bool.)))
 --------------------------------
 typeof (Gamma, (filter e1 e2), (list T))
+.
+
+[T-FILTER-MAP]
+typeof (Gamma, e1, (list T1)),
+typeof (Gamma, e2, (arrow T1 (option T2)))
+--------------------------------
+typeof (Gamma, (filter_map e1 e2), (list T2))
+.
+
+[T-MAP]
+typeof (Gamma, e1, (list T1)),
+typeof (Gamma, e2, (arrow T1 T2))
+--------------------------------
+typeof (Gamma, (map e1 e2), (list T2))
+.
+
+[T-APPEND]
+typeof (Gamma, e1, (list T)),
+typeof (Gamma, e2, (list T))
+--------------------------------
+typeof (Gamma, (append e1 e2), (list T))
 .
 
 [T-PAIR]
@@ -146,6 +185,18 @@ typeof (Gamma, e, (nat.))
 typeof (Gamma, (pred e), (nat.))
 .
 
+[T-IS-ZERO]
+typeof (Gamma, e, (nat.))
+--------------------------------
+typeof (Gamma, (is_zero e), (bool.))
+.
+
+[T-IS-SUCC]
+typeof (Gamma, e, (nat.))
+--------------------------------
+typeof (Gamma, (is_succ e), (bool.))
+.
+
 [T-ADD]
 typeof (Gamma, e1, (nat.)),
 typeof (Gamma, e2, (nat.))
@@ -179,6 +230,35 @@ typeof (Gamma, e, (all (Z)T2))
 typeof (Gamma, (appT e T1), T2[T1/Z])
 .
 
+[T-NONE]
+--------------------------------
+typeof (Gamma, (none.), (option T))
+.
+
+[T-SOME]
+typeof (Gamma, e, T)
+--------------------------------
+typeof (Gamma, (some e), (option T))
+.
+
+[T-GET]
+typeof (Gamma, e, (option T))
+--------------------------------
+typeof (Gamma, (get e), T)
+.
+
+[T-IS-NONE]
+typeof (Gamma, e, (option T))
+--------------------------------
+typeof (Gamma, (is_none e), (bool.))
+.
+
+[T-IS-SOME]
+typeof (Gamma, e, (option T))
+--------------------------------
+typeof (Gamma, (is_some e), (bool.))
+.
+
 [T-ERR]
 --------------------------------
 typeof (Gamma, (err.), T)
@@ -209,6 +289,26 @@ step ((head (cons v1 v2)), v1)
 step ((tail (cons v1 v2)), v2)
 .
 
+[R-IS-NIL-TRUE]
+--------------------------------
+step ((is_nil (nill.)), (tt.))
+.
+
+[R-IS-NIL-FALSE]
+--------------------------------
+step ((is_nil (cons v1 v2)), (ff.))
+.
+
+[R-IS-CONS-TRUE]
+--------------------------------
+step ((is_cons (cons v1 v2)), (tt.))
+.
+
+[R-IS-CONS-FALSE]
+--------------------------------
+step ((is_cons (nill.)), (ff.))
+.
+
 [R-FILTER-NIL]
 --------------------------------
 step ((filter (nill.) v), (nill.))
@@ -217,6 +317,36 @@ step ((filter (nill.) v), (nill.))
 [R-FILTER-CONS]
 --------------------------------
 step ((filter (cons v1 v2) v3), (ite (app v3 v1) (cons v1 (filter v2 v3)) (filter v2 v3)))
+.
+
+[R-FILTER-MAP-NIL]
+--------------------------------
+step ((filter_map (nill.) v), (nill.))
+.
+
+[R-FILTER-MAP-CONS]
+--------------------------------
+step ((filter_map (cons v1 v2) v3), (ite (is_some (app v3 v1)) (cons v1 (filter_map v2 v3)) (filter_map v2 v3)))
+.
+
+[R-MAP-NIL]
+--------------------------------
+step ((map (nill.) v), (nill.))
+.
+
+[R-MAP-CONS]
+--------------------------------
+step ((map (cons v1 v2) v3), (cons (app v3 v1) (map v2 v3)))
+.
+
+[R-APPEND-NIL]
+--------------------------------
+step ((append (nill.) v), v)
+.
+
+[R-APPEND-CONS]
+--------------------------------
+step ((append (cons v1 v2) v3), (cons v1 (append v2 v3)))
 .
 
 [R-FST]
@@ -247,6 +377,26 @@ step ((pred (zero.)), (err.))
 [R-PRED-SUCC]
 --------------------------------
 step ((pred (succ v)), v)
+.
+
+[R-IS-ZERO-TRUE]
+--------------------------------
+step ((is_zero (zero.)), (tt.))
+.
+
+[R-IS-ZERO-FALSE]
+--------------------------------
+step ((is_zero (succ v)), (ff.))
+.
+
+[R-IS-SUCC-TRUE]
+--------------------------------
+step ((is_succ (succ v)), (tt.))
+.
+
+[R-IS-SUCC-FALSE]
+--------------------------------
+step ((is_succ (zero.)), (ff.))
 .
 
 [R-ADD-ZERO]
@@ -294,7 +444,37 @@ step ((let v (x)e), e[v/x])
 step ((appT (absT (Z)e) T), e[T/Z])
 .
 
+[R-GET-NONE]
+--------------------------------
+step ((get (none.)), (err.))
+.
+
+[R-GET-SOME]
+--------------------------------
+step ((get (some v)), v)
+.
+
+[R-IS-NONE-TRUE]
+--------------------------------
+step ((is_none (none.)), (tt.))
+.
+
+[R-IS-NONE-FALSE]
+--------------------------------
+step ((is_none (some v)), (ff.))
+.
+
+[R-IS-SOME-TRUE]
+--------------------------------
+step ((is_some (some v)), (tt.))
+.
+
+[R-IS-SOME-FALSE]
+--------------------------------
+step ((is_some (none.)), (ff.))
+.
+
 %
 
 mode: typeof => inp inp out | step => inp out.
-variance: arrow => contra cov | list => cov.
+variance: arrow => contra cov | list => cov | times => cov cov | option => cov.

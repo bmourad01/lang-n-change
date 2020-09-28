@@ -117,6 +117,33 @@ module Sigs = struct
           "list" @ [v "B"];
         ]
     in
+    let lnc_map_join =
+      "lnc_map_join" $ [
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+        ]
+    in
+    let lnc_map_union =
+      "lnc_map_union" $ [
+          "list" @ ["list" @ ["lnc_pair" @ [v "A"; v "B"]]];
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+          "list" @ ["lnc_pair" @ [v "A"; v "B"]];
+        ]
+    in
+    let lnc_append =
+      "lnc_append" $ [
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+        ]
+    in
+    let lnc_reverse =
+      "lnc_reverse" $ [
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+        ]
+    in
     let lnc_subset =
       "lnc_subset" $ [
           "list" @ [v "A"];
@@ -149,6 +176,10 @@ module Sigs = struct
        (lnc_map_update.name, lnc_map_update);
        (lnc_map_domain.name, lnc_map_domain);
        (lnc_map_range.name, lnc_map_range);
+       (lnc_map_join.name, lnc_map_join);
+       (lnc_map_union.name, lnc_map_union);
+       (lnc_append.name, lnc_append);
+       (lnc_reverse.name, lnc_reverse);
        (lnc_subset.name, lnc_subset);
        (lnc_zip.name, lnc_zip);
        (lnc_join.name, lnc_join);
@@ -627,6 +658,62 @@ let builtin_rules =
      $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "M";
         v "Y" ++ v "L"]) <-- []
   in
+  let lnc_map_join_1 =
+    ("LNC-MAP-JOIN-1",
+     "lnc_map_join" $ ["nil" @ []; v "K"; v "K"]) <-- []
+  in
+  let lnc_map_join_2 =
+    ("LNC_MAP-JOIN-2",
+     "lnc_map_join"
+     $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "M";
+        v "K";
+        v "M'"]) <-- [
+        "lnc_member" $ ["lnc_pair" @ [v "X"; v "Y"]; v "K"];
+        "lnc_map_join" $ [v "M"; v "K"; v "M'"];
+      ]
+  in
+  let lnc_map_join_3 =
+    ("LNC_MAP-JOIN-3",
+     "lnc_map_join"
+     $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "M";
+        v "K";
+        ("lnc_pair" @ [v "X"; v "Y"]) ++ v "M'"]) <-- [
+        !("lnc_member" $ ["lnc_pair" @ [v "X"; v "Y'"]; v "K"]);
+        "lnc_map_join" $ [v "M"; v "K"; v "M'"];
+      ]
+  in
+  let lnc_map_union_1 =
+    ("LNC-MAP-UNION-1",
+     "lnc_map_union" $ ["nil" @ []; v "K"; v "K"]) <-- []
+  in
+  let lnc_map_union_2 =
+    ("LNC-MAP-UNION-2",
+     "lnc_map_union" $ [v "X" ++ v "L"; v "K"; v "M2"]) <-- [
+        "lnc_map_join" $ [v "X"; v "K"; v "M1"];
+        "lnc_map_union" $ [v "L"; v "M1"; v "M2"];
+      ]
+  in
+  let lnc_append_1 =
+    ("LNC-APPEND-1",
+     "lnc_append" $ ["nil" @ []; v "K"; v "K"]) <-- []
+  in
+  let lnc_append_2 =
+    ("LNC-APPEND-2",
+     "lnc_append" $ [v "X" ++ v "L"; v "K"; v "X" ++ v "M"]) <-- [
+        "lnc_append" $ [v "L"; v "K"; v "M"];
+      ]
+  in
+  let lnc_reverse_1 =
+    ("LNC-REVERSE-1",
+     "lnc_reverse" $ ["nil" @ []; "nil" @ []]) <-- []
+  in
+  let lnc_reverse_2 =
+    ("LNC-REVERSE-2",
+     "lnc_reverse" $ [v "X" ++ v "L1"; v "L2"]) <-- [
+        "lnc_reverse" $ [v "L1"; v "L3"];
+        "lnc_append" $ [v "L3"; v "X" ++ ("nil" @ []); v "L2"];
+      ]
+  in
   let lnc_subset_1 =
     ("LNC-SUBSET-1",
      "lnc_subset" $ ["nil" @ []; "nil" @ []]) <-- []
@@ -668,6 +755,14 @@ let builtin_rules =
   let lnc_join_2 =
     ("LNC-JOIN-2",
      "lnc_join"
+     $ [v "X" ++ v "L"; v "K"; v "L'"]) <-- [
+        "lnc_member" $ [v "X"; v "K"];
+        "lnc_join" $ [v "L"; v "K"; v "L'"];
+      ]
+  in
+  let lnc_join_3 =
+    ("LNC-JOIN-3",
+     "lnc_join"
      $ [v "X" ++ v "L"; v "K"; v "X" ++ v "L'"]) <-- [
         !("lnc_member" $ [v "X"; v "K"]);
         "lnc_join" $ [v "L"; v "K"; v "L'"];
@@ -692,6 +787,15 @@ let builtin_rules =
      (lnc_map_domain_2.name, lnc_map_domain_2);
      (lnc_map_range_1.name, lnc_map_range_1);
      (lnc_map_range_2.name, lnc_map_range_2);
+     (lnc_map_join_1.name, lnc_map_join_1);
+     (lnc_map_join_2.name, lnc_map_join_2);
+     (lnc_map_join_3.name, lnc_map_join_3);
+     (lnc_map_union_1.name, lnc_map_union_1);
+     (lnc_map_union_2.name, lnc_map_union_2);
+     (lnc_append_1.name, lnc_append_1);
+     (lnc_append_2.name, lnc_append_2);
+     (lnc_reverse_1.name, lnc_reverse_1);
+     (lnc_reverse_2.name, lnc_reverse_2);
      (lnc_subset_1.name, lnc_subset_1);
      (lnc_subset_2.name, lnc_subset_2);
      (lnc_subset_3.name, lnc_subset_3);
@@ -703,6 +807,7 @@ let builtin_rules =
      (lnc_map_update_3.name, lnc_map_update_3);
      (lnc_join_1.name, lnc_join_1);
      (lnc_join_2.name, lnc_join_2);
+     (lnc_join_3.name, lnc_join_3);
      (lnc_union_1.name, lnc_union_1);
      (lnc_union_2.name, lnc_union_2);
     ]
@@ -949,10 +1054,25 @@ let of_language (lan: L.t) =
          let (ts', props) = (List.concat ts', List.concat props) in
          let l = fresh_var vars "List" None in
          let t' =
-           List.fold_right ts' ~init:Syntax.("nil" @ [])
-             ~f:(fun t t' -> Syntax.(t ++ t'))
+           List.rev ts'
+           |> List.fold_right ~init:Syntax.("nil" @ [])
+                ~f:(fun t t' -> Syntax.(t ++ t'))
          in
          let prop = Syntax.("lnc_union" $ [t'; "nil" @ []; l]) in
+         ([l], props @ [prop])
+      | T.Map_union ts -> 
+         let (ts', props) =
+           List.map ts ~f:(aux_term (succ depth))
+           |> List.unzip
+         in
+         let (ts', props) = (List.concat ts', List.concat props) in
+         let l = fresh_var vars "List" None in
+         let t' =
+           List.rev ts'
+           |> List.fold_right ~init:Syntax.("nil" @ [])
+                ~f:(fun t t' -> Syntax.(t ++ t'))
+         in
+         let prop = Syntax.("lnc_map_union" $ [t'; "nil" @ []; l]) in
          ([l], props @ [prop])
       | T.Zip (t1, t2) ->
          let (t1', ps1) = aux_term (succ depth) t1 in

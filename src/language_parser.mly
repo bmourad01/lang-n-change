@@ -41,7 +41,7 @@
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token NIL DOM RANGE MEMBER NOT UNION SUBSET ZIP
+%token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP
 
 %start lan
 %type <Language.t> lan
@@ -132,6 +132,10 @@ term:
     { Term.Union [t1; t2] }
   | UNION LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
     { Term.Union (t1 :: t2 :: rest) }
+  | MAPUNION LPAREN t1 = term COMMA t2 = term RPAREN
+    { Term.Map_union [t1; t2] }
+  | MAPUNION LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
+    { Term.Map_union (t1 :: t2 :: rest) }
   | ZIP LPAREN t1 = term COMMA t2 = term RPAREN
     { Term.Zip (t1, t2) }
   | QUOTE NAME QUOTE

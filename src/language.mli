@@ -17,6 +17,7 @@ module Term: sig
     | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
+    | Map_union of t list
     | Zip of t * t
   and subst =
     | Subst_pair of t * string
@@ -42,6 +43,7 @@ module Term: sig
   val is_map: t -> bool
   val is_tuple: t -> bool
   val is_union: t -> bool
+  val is_map_union: t -> bool
   val is_zip: t -> bool
   val unbind: t -> t
   val unbind_rec: t -> t

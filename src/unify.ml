@@ -150,7 +150,8 @@ let run ?(normalize = false) state (lan: L.t) =
           let ts' = [element'; lst'] in
           zip_and_loop state' incompat ts ts'
        | (T.Tuple ts, T.Tuple ts')
-         | (T.Union ts, T.Union ts') ->
+         | (T.Union ts, T.Union ts')
+         | (T.Map_union ts, T.Map_union ts') ->
           zip_and_loop state' incompat ts ts'
        | (T.Zip (t1, t2), T.Zip (t1', t2')) ->
           zip_and_loop state' incompat [t1; t2] [t1'; t2']

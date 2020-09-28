@@ -44,6 +44,7 @@ rule token = parse
   | "member" {MEMBER}
   | "not" {NOT}
   | "union" {UNION}
+  | "map_union" {MAPUNION}
   | "subset" {SUBSET}
   | "zip" {ZIP}
   | "\"" {QUOTE}

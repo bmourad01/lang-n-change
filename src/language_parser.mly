@@ -120,8 +120,8 @@ formula:
 subst:
   | term FSLASH NAME
     { Term.Subst_pair ($1, $3) }
-  | NAME
-    { Term.Subst_var $1 }
+  | NAME COLON NAME
+    { Term.Subst_var ($1, $3) }
 
 term:
   | DOM LPAREN term RPAREN

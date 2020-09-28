@@ -21,7 +21,7 @@ module Term: sig
     | Zip of t * t
   and subst =
     | Subst_pair of t * string
-    | Subst_var of string [@@deriving equal, compare, sexp]
+    | Subst_var of string * string [@@deriving equal, compare, sexp]
 
   type subs = (t, t) List.Assoc.t
   type uniquify_map = (t, t list) List.Assoc.t

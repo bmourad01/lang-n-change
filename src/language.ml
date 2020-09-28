@@ -21,7 +21,7 @@ module Term = struct
     | Zip of t * t
   and subst =
     | Subst_pair of t * string
-    | Subst_var of string [@@deriving equal, compare, sexp]
+    | Subst_var of string * string [@@deriving equal, compare, sexp]
 
   type subs = (t, t) List.Assoc.t
   type uniquify_map = (t, t list) List.Assoc.t
@@ -49,7 +49,8 @@ module Term = struct
                   | Subst_pair (term, var) ->
                      Printf.sprintf "%s/%s"
                        (to_string term) var
-                  | Subst_var v -> v)
+                  | Subst_var (v, kind) ->
+                     Printf.sprintf "%s:%s" v kind)
               |> String.concat ~sep:", ")
        in Printf.sprintf "%s%s" (to_string body) substs_str
     | Map_update {key; value; map} ->
@@ -167,7 +168,7 @@ module Term = struct
          List.map substs ~f:(function
              | Subst_pair (term, var) ->
                 Subst_pair (unbind_rec term, var)
-             | Subst_var v -> Subst_var v)
+             | Subst_var (v, name) -> Subst_var (v, name))
        in Subst {body = unbind_rec body; substs}
     | Map_update {key; value; map} ->
        Map_update {key; value = unbind_rec value; map}
@@ -201,7 +202,7 @@ module Term = struct
                 if include_bindings
                 then Var var :: f term
                 else f term
-             | Subst_var v -> [Var v])
+             | Subst_var (v, _) -> [Var v])
          |> List.concat
        in f body @ substs_vars
     | Map_update {key; value; map} ->
@@ -236,7 +237,7 @@ module Term = struct
          List.map substs ~f:(function
              | Subst_pair (term, var) ->
                 Subst_pair (ticked term, var)
-             | Subst_var v -> Subst_var (v ^ "'"))
+             | Subst_var (v, kind) -> Subst_var (v ^ "'", kind))
        in Subst {body = ticked body; substs}
     | Map_update {key; value; map} ->
        Map_update {
@@ -274,7 +275,7 @@ module Term = struct
          List.map substs ~f:(function
              | Subst_pair (term, var) ->
                 Subst_pair (unticked term, var)
-             | Subst_var v -> Subst_var (f v))
+             | Subst_var (v, kind) -> Subst_var (f v, kind))
        in Subst {body = unticked body; substs}
     | Map_update {key; value; map} ->
        Map_update {
@@ -309,10 +310,10 @@ module Term = struct
          List.map substs ~f:(function
              | Subst_pair (term, var) ->
                 Subst_pair (f term, var)
-             | Subst_var v ->
+             | Subst_var (v, kind) ->
                 if List.mem ts (Var v) ~equal
-                then Subst_var (v ^ "'")
-                else Subst_var v)
+                then Subst_var (v ^ "'", kind)
+                else Subst_var (v, kind))
        in Subst {body = f body; substs}
     | Map_update {key; value; map} ->
        let key = f key in
@@ -347,10 +348,10 @@ module Term = struct
             List.map substs ~f:(function
                 | Subst_pair (term, var) ->
                    Subst_pair (f term, var)
-                | Subst_var v ->
+                | Subst_var (v, kind) ->
                    match List.Assoc.find sub ~equal (Var v) with
-                   | Some (Var v') -> Subst_var v'
-                   | _ -> Subst_var v)
+                   | Some (Var v') -> Subst_var (v', kind)
+                   | _ -> Subst_var (v, kind))
           in Subst {body = f body; substs}
        | Map_update {key; value; map} ->
           let key = f key in
@@ -435,10 +436,10 @@ module Term = struct
                    in
                    let (term, m) = aux term m in
                    (Subst_pair (term, var), m)
-                | Subst_var v ->
+                | Subst_var (v, kind) ->
                    match make_var (Var v) m with
                    | (Var v, m) ->
-                      (Subst_var v, m)
+                      (Subst_var (v, kind), m)
                    | _ -> (x, m)
               in
               let (xs, m) = aux' m xs in

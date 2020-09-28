@@ -961,17 +961,24 @@ let of_language (lan: L.t) =
                        let prop = Syntax.(name $ args) in
                        Hashtbl.add_multi subst_kinds body_kind term_kind;
                        aux (prop :: (List.rev props' @ props)) (sub :: subs) xs
-                  | T.Subst_var s ->
+                  | T.Subst_var (s, k) ->
+                     let term_kind = match Map.find lan.grammar k with
+                       | Some _ -> kind_name k
+                       | None ->
+                         invalid_arg 
+                           (Printf.sprintf
+                              "invalid kind %s for subst %s in rule %s"
+                              k (T.to_string t) rule_name)
+                     in
                      let sub = fresh_var vars "Sub" None in
                      let body = match List.hd subs with
                        | None -> body'
                        | Some sub -> sub
                      in
                      let args = Syntax.[body; v (String.capitalize s); sub] in
-                     (* fixme: how do we infer the kind of the substitution? *)
                      let name =
                        Printf.sprintf "lnc_subst_list_%s_%s"
-                         body_kind body_kind
+                         body_kind term_kind
                      in
                      let prop = Syntax.(name $ args) in
                      Hashtbl.add_multi subst_kinds body_kind body_kind;

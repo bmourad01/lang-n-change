@@ -74,7 +74,7 @@ let () =
                begin match arg with
                | T.Constructor c'
                       when String.equal op c'.name ->
-                  Some r.conclusion
+                  Some (r.conclusion, r)
                | _ -> None
                end                 
             | _ -> None)
@@ -93,7 +93,7 @@ let () =
         | T.Constructor c ->
            typeof_for_op c.name
            |> (function
-               | Some (F.Prop p) ->
+               | Some (F.Prop p, _) ->
                   let args = typeof_for_op_substituted c.args p.args lhs in
                   F.Prop {p with args}
                | _ ->
@@ -128,7 +128,7 @@ let () =
                  | _ -> None)
           | T.Constructor c ->
              begin match typeof_for_op c.name with
-             | Some (F.Prop p) ->
+             | Some (F.Prop p, _) ->
                 let args = typeof_for_op_substituted c.args p.args t in
                 Some (F.Prop {p with args})
              | _ -> None
@@ -136,7 +136,7 @@ let () =
           | _ -> None
         in
         match rhs with
-        | Some ((T.Subst s) as rhs) ->
+        | Some (T.Subst s as rhs) ->
            let open Option.Let_syntax in
            let%bind body_kind = match s.body with
              | T.Var v -> L.kind_of_var lan v
@@ -217,10 +217,23 @@ let () =
                  (Printf.sprintf "no typing rule found for %s"
                     (T.to_string s.body))
            end
-        | Some ((T.Constructor c) as rhs) ->
+        | Some (T.Constructor c as rhs) ->
            begin match typeof_for_op c.name with
-           | Some (F.Prop p) ->
+           | Some (F.Prop p, r) ->
               let args = typeof_for_op_substituted c.args p.args rhs in
+              let args =
+                (* handle the case where the RHS
+                 * output type is a free variable,
+                 * in which case we're free to substitute
+                 * with the output type of the LHS *)
+                if List.is_empty r.premises
+                   && T.is_var (List.last_exn args) then
+                  let typ = match start_lhs with
+                    | F.Prop p' -> List.last_exn p'.args
+                    | _ -> failwith "unreachable"
+                  in List.take args 2 @ [typ]
+                else args
+              in
               Some [F.Prop {p with args}]
            | _ ->
               invalid_arg

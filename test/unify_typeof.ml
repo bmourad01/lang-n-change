@@ -40,7 +40,7 @@ let () =
            let lhs = List.hd_exn p.args in
            begin match lhs with
            | T.Constructor _ -> lhs
-           | T.(Tuple ((Constructor _ as t) :: _)) -> t
+           | T.(Tuple (Constructor _ as t :: _)) -> t
            | _ ->
               invalid_arg
                 (Printf.sprintf "bad lhs of step %s"
@@ -57,8 +57,8 @@ let () =
            begin match rhs with
            | T.Constructor _
              | T.Subst _ -> Some rhs
-           | T.(Tuple ((Constructor _ as t) :: _))
-             | T.(Tuple ((Subst _ as t) :: _)) -> Some t
+           | T.(Tuple (Constructor _ as t :: _))
+             | T.(Tuple (Subst _ as t :: _)) -> Some t
            | _ -> None
            end
         | _ ->
@@ -120,8 +120,8 @@ let () =
         let find_formula t = match t with
           | T.Var _ ->
              List.find_map (Set.to_list state) ~f:(function
-                 | S.Candidate ((F.Prop p) as f)
-                   | S.Proven ((F.Prop p) as f) ->
+                 | S.Candidate (F.Prop p as f)
+                   | S.Proven (F.Prop p as f) ->
                     Option.some_if
                       (P.(equal p.predicate Builtin.typeof)
                        && T.equal t (List.nth_exn p.args 1)) f
@@ -194,7 +194,7 @@ let () =
               let%bind assume' = match assume with
                 | T.Var _ -> return (make_assume assume)
                 | T.Map_update m -> return (make_assume m.map)
-                | T.(Tuple ((Var _ as t) :: _)) -> return (make_assume t)
+                | T.(Tuple (Var _ as t :: _)) -> return (make_assume t)
                 | T.(Tuple (Map_update m :: _)) -> return (make_assume m.map)
                 | _ -> None
               in

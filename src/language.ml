@@ -947,6 +947,6 @@ let subset_categories lan =
                   in
                   Set.length ops < Set.length ops'
                   && Set.is_subset ops ops')
-           |> function
-             | None -> subsets
-             | Some c -> Map.set subsets name C.(c.name))
+           |> (function
+               | None -> subsets
+               | Some c -> Map.set subsets name C.(c.name)))

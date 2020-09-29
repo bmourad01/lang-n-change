@@ -47,6 +47,7 @@ rule token = parse
   | "map_union" {MAPUNION}
   | "subset" {SUBSET}
   | "zip" {ZIP}
+  | "fresh" {FRESH}
   | "\"" {QUOTE}
   | name as n {NAME n}
   | eof {EOF}

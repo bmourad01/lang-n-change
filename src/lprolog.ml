@@ -97,6 +97,7 @@ module Sigs = struct
   let builtin_props =
     let open Syntax in
     let lnc_member = "lnc_member" $ [v "A"; "list" @ [v "A"]] in
+    let lnc_nmember = "lnc_nmember" $ [v "A"; "list" @ [v "A"]] in
     let lnc_map_update =
       "lnc_map_update" $ [
           "list" @ ["lnc_pair" @ [v "A"; v "B"]];
@@ -171,8 +172,15 @@ module Sigs = struct
           "list" @ [v "A"];
         ]
     in
+    let lnc_fresh =
+      "lnc_fresh" $ [
+          "list" @ [v "A"];
+          "list" @ [v "A"];
+        ]
+    in
     String.Map.of_alist_exn
       [(lnc_member.name, lnc_member);
+       (lnc_nmember.name, lnc_nmember);
        (lnc_map_update.name, lnc_map_update);
        (lnc_map_domain.name, lnc_map_domain);
        (lnc_map_range.name, lnc_map_range);
@@ -184,6 +192,7 @@ module Sigs = struct
        (lnc_zip.name, lnc_zip);
        (lnc_join.name, lnc_join);
        (lnc_union.name, lnc_union);
+       (lnc_fresh.name, lnc_fresh);
       ]
 
   type t = {
@@ -612,6 +621,16 @@ let builtin_rules =
         "lnc_member" $ [v "X"; v "L"];
       ]
   in
+  let lnc_nmember_1 =
+    ("LNC-NMEMBER-1",
+     "lnc_nmember" $ [v "X"; "nil" @ []]) <-- []
+  in
+  let lnc_nmember_2 =
+    ("LNC-NMEMBER-2",
+     "lnc_nmember" $ [v "X"; v "Y" ++ v "L"]) <-- [
+        "lnc_nmember" $ [v "X"; v "L"];
+      ]
+  in
   let lnc_map_update_1 =
     ("LNC-MAP-UPDATE-1",
      "lnc_map_update"
@@ -780,9 +799,17 @@ let builtin_rules =
         "lnc_union" $ [v "L"; v "M1"; v "M2"];
       ]
   in
+  let lnc_fresh =
+    ("LNC-FRESH",
+     "lnc_fresh" $ [v "L"; v "X" ++ v "L"]) <-- [
+        "lnc_nmember" $ [v "X"; v "L"];
+      ]
+  in
   String.Map.of_alist_exn
     [(lnc_member_1.name, lnc_member_1);
      (lnc_member_2.name, lnc_member_2);
+     (lnc_nmember_1.name, lnc_nmember_1);
+     (lnc_nmember_2.name, lnc_nmember_2);
      (lnc_map_domain_1.name, lnc_map_domain_1);
      (lnc_map_domain_2.name, lnc_map_domain_2);
      (lnc_map_range_1.name, lnc_map_range_1);
@@ -810,6 +837,7 @@ let builtin_rules =
      (lnc_join_3.name, lnc_join_3);
      (lnc_union_1.name, lnc_union_1);
      (lnc_union_2.name, lnc_union_2);
+     (lnc_fresh.name, lnc_fresh);
     ]
 
 type t = {
@@ -1101,6 +1129,19 @@ let of_language (lan: L.t) =
              let m = fresh_var vars "Map" None in
              let prop = Syntax.("lnc_zip" $ [t1'; t2'; m]) in
              ([m], ps1 @ ps2 @ [prop])
+      | T.Fresh t ->
+         let (t', props) = aux_term (succ depth) t in
+         if List.length t' > 1 then         
+           invalid_arg
+             (Printf.sprintf
+                "invalid fresh term %s in rule %s"
+                (T.to_string t) rule_name)
+         else
+           let t' = List.hd_exn t' in
+           let res = fresh_var vars "Fresh" None in
+           let prop =
+             Syntax.("lnc_fresh" $ [t'; res ++ (new_wildcard wildcard)])
+           in ([res], props @ [prop])
       | _ ->
          invalid_arg
            (Printf.sprintf "invalid term %s in rule %s" 

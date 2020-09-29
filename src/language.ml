@@ -19,6 +19,7 @@ module Term = struct
     | Union of t list
     | Map_union of t list
     | Zip of t * t
+    | Fresh of t
   and subst =
     | Subst_pair of t * string
     | Subst_var of string * string [@@deriving equal, compare, sexp]
@@ -78,6 +79,7 @@ module Term = struct
     | Zip (t1, t2) ->
        Printf.sprintf "zip(%s, %s)"
          (to_string t1) (to_string t2)
+    | Fresh t -> Printf.sprintf "fresh(%s)" (to_string t)
 
   let is_var = function
     | Var _ -> true
@@ -151,6 +153,10 @@ module Term = struct
     | Zip _ -> true
     | _ -> false
 
+  let is_fresh = function
+    | Fresh _ -> true
+    | _ -> false
+
   let unbind t = match t with
     | Binding {var; body} -> body
     | _ -> t
@@ -181,6 +187,7 @@ module Term = struct
     | Union ts -> Union (List.map ts ~f:unbind_rec)
     | Map_union ts -> Map_union (List.map ts ~f:unbind_rec)
     | Zip (t1, t2) -> Zip (unbind_rec t1, unbind_rec t2)
+    | Fresh t -> Fresh (unbind_rec t)
 
   let rec vars_dup ?(include_bindings = false) t =
     let f t = vars_dup t ~include_bindings in
@@ -215,6 +222,7 @@ module Term = struct
     | Tuple ts | Union ts | Map_union ts ->
        List.map ts ~f |> List.concat
     | Zip (t1, t2) -> f t1 @ f t2
+    | Fresh t -> f t
 
   let vars ?(include_bindings = false) t =
     vars_dup t ~include_bindings |> List.dedup_and_sort ~compare
@@ -254,6 +262,7 @@ module Term = struct
     | Union ts -> Union (List.map ts ~f:ticked)
     | Map_union ts -> Map_union (List.map ts ~f:ticked)
     | Zip (t1, t2) -> Zip (ticked t1, ticked t2)
+    | Fresh t -> Fresh (ticked t)
 
   let rec unticked t =
     let f v = match String.index v '\'' with
@@ -292,6 +301,7 @@ module Term = struct
     | Union ts -> Union (List.map ts ~f:unticked)
     | Map_union ts -> Map_union (List.map ts ~f:unticked)
     | Zip (t1, t2) -> Zip (unticked t1, unticked t2)
+    | Fresh t -> Fresh (unticked t)
 
   let rec ticked_restricted t ts =
     let f t = ticked_restricted t ts in
@@ -329,6 +339,7 @@ module Term = struct
     | Union ts -> Union (List.map ts ~f)
     | Map_union ts -> Map_union (List.map ts ~f)
     | Zip (t1, t2) -> Zip (f t1, f t2)
+    | Fresh t -> Fresh (f t)
 
   let rec substitute t sub = match List.Assoc.find sub ~equal t with
     | Some t' -> t'
@@ -367,6 +378,7 @@ module Term = struct
        | Union ts -> Union (List.map ts ~f)
        | Map_union ts -> Map_union (List.map ts ~f)
        | Zip (t1, t2) -> Zip (f t1, f t2)
+       | Fresh t -> Fresh (f t)
 
   let uniquify_map include_bindings min t =
     let vars = vars_dup t ~include_bindings in
@@ -507,6 +519,9 @@ module Term = struct
          let (t1, m) = aux t1 m in
          let (t2, m) = aux t2 m in
          (Zip (t1, t2), m)
+      | Fresh t ->
+         let (t, m) = aux t m in
+         (Fresh t, m)
     in aux t m
 
   let uniquify ?(include_bindings = false) ?(min = 1) t =

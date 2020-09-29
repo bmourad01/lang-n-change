@@ -41,7 +41,7 @@
 %token MAPSTO
 %token EQ
 %token QUOTE
-%token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP
+%token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP FRESH
 
 %start lan
 %type <Language.t> lan
@@ -138,6 +138,8 @@ term:
     { Term.Map_union (t1 :: t2 :: rest) }
   | ZIP LPAREN t1 = term COMMA t2 = term RPAREN
     { Term.Zip (t1, t2) }
+  | FRESH LPAREN term RPAREN
+    { Term.Fresh $3 }
   | QUOTE NAME QUOTE
     { Term.Str $2 }
   | LPAREN name = NAME DOT RPAREN

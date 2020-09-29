@@ -19,6 +19,7 @@ module Term: sig
     | Union of t list
     | Map_union of t list
     | Zip of t * t
+    | Fresh of t
   and subst =
     | Subst_pair of t * string
     | Subst_var of string * string [@@deriving equal, compare, sexp]
@@ -45,6 +46,7 @@ module Term: sig
   val is_union: t -> bool
   val is_map_union: t -> bool
   val is_zip: t -> bool
+  val is_fresh: t -> bool
   val unbind: t -> t
   val unbind_rec: t -> t
   val vars_dup: ?include_bindings:bool -> t -> t list

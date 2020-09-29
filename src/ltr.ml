@@ -51,10 +51,12 @@ module Exp = struct
     (* control operations *)
     | Let of {
         recursive: bool;
-        var: string;
+        name: string;
+        args: (string * Type.t) list;
         exp: t;
         body: t;
       }
+    | Apply of t * t list
     | Ite of boolean * t * t
     | Seq of t * t
     | Compose of t * t
@@ -103,15 +105,9 @@ module Exp = struct
     | Meta_var_of of string
     | Syntax_terms_of of string
     (* relation operations *)
-    | New_relation of {
-        predicate: string;
-        terms: t list;
-      }
+    | New_relation of string * t list
     (* formula operations *)
-    | New_formula of {
-        predicate: t;
-        args: t;
-      }
+    | New_formula of t * t
     | Uniquify_formulae of {
         formulae: t;
         hint_map: t;
@@ -176,7 +172,7 @@ module Exp = struct
     | Term_fresh of t
   and subst =
     | Subst_pair of t * string
-    | Subst_var of string
+    | Subst_var of string * string
 
   let rec to_string = function
     | Self -> "self"
@@ -197,10 +193,22 @@ module Exp = struct
          (to_string e)
     | Bool b -> Bool.to_string b
     | Bool_exp b -> string_of_boolean b
-    | Let {recursive; var; exp; body} ->
+    | Let {recursive; name; args; exp; body} ->
+       let args_str = match args with
+         | [] -> " "
+         | _ ->
+            List.map args ~f:(fun (a, t) ->
+                Printf.sprintf "(%s: %s)"
+                  a (Type.to_string t))
+            |> String.concat ~sep:" "
+       in
        let let_str = if recursive then "let rec" else "let" in
-       Printf.sprintf "%s %s = %s in %s"
-         let_str var (to_string exp) (to_string body)
+       Printf.sprintf "%s %s%s= %s in %s"
+         let_str name args_str (to_string exp) (to_string body)
+    | Apply (e, args) ->
+       Printf.sprintf "%s(%s)" (to_string e)
+         (List.map args ~f:to_string
+          |> String.concat ~sep:", ")
     | Ite (b, e1, e2) ->
        Printf.sprintf "if %s then %s else %s"
          (string_of_boolean b) (to_string e1) (to_string e2)
@@ -268,12 +276,12 @@ module Exp = struct
     | Remove_syntax name -> Printf.sprintf "remove_syntax(%s)" name
     | Meta_var_of name -> Printf.sprintf "meta_var(%s)" name
     | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
-    | New_relation {predicate; terms} ->
+    | New_relation (predicate, terms) ->
        Printf.sprintf "%%%s %s"
          predicate
          (List.map terms ~f:to_string
           |> String.concat ~sep:" ")
-    | New_formula {predicate; args} ->
+    | New_formula (predicate, args) ->
        Printf.sprintf "$%s %s"
          (to_string predicate) (to_string args)
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
@@ -366,7 +374,8 @@ module Exp = struct
              | Subst_pair (e, var) ->
                 Printf.sprintf "%s/%s"
                   (to_string e) var
-             | Subst_var v -> v)
+             | Subst_var (v, k) ->
+                Printf.sprintf "%s: %s" v k)
          |> String.concat ~sep:", "
        in Printf.sprintf "%s[%s]" (to_string e) substs_str
     | Term_map_update (key, value, map) ->

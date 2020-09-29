@@ -37,10 +37,12 @@ module Exp: sig
     (* control operations *)
     | Let of {
         recursive: bool;
-        var: string;
+        name: string;
+        args: (string * Type.t) list;
         exp: t;
         body: t;
       }
+    | Apply of t * t list
     | Ite of boolean * t * t
     | Seq of t * t
     | Compose of t * t
@@ -89,15 +91,9 @@ module Exp: sig
     | Meta_var_of of string
     | Syntax_terms_of of string
     (* relation operations *)
-    | New_relation of {
-        predicate: string;
-        terms: t list;
-      }
+    | New_relation of string * t list
     (* formula operations *)
-    | New_formula of {
-        predicate: t;
-        args: t;
-      }
+    | New_formula of t * t
     | Uniquify_formulae of {
         formulae: t;
         hint_map: t;
@@ -162,5 +158,5 @@ module Exp: sig
     | Term_fresh of t
   and subst =
     | Subst_pair of t * string
-    | Subst_var of string
+    | Subst_var of string * string
 end

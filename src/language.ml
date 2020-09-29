@@ -576,16 +576,29 @@ module Formula = struct
          (Term.to_string t1)
          (Term.to_string t2)
     | Prop {predicate; args} ->
-       let args_str =
-         List.map args ~f:Term.to_string
-         |> String.concat ~sep:", "
-       in Printf.sprintf "%s(%s)" predicate args_str
+       let len = List.length args in
+       if Predicate.(equal predicate Builtin.typeof)
+          && len = 3 then
+         Printf.sprintf "%s |- %s : %s"
+           (Term.to_string (List.hd_exn args))
+           (Term.to_string (List.nth_exn args 1))
+           (Term.to_string (List.last_exn args))
+       else if Predicate.(equal predicate Builtin.step)
+               && len = 2 then
+         Printf.sprintf "%s --> %s"
+           (Term.to_string (List.hd_exn args))
+           (Term.to_string (List.last_exn args))
+       else
+         let args_str =
+           List.map args ~f:Term.to_string
+           |> String.concat ~sep:" "
+         in Printf.sprintf "%s %s" predicate args_str
     | Member {element; collection} ->
-       Printf.sprintf "member(%s, %s)"
+       Printf.sprintf "member %s %s"
          (Term.to_string element)
          (Term.to_string collection)
     | Subset {sub; super} ->
-       Printf.sprintf "subset(%s, %s)"
+       Printf.sprintf "subset %s %s"
          (Term.to_string sub)
          (Term.to_string super)
 
@@ -774,7 +787,7 @@ module Rule = struct
          |> String.concat ~sep:",\n"
          |> (fun s -> s ^ "\n")
     in Printf.sprintf
-         "[%s]\n%s--------------------------------------\n%s\n."
+         "[%s]\n%s--------------------------------------\n%s."
          r.name premises_str
          (Formula.to_string r.conclusion)
 
@@ -866,9 +879,22 @@ let to_string lan =
     if Map.is_empty lan.relations then "" else
       Map.to_alist lan.relations
       |> List.map ~f:(fun (p, ts) ->
-             Printf.sprintf "%s(%s)" p
-               (List.map ts ~f:Term.to_string
-                |> String.concat ~sep:", "))
+             let len = List.length ts in
+             if Predicate.(equal p Builtin.typeof)
+                && len = 3 then
+               Printf.sprintf "%s |- %s : %s."
+                 (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.nth_exn ts 1))
+                 (Term.to_string (List.last_exn ts))
+             else if Predicate.(equal p Builtin.step)
+                     && len = 2 then
+               Printf.sprintf "%s --> %s."
+                 (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.last_exn ts))
+             else
+               Printf.sprintf "%s %s." p
+                 (List.map ts ~f:Term.to_string
+                  |> String.concat ~sep:" "))
       |> String.concat ~sep:"\n"
       |> (fun s -> "\n\n%\n\n" ^ s)
   in 

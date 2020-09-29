@@ -110,7 +110,7 @@ module Exp = struct
     (* formula operations *)
     | New_formula of {
         predicate: t;
-        args: t list;
+        args: t;
       }
     | Uniquify_formulae of {
         formulae: t;
@@ -269,15 +269,13 @@ module Exp = struct
     | Meta_var_of name -> Printf.sprintf "meta_var(%s)" name
     | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
     | New_relation {predicate; terms} ->
-       Printf.sprintf "%%%s(%s)"
+       Printf.sprintf "%%%s %s"
          predicate
          (List.map terms ~f:to_string
-          |> String.concat ~sep:", ")
+          |> String.concat ~sep:" ")
     | New_formula {predicate; args} ->
-       Printf.sprintf "$%s(%s)"
-         (to_string predicate)
-         (List.map args ~f:to_string
-          |> String.concat ~sep:", ")
+       Printf.sprintf "$%s %s"
+         (to_string predicate) (to_string args)
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
        Printf.sprintf "uniquify(%s, \"%s\", \"%s\")"
          (to_string formulae) (to_string hint_map) hint_var
@@ -298,7 +296,6 @@ module Exp = struct
          |> String.concat ~sep:" | "
        in Printf.sprintf "#%s:%s%s" name extend_str elements_str
     | Lookup_hint hint -> Printf.sprintf "hint(%s)" hint
-          
   and string_of_boolean = function
     | Not b -> Printf.sprintf "not(%s)" (string_of_boolean b)
     | And (b1, b2) ->

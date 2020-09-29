@@ -53,506 +53,417 @@ Environment Gamma ::= {x => T}
     
 %
 
-step(e, e)
-typeof(Gamma, e, T)
+e --> e.
+Gamma |- e : T.
 
 %
 
 [T-VAR]
-member(<x, T>, Gamma)
+member <x, T> Gamma
 --------------------------------
-typeof(Gamma, x, T)
-.
+Gamma |- x : T.
 
 [T-CONS]
-typeof(Gamma, e1, T),
-typeof(Gamma, e2, (list T))
+Gamma |- e1 : T,
+Gamma |- e2 : (list T)
 --------------------------------
-typeof(Gamma, (cons e1 e2), (list T))
-.
+Gamma |- (cons e1 e2) : (list T).
 
 [T-NIL]
 --------------------------------
-typeof(Gamma, (nill.), (list T))
-.
-    
+Gamma |- (nill.) : (list T).
+ 
 [T-HEAD]
-typeof(Gamma, e, (list T))
+Gamma |- e : (list T)
 --------------------------------
-typeof(Gamma, (head e), T)
-.
+Gamma |- (head e) : T.
 
 [T-TAIL]
-typeof(Gamma, e, (list T))
+Gamma |- e : (list T)
 --------------------------------
-typeof(Gamma, (tail e), (list T))
-.
+Gamma |- (tail e) : (list T).
 
 [T-IS-NIL]
-typeof(Gamma, e, (list T))
+Gamma |- e : (list T)
 --------------------------------
-typeof(Gamma, (is_nil e), (bool.))
-.
+Gamma |- (is_nil e) : (bool.).
 
 [T-IS-CONS]
-typeof(Gamma, e, (list T))
+Gamma |- e : (list T)
 --------------------------------
-typeof(Gamma, (is_cons e), (bool.))
-.
+Gamma |- (is_cons e) : (bool.).
 
 [T-FILTER]
-typeof(Gamma, e1, (list T)),
-typeof(Gamma, e2, (arrow T (bool.)))
+Gamma |- e1 : (list T),
+Gamma |- e2 : (arrow T (bool.))
 --------------------------------
-typeof(Gamma, (filter e1 e2), (list T))
-.
+Gamma |- (filter e1 e2) : (list T).
 
 [T-FILTER-MAP]
-typeof(Gamma, e1, (list T1)),
-typeof(Gamma, e2, (arrow T1 (option T2)))
+Gamma |- e1 : (list T1),
+Gamma |- e2 : (arrow T1 (option T2))
 --------------------------------
-typeof(Gamma, (filter_map e1 e2), (list T2))
-.
+Gamma |- (filter_map e1 e2) : (list T2).
 
 [T-MAP]
-typeof(Gamma, e1, (list T1)),
-typeof(Gamma, e2, (arrow T1 T2))
+Gamma |- e1 : (list T1),
+Gamma |- e2 : (arrow T1 T2)
 --------------------------------
-typeof(Gamma, (map e1 e2), (list T2))
-.
+Gamma |- (map e1 e2) : (list T2).
 
 [T-APPEND]
-typeof(Gamma, e1, (list T)),
-typeof(Gamma, e2, (list T))
+Gamma |- e1 : (list T),
+Gamma |- e2 : (list T)
 --------------------------------
-typeof(Gamma, (append e1 e2), (list T))
-.
+Gamma |- (append e1 e2) : (list T).
 
 [T-PAIR]
-typeof(Gamma, e1, T1),
-typeof(Gamma, e2, T2)
+Gamma |- e1 : T1,
+Gamma |- e2 : T2
 --------------------------------
-typeof(Gamma, (pair e1 e2), (times T1 T2))
-.
+Gamma |- (pair e1 e2) : (times T1 T2).
 
 [T-FST]
-typeof(Gamma, e, (times T1 T2))
+Gamma |- e : (times T1 T2)
 --------------------------------
-typeof(Gamma, (fst e), T1)
-.
+Gamma |- (fst e) : T1.
 
 [T-SND]
-typeof(Gamma, e, (times T1 T2))
+Gamma |- e : (times T1 T2)
 --------------------------------
-typeof(Gamma, (snd e), T2)
-.
+Gamma |- (snd e) : T2.
 
 [T-ABS]
-typeof([x => T1]Gamma, e, T2)
+[x => T1]Gamma |- e : T2
 --------------------------------
-typeof(Gamma, (abs T1 (x)e), (arrow T1 T2))
-.
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
 
 [T-APP]
-typeof(Gamma, e1, (arrow T1 T2)),
-typeof(Gamma, e2, T1)
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
 --------------------------------
-typeof(Gamma, (app e1 e2), T2)
-.
+Gamma |- (app e1 e2) : T2.
 
 [T-TRUE]
 --------------------------------
-typeof(Gamma, (tt.), (bool.))
-.
+Gamma |- (tt.) : (bool.).
  
 [T-FALSE]
 --------------------------------
-typeof(Gamma, (ff.), (bool.))
-.
+Gamma |- (ff.) : (bool.).
 
 [T-IF]
-typeof(Gamma, e1, (bool.)),
-typeof(Gamma, e2, T),
-typeof(Gamma, e3, T)
+Gamma |- e1 : (bool.),
+Gamma |- e2 : T,
+Gamma |- e3 : T
 --------------------------------
-typeof(Gamma, (ite e1 e2 e3), T)
-.
+Gamma |- (ite e1 e2 e3) : T.
 
 [T-ZERO]
 --------------------------------
-typeof(Gamma, (zero.), (nat.))
-.
+Gamma |- (zero.) : (nat.).
 
 [T-SUCC]
-typeof(Gamma, e, (nat.))
+Gamma |- e : (nat.)
 --------------------------------
-typeof(Gamma, (succ e), (nat.))
-.
+Gamma |- (succ e) : (nat.).
 
 [T-PRED]
-typeof(Gamma, e, (nat.))
+Gamma |- e : (nat.)
 --------------------------------
-typeof(Gamma, (pred e), (nat.))
-.
+Gamma |- (pred e) : (nat.).
 
 [T-IS-ZERO]
-typeof(Gamma, e, (nat.))
+Gamma |- e : (nat.)
 --------------------------------
-typeof(Gamma, (is_zero e), (bool.))
-.
+Gamma |- (is_zero e) : (bool.).
 
 [T-IS-SUCC]
-typeof(Gamma, e, (nat.))
+Gamma |- e : (nat.)
 --------------------------------
-typeof(Gamma, (is_succ e), (bool.))
-.
+Gamma |- (is_succ e) : (bool.).
 
 [T-ADD]
-typeof(Gamma, e1, (nat.)),
-typeof(Gamma, e2, (nat.))
+Gamma |- e1 : (nat.),
+Gamma |- e2 : (nat.)
 --------------------------------
-typeof(Gamma, (add e1 e2), (nat.))
-.
-   
+Gamma |- (add e1 e2) : (nat.).
+ 
 [T-SUB]
-typeof(Gamma, e1, (nat.)),
-typeof(Gamma, e2, (nat.))
+Gamma |- e1 : (nat.),
+Gamma |- e2 : (nat.)
 --------------------------------
-typeof(Gamma, (sub e1 e2), (nat.))
-.
+Gamma |- (sub e1 e2) : (nat.).
 
 [T-LET]
-typeof(Gamma, e1, T1),
-typeof([x => T1]Gamma, e2, T2)
+Gamma |- e1 : T1,
+[x => T1]Gamma |- e2 : T2
 --------------------------------
-typeof(Gamma, (let e1 (x)e2), T2)
-.
+Gamma |- (let e1 (x)e2) : T2.
 
 [T-ABST]
-typeof(Gamma, e, T)
+Gamma |- e : T
 --------------------------------
-typeof(Gamma, (absT (Z)e), (all (Z)T))
-.
+Gamma |- (absT (Z)e) : (all (Z)T).
 
 [T-APPT]
-typeof(Gamma, e, (all (Z)T2))
+Gamma |- e : (all (Z)T2)
 --------------------------------
-typeof(Gamma, (appT e T1), T2[T1/Z])
-.
+Gamma |- (appT e T1) : T2[T1/Z].
 
 [T-NONE]
 --------------------------------
-typeof(Gamma, (none.), (option T))
-.
+Gamma |- (none.) : (option T).
 
 [T-SOME]
-typeof(Gamma, e, T)
+Gamma |- e : T
 --------------------------------
-typeof(Gamma, (some e), (option T))
-.
+Gamma |- (some e) : (option T).
 
 [T-GET]
-typeof(Gamma, e, (option T))
+Gamma |- e : (option T)
 --------------------------------
-typeof(Gamma, (get e), T)
-.
+Gamma |- (get e) : T.
 
 [T-IS-NONE]
-typeof(Gamma, e, (option T))
+Gamma |- e : (option T)
 --------------------------------
-typeof(Gamma, (is_none e), (bool.))
-.
+Gamma |- (is_none e) : (bool.).
 
 [T-IS-SOME]
-typeof(Gamma, e, (option T))
+Gamma |- e : (option T)
 --------------------------------
-typeof(Gamma, (is_some e), (bool.))
-.
+Gamma |- (is_some e) : (bool.).
 
 [T-INL]
-typeof(Gamma, e, T1)
+Gamma |- e : T1
 --------------------------------
-typeof(Gamma, (inl e), (sum T1 T2))
-.
+Gamma |- (inl e) : (sum T1 T2).
 
 [T-INR]
-typeof(Gamma, e, T2)
+Gamma |- e : T2
 --------------------------------
-typeof(Gamma, (inr e), (sum T1 T2))
-.
+Gamma |- (inr e) : (sum T1 T2).
 
 [T-CASE]
-typeof(Gamma, e1, (sum T1 T2)),
-typeof([x1 => T1]Gamma, e2, T),
-typeof([x2 => T2]Gamma, e3, T)
+Gamma |- e1 : (sum T1 T2),
+[x1 => T1]Gamma |- e2 : T,
+[x2 => T2]Gamma |- e3 : T
 --------------------------------
-typeof(Gamma, (case e1 (x1)e2 (x2)e3), T)
-.
+Gamma |- (case e1 (x1)e2 (x2)e3) : T.
 
 [T-FIX]
-typeof(Gamma, e, (arrow T T))
+Gamma |- e : (arrow T T)
 --------------------------------
-typeof(Gamma, (fix e), T)
-.
+Gamma |- (fix e) : T.
 
 [T-LETREC]
-typeof([x => T1]Gamma, e1, T1),
-typeof([x => T1]Gamma, e2, T2)
+typeof [x => T1]Gamma e1 T1,
+typeof [x => T1]Gamma e2 T2
 --------------------------------
-typeof(Gamma, (letrec T1 (x)e1 (x)e2), T2)
-.
+Gamma |- (letrec T1 (x)e1 (x)e2) : T2.
 
 [T-FOLD]
-typeof(Gamma, e, T[(mu (Z)T)/Z])
+Gamma |- e : T[(mu (Z)T)/Z]
 --------------------------------
-typeof(Gamma, (fold e (Z)T), (mu (Z)T))
-.
+Gamma |- (fold e (Z)T) : (mu (Z)T).
 
 [T-UNFOLD]
-typeof(Gamma, e, (mu (Z)T))
+Gamma |- e : (mu (Z)T)
 --------------------------------
-typeof(Gamma, (unfold e), T[(mu (Z)T)/Z])
-.
+Gamma |- (unfold e) : T[(mu (Z)T)/Z].
 
 [T-ERR]
 --------------------------------
-typeof(Gamma, (err.), T)
-.
+Gamma |- (err.) : T.
 
 [R-BETA]
 --------------------------------
-step((app (abs T (x)e) v), e[v/x])
-.
+(app (abs T (x)e) v) --> e[v/x].
 
 [R-HEAD-NIL]
 --------------------------------
-step((head (nill.)), (err.))
-.
+(head (nill.)) --> (err.).
 
 [R-TAIL-NIL]
 --------------------------------
-step((tail (nill.)), (err.))
-.
+(tail (nill.)) --> (err.).
     
 [R-HEAD-CONS]
 --------------------------------
-step((head (cons v1 v2)), v1)
-.
+(head (cons v1 v2)) --> v1.
 
 [R-TAIL-CONS]
 --------------------------------
-step((tail (cons v1 v2)), v2)
-.
+(tail (cons v1 v2)) --> v2.
 
 [R-IS-NIL-TRUE]
 --------------------------------
-step((is_nil (nill.)), (tt.))
-.
+(is_nil (nill.)) --> (tt.).
 
 [R-IS-NIL-FALSE]
 --------------------------------
-step((is_nil (cons v1 v2)), (ff.))
-.
+(is_nil (cons v1 v2)) --> (ff.).
 
 [R-IS-CONS-TRUE]
 --------------------------------
-step((is_cons (cons v1 v2)), (tt.))
-.
+(is_cons (cons v1 v2)) --> (tt.).
 
 [R-IS-CONS-FALSE]
 --------------------------------
-step((is_cons (nill.)), (ff.))
-.
+(is_cons (nill.)) --> (ff.).
 
 [R-FILTER-NIL]
 --------------------------------
-step((filter (nill.) v), (nill.))
-.
+(filter (nill.) v) --> (nill.).
 
 [R-FILTER-CONS]
 --------------------------------
-step((filter (cons v1 v2) v3), (ite (app v3 v1) (cons v1 (filter v2 v3)) (filter v2 v3)))
-.
+(filter (cons v1 v2) v3) --> (ite (app v3 v1) (cons v1 (filter v2 v3)) (filter v2 v3)).
 
 [R-FILTER-MAP-NIL]
 --------------------------------
-step((filter_map (nill.) v), (nill.))
-.
+(filter_map (nill.) v) --> (nill.).
 
 [R-FILTER-MAP-CONS]
 --------------------------------
-step((filter_map (cons v1 v2) v3), (ite (is_some (app v3 v1)) (cons v1 (filter_map v2 v3)) (filter_map v2 v3)))
-.
+(filter_map (cons v1 v2) v3) --> (ite (is_some (app v3 v1)) (cons v1 (filter_map v2 v3)) (filter_map v2 v3)).
 
 [R-MAP-NIL]
 --------------------------------
-step((map (nill.) v), (nill.))
-.
+(map (nill.) v) --> (nill.).
 
 [R-MAP-CONS]
 --------------------------------
-step((map (cons v1 v2) v3), (cons (app v3 v1) (map v2 v3)))
-.
+(map (cons v1 v2) v3) --> (cons (app v3 v1) (map v2 v3)).
 
 [R-APPEND-NIL]
 --------------------------------
-step((append (nill.) v), v)
-.
+(append (nill.) v) --> v.
 
 [R-APPEND-CONS]
 --------------------------------
-step((append (cons v1 v2) v3), (cons v1 (append v2 v3)))
-.
+(append (cons v1 v2) v3) --> (cons v1 (append v2 v3)).
 
 [R-FST]
 --------------------------------
-step((fst (pair v1 v2)), v1)
-.
+(fst (pair v1 v2)) --> v1.
 
 [R-SND]
 --------------------------------
-step((snd (pair v1 v2)), v2)
-.
+(snd (pair v1 v2)) --> v2.
 
 [R-IF-TRUE]
 --------------------------------
-step((ite (tt.) e1 e2), e1)
-.
+(ite (tt.) e1 e2) --> e1.
 
 [R-IF-FALSE]
 --------------------------------
-step((ite (ff.) e1 e2), e2)
-.
+(ite (ff.) e1 e2) --> e2.
 
 [R-PRED-ZERO]
 --------------------------------
-step((pred (zero.)), (err.))
-.
+(pred (zero.)) --> (err.).
 
 [R-PRED-SUCC]
 --------------------------------
-step((pred (succ v)), v)
-.
+(pred (succ v)) --> v.
 
 [R-IS-ZERO-TRUE]
 --------------------------------
-step((is_zero (zero.)), (tt.))
-.
+(is_zero (zero.)) --> (tt.).
 
 [R-IS-ZERO-FALSE]
 --------------------------------
-step((is_zero (succ v)), (ff.))
-.
+(is_zero (succ v)) --> (ff.).
 
 [R-IS-SUCC-TRUE]
 --------------------------------
-step((is_succ (succ v)), (tt.))
-.
+(is_succ (succ v)) --> (tt.).
 
 [R-IS-SUCC-FALSE]
 --------------------------------
-step((is_succ (zero.)), (ff.))
-.
+(is_succ (zero.)) --> (ff.).
 
 [R-ADD-ZERO]
 --------------------------------
-step((add v (zero.)), v)
-.
+(add v (zero.)) --> v.
 
 [R-ADD-SUCC]
 --------------------------------
-step((add v1 (succ v2)), (add (succ v1) v2))
-.
+(add v1 (succ v2)) --> (add (succ v1) v2).
 
 [R-SUB-ZERO-SUCC]
 --------------------------------
-step((sub (zero.) (succ v)), (err.))
-.
+(sub (zero.) (succ v)) --> (err.).
    
 [R-SUB-ZERO-ZERO]
 --------------------------------
-step((sub (zero.) (zero.)), (zero.))
-.
+(sub (zero.) (zero.)) --> (zero.).
 
 [R-SUB-SUCC-SUCC]
 --------------------------------
-step((sub (succ v1) (succ v2)), (sub v1 v2))
-.
+(sub (succ v1) (succ v2)) --> (sub v1 v2).
    
 [R-SUB-SUCC-ZERO]
 --------------------------------
-step((sub (succ v) (zero.)), (succ v))
-.
+(sub (succ v) (zero.)) --> (succ v).
 
 [R-ADD-SUCC]
 --------------------------------
-step((add v1 (succ v2)), (add (succ v1) v2))
-.
+(add v1 (succ v2)) --> (add (succ v1) v2).
 
 [R-LET]
 --------------------------------
-step((let v (x)e), e[v/x])
-.
+(let v (x)e) --> e[v/x].
 
 [R-ALPHA]
 --------------------------------
-step((appT (absT (Z)e) T), e[T/Z])
-.
+(appT (absT (Z)e) T) --> e[T/Z].
 
 [R-GET-NONE]
 --------------------------------
-step((get (none.)), (err.))
-.
+(get (none.)) --> (err.).
 
 [R-GET-SOME]
 --------------------------------
-step((get (some v)), v)
-.
+(get (some v)) --> v.
 
 [R-IS-NONE-TRUE]
 --------------------------------
-step((is_none (none.)), (tt.))
-.
+(is_none (none.)) --> (tt.).
 
 [R-IS-NONE-FALSE]
 --------------------------------
-step((is_none (some v)), (ff.))
-.
+(is_none (some v)) --> (ff.).
 
 [R-IS-SOME-TRUE]
 --------------------------------
-step((is_some (some v)), (tt.))
-.
+(is_some (some v)) --> (tt.).
 
 [R-IS-SOME-FALSE]
 --------------------------------
-step((is_some (none.)), (ff.))
-.
+(is_some (none.)) --> (ff.).
 
 [R-CASE-INL]
 --------------------------------
-step((case (inl v) (x1)e1 (x2)e2), e1[v/x1])
-.
+(case (inl v) (x1)e1 (x2)e2) --> e1[v/x1].
 
 [R-CASE-INR]
 --------------------------------
-step((case (inr v) (x1)e1 (x2)e2), e2[v/x2])
-.
+(case (inr v) (x1)e1 (x2)e2) --> e2[v/x2].
 
 [R-FIX]
 --------------------------------
-step((fix (abs T (x)e)), e[(fix (abs T (x)e))/x])
-.
+(fix (abs T (x)e)) --> e[(fix (abs T (x)e))/x].
 
 [R-LETREC]
 --------------------------------
-step((letrec T (x)e1 (x)e2), (let (fix (abs T (x)e1)) (x)e2))
-.
+(letrec T (x)e1 (x)e2) --> (let (fix (abs T (x)e1)) (x)e2).
 
 [R-UNFOLD]
 --------------------------------
-step((unfold (fold v (Z)T)), v)
-.
+(unfold (fold v (Z)T)) --> v.
 
 %
 

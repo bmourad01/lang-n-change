@@ -30,6 +30,8 @@
 %token MOD
 %token GRAMMARASSIGN
 %token WILDCARD
+%token TURNSTYLE
+%token STEP
 %token MID
 %token COMMA
 %token CONS
@@ -101,20 +103,44 @@ rule:
   | LSQUARE name = NAME RSQUARE premises = separated_list(COMMA, formula) nonempty_list(DASH) conclusion = formula DOT
     { Rule.{name; premises; conclusion} }
 
+sugared_relation:
+  | term TURNSTYLE term COLON term DOT
+    { (Predicate.Builtin.typeof, [$1; $3; $5]) }
+  | term STEP term DOT
+    { (Predicate.Builtin.step, [$1; $3]) }
+
 relation:
-  | name = NAME LPAREN terms = separated_nonempty_list(COMMA, term) RPAREN
-    { (name, terms) }
+  | sugared_relation
+    { $1 }
+  | NAME nonempty_list(term) DOT
+    { ($1, $2) }
+
+sugared_formula:
+  | term TURNSTYLE term COLON term
+    {
+      let predicate = Predicate.Builtin.typeof in
+      let args = [$1; $3; $5] in
+      Formula.Prop {predicate; args}
+    }
+  | term STEP term
+    {
+      let predicate = Predicate.Builtin.step in
+      let args = [$1; $3] in
+      Formula.Prop {predicate; args}
+    }
 
 formula:
+  | sugared_formula
+    { $1 }
   | NOT LPAREN f = formula RPAREN
     { Formula.Not f }
   | term EQ term
     { Formula.Eq ($1, $3) }
-  | MEMBER LPAREN element = term COMMA collection = term RPAREN
+  | MEMBER element = term collection = term
     { Formula.Member {element; collection} }
-  | SUBSET LPAREN sub = term COMMA super = term RPAREN
+  | SUBSET sub = term super = term
     { Formula.Subset {sub; super} }
-  | predicate = NAME LPAREN args = separated_list(COMMA, term) RPAREN
+  | predicate = NAME args = nonempty_list(term)
     { Formula.Prop {predicate; args} }
 
 subst:
@@ -143,7 +169,16 @@ term:
   | QUOTE NAME QUOTE
     { Term.Str $2 }
   | LPAREN name = NAME DOT RPAREN
-    { Term.Constructor {name; args = []} }
+    {
+      let open Core_kernel in
+      if String.(equal name (uncapitalize name)) then
+        Term.Constructor {name; args = []}
+      else
+        invalid_arg
+          (Printf.sprintf
+             "bad constructor name %s, cannot be capitalized"
+             name)
+    }
   | LPAREN name = NAME args = list(term) RPAREN
     { Term.Constructor {name; args} }
   | WILDCARD

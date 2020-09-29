@@ -96,7 +96,7 @@ module Exp: sig
     (* formula operations *)
     | New_formula of {
         predicate: t;
-        args: t list;
+        args: t;
       }
     | Uniquify_formulae of {
         formulae: t;

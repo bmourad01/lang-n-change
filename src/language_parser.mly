@@ -31,6 +31,7 @@
 %token GRAMMARASSIGN
 %token WILDCARD
 %token TURNSTYLE
+%token SUBTYPE
 %token STEP
 %token MID
 %token COMMA
@@ -108,6 +109,10 @@ sugared_relation:
     { (Predicate.Builtin.typeof, [$1; $3; $5]) }
   | term STEP term DOT
     { (Predicate.Builtin.step, [$1; $3]) }
+  | term SUBTYPE term DOT
+    { (Predicate.Builtin.subtype, [$1; $3]) }
+  | term TURNSTYLE term SUBTYPE term DOT
+    { (Predicate.Builtin.subtype, [$1; $3; $5]) }
 
 relation:
   | sugared_relation
@@ -126,6 +131,18 @@ sugared_formula:
     {
       let predicate = Predicate.Builtin.step in
       let args = [$1; $3] in
+      Formula.Prop {predicate; args}
+    }
+  | term SUBTYPE term
+    {
+      let predicate = Predicate.Builtin.subtype in
+      let args = [$1; $3] in
+      Formula.Prop {predicate; args}
+    }
+  | term TURNSTYLE term SUBTYPE term
+    {
+      let predicate = Predicate.Builtin.subtype in
+      let args = [$1; $3; $5] in
       Formula.Prop {predicate; args}
     }
 

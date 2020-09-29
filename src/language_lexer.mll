@@ -27,6 +27,7 @@ rule token = parse
   | "_" {WILDCARD}
   | "|-" {TURNSTYLE}
   | "-->" {STEP}
+  | "<:" {SUBTYPE}
   | "|" {MID}
   | "[" {LSQUARE}
   | "]" {RSQUARE}

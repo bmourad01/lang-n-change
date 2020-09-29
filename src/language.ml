@@ -588,6 +588,17 @@ module Formula = struct
          Printf.sprintf "%s --> %s"
            (Term.to_string (List.hd_exn args))
            (Term.to_string (List.last_exn args))
+       else if Predicate.(equal predicate Builtin.subtype)
+               && len = 2 then
+         Printf.sprintf "%s <: %s"
+           (Term.to_string (List.hd_exn args))
+           (Term.to_string (List.last_exn args))
+       else if Predicate.(equal predicate Builtin.subtype)
+               && len = 3 then
+         Printf.sprintf "%s |- %s <: %s"
+           (Term.to_string (List.hd_exn args))
+           (Term.to_string (List.nth_exn args 1))
+           (Term.to_string (List.last_exn args))
        else
          let args_str =
            List.map args ~f:Term.to_string
@@ -890,6 +901,17 @@ let to_string lan =
                      && len = 2 then
                Printf.sprintf "%s --> %s."
                  (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.last_exn ts))
+             else if Predicate.(equal p Builtin.subtype)
+                     && len = 2 then
+               Printf.sprintf "%s <: %s"
+                 (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.last_exn ts))
+             else if Predicate.(equal p Builtin.subtype)
+                     && len = 3 then
+               Printf.sprintf "%s |- %s <: %s"
+                 (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.nth_exn ts 1))
                  (Term.to_string (List.last_exn ts))
              else
                Printf.sprintf "%s %s." p

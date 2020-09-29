@@ -570,7 +570,7 @@ module Formula = struct
       } [@@deriving equal, compare, sexp]
 
   let rec to_string = function
-    | Not f -> Printf.sprintf "not (%s)" (to_string f)
+    | Not f -> Printf.sprintf "not(%s)" (to_string f)
     | Eq (t1, t2) ->
        Printf.sprintf "%s = %s"
          (Term.to_string t1)
@@ -579,13 +579,13 @@ module Formula = struct
        let args_str =
          List.map args ~f:Term.to_string
          |> String.concat ~sep:", "
-       in Printf.sprintf "%s (%s)" predicate args_str
+       in Printf.sprintf "%s(%s)" predicate args_str
     | Member {element; collection} ->
-       Printf.sprintf "member (%s, %s)"
+       Printf.sprintf "member(%s, %s)"
          (Term.to_string element)
          (Term.to_string collection)
     | Subset {sub; super} ->
-       Printf.sprintf "subset (%s, %s)"
+       Printf.sprintf "subset(%s, %s)"
          (Term.to_string sub)
          (Term.to_string super)
 
@@ -866,7 +866,7 @@ let to_string lan =
     if Map.is_empty lan.relations then "" else
       Map.to_alist lan.relations
       |> List.map ~f:(fun (p, ts) ->
-             Printf.sprintf "%s (%s)" p
+             Printf.sprintf "%s(%s)" p
                (List.map ts ~f:Term.to_string
                 |> String.concat ~sep:", "))
       |> String.concat ~sep:"\n"

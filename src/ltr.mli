@@ -93,7 +93,7 @@ module Exp: sig
     (* relation operations *)
     | New_relation of string * t list
     (* formula operations *)
-    | New_formula of t * t
+    | New_formula of formula
     | Uniquify_formulae of {
         formulae: t;
         hint_map: t;
@@ -143,7 +143,7 @@ module Exp: sig
     | Term_var of string
     | Term_str of string
     | Term_constructor of t * t
-    | Term_binding of string * t
+    | Term_binding of t * t
     | Term_subst of t * subst list
     | Term_map_update of t * t * t
     | Term_map_domain of t
@@ -156,6 +156,12 @@ module Exp: sig
     | Term_map_union of t list
     | Term_zip of t * t
     | Term_fresh of t
+  and formula =
+    | Formula_not of t
+    | Formula_eq of t * t
+    | Formula_prop of t * t
+    | Formula_member of t * t
+    | Formula_subset of t * t
   and subst =
     | Subst_pair of t * string
     | Subst_var of string * string

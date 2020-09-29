@@ -107,7 +107,7 @@ module Exp = struct
     (* relation operations *)
     | New_relation of string * t list
     (* formula operations *)
-    | New_formula of t * t
+    | New_formula of formula
     | Uniquify_formulae of {
         formulae: t;
         hint_map: t;
@@ -157,7 +157,7 @@ module Exp = struct
     | Term_var of string
     | Term_str of string
     | Term_constructor of t * t
-    | Term_binding of string * t
+    | Term_binding of t * t
     | Term_subst of t * subst list
     | Term_map_update of t * t * t
     | Term_map_domain of t
@@ -170,6 +170,12 @@ module Exp = struct
     | Term_map_union of t list
     | Term_zip of t * t
     | Term_fresh of t
+  and formula =
+    | Formula_not of t
+    | Formula_eq of t * t
+    | Formula_prop of t * t
+    | Formula_member of t * t
+    | Formula_subset of t * t
   and subst =
     | Subst_pair of t * string
     | Subst_var of string * string
@@ -281,9 +287,7 @@ module Exp = struct
          predicate
          (List.map terms ~f:to_string
           |> String.concat ~sep:" ")
-    | New_formula (predicate, args) ->
-       Printf.sprintf "$%s %s"
-         (to_string predicate) (to_string args)
+    | New_formula f -> string_of_formula f
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
        Printf.sprintf "uniquify(%s, \"%s\", \"%s\")"
          (to_string formulae) (to_string hint_map) hint_var
@@ -367,7 +371,8 @@ module Exp = struct
        Printf.sprintf "(%s %s)"
          (to_string name) (to_string e)
     | Term_binding (var, e) ->
-       Printf.sprintf "(%s)%s" var (to_string e)
+       Printf.sprintf "(%s)%s"
+         (to_string var) (to_string e)
     | Term_subst (e, substs) ->
        let substs_str =
          List.map substs ~f:(function
@@ -406,4 +411,18 @@ module Exp = struct
        Printf.sprintf "zip(%s, %s)"
          (to_string e1) (to_string e2)
     | Term_fresh e -> Printf.sprintf "fresh(%s)" (to_string e)
+  and string_of_formula = function
+    | Formula_not e -> Printf.sprintf "$not(%s)" (to_string e)
+    | Formula_eq (e1, e2) ->
+       Printf.sprintf "%s = %s"
+         (to_string e1) (to_string e2)
+    | Formula_prop (e1, e2) ->
+       Printf.sprintf "%s %s"
+         (to_string e1) (to_string e2)
+    | Formula_member (e1, e2) ->
+       Printf.sprintf "$member %s %s"
+         (to_string e1) (to_string e2)
+    | Formula_subset (e1, e2) ->
+       Printf.sprintf "$subset %s %s"
+         (to_string e1) (to_string e2)
 end

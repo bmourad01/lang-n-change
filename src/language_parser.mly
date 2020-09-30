@@ -26,6 +26,7 @@
 %}
 
 %token EOF
+%token <string> STRING
 %token <string> NAME
 %token MOD
 %token GRAMMARASSIGN
@@ -43,7 +44,6 @@
 %token FSLASH
 %token MAPSTO
 %token EQ
-%token QUOTE
 %token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP FRESH
 
 %start lan
@@ -183,8 +183,8 @@ term:
     { Term.Zip (t1, t2) }
   | FRESH LPAREN term RPAREN
     { Term.Fresh $3 }
-  | QUOTE NAME QUOTE
-    { Term.Str $2 }
+  | STRING
+    { Term.Str $1 }
   | LPAREN name = NAME DOT RPAREN
     {
       let open Core_kernel in

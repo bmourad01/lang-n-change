@@ -45,7 +45,6 @@ module Exp: sig
     | Apply of t * t list
     | Ite of boolean * t * t
     | Seq of t * t
-    | Compose of t * t
     | Select of {
         keep: bool;
         field: t;
@@ -105,6 +104,7 @@ module Exp: sig
         premises: t;
         conclusion: t;
       }
+    | Rule_name of t
     | Rule_premises of t
     | Rule_conclusion of t
     | Rules_of

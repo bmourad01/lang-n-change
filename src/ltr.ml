@@ -59,7 +59,6 @@ module Exp = struct
     | Apply of t * t list
     | Ite of boolean * t * t
     | Seq of t * t
-    | Compose of t * t
     | Select of {
         keep: bool;
         field: t;
@@ -119,6 +118,7 @@ module Exp = struct
         premises: t;
         conclusion: t;
       }
+    | Rule_name of t
     | Rule_premises of t
     | Rule_conclusion of t
     | Rules_of
@@ -221,9 +221,6 @@ module Exp = struct
     | Seq (e1, e2) ->
        Printf.sprintf "%s; %s"
          (to_string e1) (to_string e2)
-    | Compose (e1, e2) ->
-       Printf.sprintf "%s >> %s"
-         (to_string e1) (to_string e2)
     | Select {keep; field; pattern; body} ->
        let field_str = to_string field in
        let field_str = if keep then field_str ^ "!" else field_str in
@@ -259,7 +256,7 @@ module Exp = struct
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
     | New_term t -> "$" ^ string_of_term t
     | Vars_of e -> Printf.sprintf "vars(%s)" (to_string e)
-    | Fresh_var v -> Printf.sprintf "fresh(%s)" v
+    | Fresh_var v -> Printf.sprintf "fresh_var(%s)" v
     | Unbind e -> Printf.sprintf "unbind(%s)" (to_string e)
     | Bound_of e -> Printf.sprintf "bound(%s)" (to_string e)
     | Substitute (e1, e2) ->
@@ -294,6 +291,7 @@ module Exp = struct
     | Rule {name; premises; conclusion} ->
        Printf.sprintf "[%s] {\n  %s\n---------------------\n  %s\n}"
          (to_string name) (to_string premises) (to_string conclusion)
+    | Rule_name e -> Printf.sprintf "rule_name(%s)" (to_string e)
     | Rule_premises e -> Printf.sprintf "premises(%s)" (to_string e)
     | Rule_conclusion e -> Printf.sprintf "conclusion(%s)" (to_string e)
     | Rules_of -> "rules"

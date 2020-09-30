@@ -18,6 +18,7 @@ let name = ['a'-'z' 'A'-'Z'] (alpha | '_' | '-' | '\'' | digit)*
 rule token = parse                            
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
+  | "\"" (name as s) "\"" {STRING s}
   | '%' {MOD}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
@@ -51,8 +52,7 @@ rule token = parse
   | "subset" {SUBSET}
   | "zip" {ZIP}
   | "fresh" {FRESH}
-  | "\"" {QUOTE}
-  | name as n {NAME n}
+  | name as s {NAME s}
   | eof {EOF}
   | _ {raise (Error
         (Printf.sprintf "At offset %d: unexpected token %s.\n"

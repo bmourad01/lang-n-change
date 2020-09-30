@@ -1,7 +1,9 @@
-(ocamllex language_lexer)
+(ocamllex language_lexer
+          ltr_lexer)
 
 (menhir
- (modules language_parser)
+ (modules language_parser
+          ltr_parser)
  (flags --explain))
 
 (library

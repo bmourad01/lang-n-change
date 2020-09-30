@@ -563,12 +563,11 @@ let rec compile e ctx = match e with
      let (exp', exp_typ, _) = compile exp ctx_exp in
      let ctx_body =
        let type_env = match recursive with
-         | None -> Map.set ctx.type_env name exp_typ
+         | None -> bind_var ctx name exp_typ
          | Some typ ->
             if Type.equal typ exp_typ then
               let typs = List.map args ~f:snd in
-              let typ = Type.Arrow (typs @ [typ]) in
-              Map.set ctx.type_env name typ
+              bind_var ctx name (Type.Arrow (typs @ [typ]))
             else incompat "Let" [exp_typ] [typ]
        in {type_env}
      in

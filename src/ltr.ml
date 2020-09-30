@@ -585,7 +585,19 @@ let rec compile e ctx = match e with
             else incompat "Let" [exp_typ] [typ]
        in {type_env}
      in
-     compile body ctx_body
+     let let_str = match recursive with
+       | None -> "let"
+       | Some _ -> "let rec"
+     in
+     let args_str = match args with
+       | [] -> ""
+       | _ -> List.map args ~f:fst |> String.concat ~sep:" "
+     in
+     let (body', body_typ, _) = compile body ctx_body in
+     let e' =
+       Printf.sprintf "%s %s%s = %s in %s"
+         let_str name args_str exp' body'
+     in (e', body_typ, ctx_body)
   | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
   | _ -> failwith "unreachable"
 and compile_bool b ctx = match b with

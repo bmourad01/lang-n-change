@@ -19,7 +19,7 @@ let name = ['a'-'z' 'A'-'Z'] (alpha | '_' | '-' | '\'' | digit)*
 rule token = parse
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
-  | "\"" (name as s) "\"" {STRING s}
+  | "\"" (name as s) "\"" {STR s}
   | "%" {MOD}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
@@ -112,8 +112,20 @@ rule token = parse
   | "hint" {HINT}
   | "and" {AND}
   | "or" {OR} 
+  | "lan" {LAN}
+  | "rule" {RULE}
+  | "formula" {FORMULA}
+  | "term" {TERM}
+  | "string" {STRING}
+  | "bool" {BOOL}
+  | "int" {INT}
+  | "tuple" {TUPLE} 
+  | "option" {OPTION}
+  | "list" {LIST}
+  | "true" {TRUE}
+  | "false" {FALSE}
   | name as n {NAME n}
-  | integer as n {INT (int_of_string n)}
+  | integer as n {NUM (int_of_string n)}
   | eof {EOF}
   | _ {raise (Error
         (Printf.sprintf "At offset %d: unexpected token %s.\n"

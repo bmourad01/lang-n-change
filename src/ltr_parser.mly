@@ -7,6 +7,7 @@
 %token <string> NAME
 %token <int> NUM
 %token MOD
+%token HASH
 %token GRAMMARASSIGN
 %token WILDCARD
 %token TURNSTYLE
@@ -74,6 +75,16 @@ typ:
 let_arg:
   | LPAREN NAME COLON typ RPAREN
     { ($2, $4) }
+
+hint_element:
+  | NAME MAPSTO nonempty_list(NAME)
+    {
+      ($1, $3)
+    }
+  | NAME
+    {
+      ($1, [])
+    }
 
 exp:
   | SELF
@@ -272,6 +283,22 @@ exp:
     { Exp.Add_rule $3 }
   | SETRULES LPAREN exp RPAREN
     { Exp.Set_rules $3 }
+  | HASH name = NAME COLON DOT DOT DOT MID elements = separated_nonempty_list(MID, hint_element)
+    {
+      Exp.New_hint {
+          extend = true;
+          name;
+          elements;
+        }
+    }
+  | HASH name = NAME COLON elements = separated_nonempty_list(MID, hint_element)
+    {
+      Exp.New_hint {
+          extend = true;
+          name;
+          elements;
+        }
+    }
   | HINT LPAREN STR RPAREN
     { Exp.Lookup_hint $3 }
 

@@ -20,7 +20,8 @@ rule token = parse
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
   | "\"" (name as s) "\"" {STR s}
-  | "%" {MOD}
+  | '%' {MOD}
+  | "#" {HASH}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
   | "::" {CONS}

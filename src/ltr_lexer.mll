@@ -15,9 +15,9 @@ let digit = ['0'-'9']
 let integer = digit+
 let alpha = ['a'-'z' 'A'-'Z']
 let alnum = (alpha | '_' | '-' | digit)*
-let cap_name = ['A'-'Z'] (alpha | '_' | '-' | digit)*
-let name = ['a'-'z'] (alpha | '_' | '-' | digit)*
-let any_name = alpha (alpha | '_' | '-' | digit)*
+let cap_name = ['A'-'Z'] alnum
+let name = ['a'-'z'] alnum
+let any_name = alpha alnum
 
 rule token = parse
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 

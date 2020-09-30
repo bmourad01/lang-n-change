@@ -46,7 +46,6 @@ module Exp = struct
     | Int of int
     | Int_str of t
     (* boolean operations *)
-    | Bool of bool
     | Bool_exp of boolean
     (* control operations *)
     | Let of {
@@ -132,11 +131,11 @@ module Exp = struct
       }
     | Lookup_hint of string
   and boolean =
+    | Bool of bool
     | Not of boolean
     | And of boolean * boolean
     | Or of boolean * boolean
     | Eq of t * t
-    | Var_bool of string
     | Is_member of t * t
     | Is_nothing of t
     | Is_something of t
@@ -197,7 +196,6 @@ module Exp = struct
     | Int_str e ->
        Printf.sprintf "int_str(%s)"
          (to_string e)
-    | Bool b -> Bool.to_string b
     | Bool_exp b -> string_of_boolean b
     | Let {recursive; name; args; exp; body} ->
        let args_str = match args with
@@ -307,6 +305,7 @@ module Exp = struct
        in Printf.sprintf "#%s:%s%s" name extend_str elements_str
     | Lookup_hint hint -> Printf.sprintf "hint(%s)" hint
   and string_of_boolean = function
+    | Bool b -> Bool.to_string b
     | Not b -> Printf.sprintf "not(%s)" (string_of_boolean b)
     | And (b1, b2) ->
        Printf.sprintf "and(%s, %s)"
@@ -317,7 +316,6 @@ module Exp = struct
     | Eq (e1, e2) ->
        Printf.sprintf "%s = %s"
          (to_string e1) (to_string e2)
-    | Var_bool v -> v
     | Is_member (e1, e2) ->
        Printf.sprintf "member?(%s, %s)"
          (to_string e1) (to_string e2)

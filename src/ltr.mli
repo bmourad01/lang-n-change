@@ -32,7 +32,6 @@ module Exp: sig
     | Int of int
     | Int_str of t
     (* boolean operations *)
-    | Bool of bool
     | Bool_exp of boolean
     (* control operations *)
     | Let of {
@@ -118,11 +117,11 @@ module Exp: sig
       }
     | Lookup_hint of string
   and boolean =
+    | Bool of bool
     | Not of boolean
     | And of boolean * boolean
     | Or of boolean * boolean
     | Eq of t * t
-    | Var_bool of string
     | Is_member of t * t
     | Is_nothing of t
     | Is_something of t

@@ -810,6 +810,36 @@ let rec compile ctx e = match e with
         (e', typ', ctx)
      | _ -> incompat "Option_get" [typ] []
      end
+  | Exp.Rule_name e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Rule ->
+        let e' =
+          Printf.sprintf
+            "((fun (r: Language.Rule.t) -> r.name) %s)" e'
+        in (e', Type.String, ctx)
+     | _ -> incompat "Rule_name" [typ] [Type.Rule]
+     end
+  | Exp.Rule_premises e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Rule ->
+        let e' =
+          Printf.sprintf
+            "((fun (r: Language.Rule.t) -> r.premises) %s)" e'
+        in (e', Type.(List Formula), ctx)
+     | _ -> incompat "Rule_premises" [typ] [Type.Rule]
+     end
+  | Exp.Rule_conclusion e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Rule ->
+        let e' =
+          Printf.sprintf
+            "((fun (r: Language.Rule.t) -> r.conclusion) %s)" e'
+        in (e', Type.Formula, ctx)
+     | _ -> incompat "Rule_conclusion" [typ] [Type.Rule]
+     end
   | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
   | Exp.Add_rule e ->
      let (e', typ, _) = compile ctx e in
@@ -819,7 +849,7 @@ let rec compile ctx e = match e with
           Printf.sprintf
             {|
              {lan with rules =
-             let r = %s in
+             let (r: Language.Rule.t) = %s in
              Map.add_exn lan.rules r.name r}
              |} e'
         in (e', Type.Lan, ctx)
@@ -834,7 +864,7 @@ let rec compile ctx e = match e with
             {|
              {lan with rules =
              String.Map.of_alist_exn
-             (List.map %s ~f:(fun r -> (r.name, r)))}
+             (List.map %s ~f:(fun (r: Language.Rule.t) -> (r.name, r)))}
              |} e'
         in (e', Type.Lan, ctx)
      | _ -> incompat "Set_rules" [typ] [Type.(List Rule)]

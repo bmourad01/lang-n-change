@@ -213,6 +213,7 @@ module Exp = struct
                 Printf.sprintf "(%s: %s)"
                   a (Type.to_string t))
             |> String.concat ~sep:" "
+            |> Printf.sprintf " %s"
        in
        let let_str = match recursive with
          | None -> "let"

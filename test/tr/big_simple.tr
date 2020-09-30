@@ -6,20 +6,21 @@ rules![(op args) --> rhs]: {
     let v_res = fresh_var(v) in
     let exprs = head(exprs) in
     let emap = zip(exprs, args) in
+    let new_args = emap[(expr, arg)]: {expr'} in
+    let new_target = if not(member?(rhs, args)) then v_res else rhs in
     
     [rule_name(self)] {
       emap[(expr, arg)]: {
-        if and(var?(arg), not(member?(arg, vars(et)))) then
+        if and(var?(arg), not(member?(arg, vars(rhs)))) then
           nothing
         else
           expr' --> arg
       },
-      if not(member?(et, args)) then
-        nothing
-      else
-        et --> v_res,
+      if not(member?(rhs, args))
+      then nothing
+      else rhs --> v_res,
       rule_premises(self)
       ---------------------------------
-      conclusion(self)
+      (op new_args) --> new_target 
     }
 }

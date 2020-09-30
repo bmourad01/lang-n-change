@@ -546,7 +546,7 @@ let rec compile ctx e = match e with
      end
   | Exp.Bool_exp b -> compile_bool ctx b
   | Exp.Let {recursive; name; args; exp; body} ->
-     (* don't allow users to bind vars special
+     (* don't allow users to bind special
       * names used internally by the compiler *)
      reserved_name name;
      List.iter args ~f:(fun (v, _) -> reserved_name v);

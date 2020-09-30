@@ -12,7 +12,8 @@ module Type = struct
     | Int
     | Tuple of t list
     | Option of t
-    | List of t [@@deriving equal]
+    | List of t
+    | Arrow of t list [@@deriving equal]
 
   let rec to_string = function
     | Lan -> "lan"
@@ -29,6 +30,10 @@ module Type = struct
        |> Printf.sprintf "(%s) tuple"
     | Option t -> Printf.sprintf "%s option" (to_string t)
     | List t -> Printf.sprintf "%s list" (to_string t)
+    | Arrow ts ->
+       List.map ts ~f:to_string
+       |> String.concat ~sep:" -> "
+       |> Printf.sprintf "(%s)"
 end
 
 module Exp = struct
@@ -284,7 +289,7 @@ module Exp = struct
           |> String.concat ~sep:" ")
     | New_formula f -> string_of_formula f
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
-       Printf.sprintf "uniquify(%s, \"%s\", \"%s\")"
+       Printf.sprintf "uniquify(%s, %s, \"%s\")"
          (to_string formulae) (to_string hint_map) hint_var
     | Rule {name; premises; conclusion} ->
        Printf.sprintf "[%s] {\n  %s\n---------------------\n  %s\n}"

@@ -12,7 +12,8 @@ module Type: sig
     | Int
     | Tuple of t list
     | Option of t
-    | List of t [@@deriving equal]
+    | List of t
+    | Arrow of t list [@@deriving equal]
 
   val to_string: t -> string
 end

@@ -12,6 +12,7 @@
 %token TURNSTYLE
 %token SUBTYPE
 %token STEP
+%token ARROW
 %token MID
 %token COMMA
 %token CONS
@@ -57,12 +58,18 @@ typ:
     { Type.Bool }
   | INT
     { Type.Int }
-  | LPAREN typ COMMA typ separated_list(COMMA, typ) RPAREN TUPLE
-    { Type.Tuple ($2 :: $4 :: $5) }
+  | LPAREN typ COMMA typ RPAREN TUPLE
+    { Type.Tuple [$2; $4] }
+  | LPAREN typ COMMA typ COMMA separated_nonempty_list(COMMA, typ) RPAREN TUPLE
+    { Type.Tuple ($2 :: $4 :: $6) }
   | typ OPTION
     { Type.Option $1 }
   | typ LIST
     { Type.List $1 }
+  | LPAREN typ ARROW typ RPAREN
+    { Type.Arrow [$2; $4] }
+  | LPAREN typ ARROW typ ARROW separated_nonempty_list(ARROW, typ) RPAREN
+    { Type.Arrow ($2 :: $4 :: $6) }
 
 let_arg:
   | LPAREN NAME COLON typ RPAREN

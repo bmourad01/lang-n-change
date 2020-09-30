@@ -32,6 +32,7 @@ rule token = parse
   | "^" {CARET}
   | "|-" {TURNSTYLE}
   | "-->" {STEP}
+  | "->" {ARROW}
   | "<:" {SUBTYPE}
   | "|" {MID}
   | "[" {LSQUARE}

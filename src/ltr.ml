@@ -292,7 +292,7 @@ module Exp = struct
        Printf.sprintf "uniquify(%s, %s, \"%s\")"
          (to_string formulae) (to_string hint_map) hint_var
     | Rule {name; premises; conclusion} ->
-       Printf.sprintf "[%s] {\n  %s\n---------------------\n  %s\n}"
+       Printf.sprintf "[%s]\n%s\n---------------------\n%s.\n"
          (to_string name) (to_string premises) (to_string conclusion)
     | Rule_name e -> Printf.sprintf "rule_name(%s)" (to_string e)
     | Rule_premises e -> Printf.sprintf "premises(%s)" (to_string e)

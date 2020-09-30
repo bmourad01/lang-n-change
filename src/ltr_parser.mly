@@ -189,6 +189,38 @@ exp:
     { Exp.Ticked_restricted ($1, $4) }
   | UNIQUIFY LPAREN exp RPAREN
     { Exp.Uniquify_term $3 }
+  | name = NAME meta_var = NAME GRAMMARASSIGN DOT DOT DOT MID terms = separated_nonempty_list(MID, exp)
+    {
+      let open Core_kernel in
+      if String.(equal name (capitalize name)) then
+        Exp.New_syntax {
+            extend = true;
+            name;
+            meta_var;
+            terms;
+          }
+      else
+        invalid_arg
+          (Printf.sprintf
+             "invalid category name %s, must be capitalized"
+             name)
+    }
+  | name = NAME meta_var = NAME GRAMMARASSIGN terms = separated_nonempty_list(MID, exp)
+    {
+      let open Core_kernel in
+      if String.(equal name (capitalize name)) then
+        Exp.New_syntax {
+            extend = false;
+            name;
+            meta_var;
+            terms;
+          }
+      else
+        invalid_arg
+          (Printf.sprintf
+             "invalid category name %s, must be capitalized"
+             name)
+    }
   | REMOVESYNTAX LPAREN name = NAME RPAREN
     {
       let open Core_kernel in
@@ -222,8 +254,12 @@ exp:
              "invalid category name %s, must be capitalized"
              name)
     }
+  | MOD NAME nonempty_list(exp)
+    { Exp.New_relation ($2, $3) }
   | UNIQUIFY LPAREN formulae = exp COMMA hint_map = exp COMMA hint_var = STR RPAREN
     { Exp.Uniquify_formulae {formulae; hint_map; hint_var} }
+  | LSQUARE name = exp RSQUARE premises = exp nonempty_list(DASH) conclusion = exp DOT
+    { Exp.Rule {name; premises; conclusion} }
   | RULENAME LPAREN exp RPAREN
     { Exp.Rule_name $3 }
   | PREMISES LPAREN exp RPAREN

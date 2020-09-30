@@ -1,4 +1,4 @@
-rules![(op args) --> rhs]: {
+set_rules(rules![(op args) --> rhs]: {
   let exprs = syntax(Expression)[(op exprs)]: {exprs} in
   if empty?(exprs) then
     nothing
@@ -23,4 +23,4 @@ rules![(op args) --> rhs]: {
       ---------------------------------
       (op new_args) --> new_target 
     }
-}
+})

@@ -450,8 +450,18 @@ let typeof_var ctx v = match Map.find ctx.type_env v with
   | Some typ -> typ
   | None -> failwith (Printf.sprintf "var '%s' is unbound" v)
 
+let is_reserved_name = function
+  | "lan" -> true
+  | _ -> false
+
+let reserved_name v =
+  if is_reserved_name v then
+    failwith
+      (Printf.sprintf "cannot bind reserved var name %s" v)
+
 let bind_var ctx v typ =
-  Map.set ctx.type_env v typ [@@inline]
+  reserved_name v;
+  Map.set ctx.type_env v typ
 
 let incompat name ts ts' =
   let expect = match ts' with
@@ -536,6 +546,10 @@ let rec compile e ctx = match e with
      end
   | Exp.Bool_exp b -> compile_bool b ctx
   | Exp.Let {recursive; name; args; exp; body} ->
+     (* don't allow users to bind vars special
+      * names used internally by the compiler *)
+     reserved_name name;
+     List.iter args ~f:(fun (v, _) -> reserved_name v);
      let type_env_exp = match String.Map.of_alist args with
        | `Ok m -> m
        | `Duplicate_key a -> 

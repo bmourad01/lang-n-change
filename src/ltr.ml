@@ -591,7 +591,7 @@ let rec compile e ctx = match e with
      in
      let args_str = match args with
        | [] -> ""
-       | _ -> List.map args ~f:fst |> String.concat ~sep:" "
+       | _ -> " " ^ (List.map args ~f:fst |> String.concat ~sep:" ")
      in
      let (body', body_typ, _) = compile body ctx_body in
      let e' =

@@ -811,6 +811,34 @@ let rec compile ctx e = match e with
      | _ -> incompat "Option_get" [typ] []
      end
   | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
+  | Exp.Add_rule e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Rule ->  
+        let e' =
+          Printf.sprintf
+            {|
+             {lan with rules =
+             let r = %s in
+             Map.add_exn lan.rules r.name r}
+             |} e'
+        in (e', Type.Lan, ctx)
+     | _ -> incompat "Add_rule" [typ] [Type.Rule]
+     end
+  | Exp.Set_rules e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.(List Rule) ->
+        let e' =
+          Printf.sprintf
+            {|
+             {lan with rules =
+             String.Map.of_alist_exn
+             (List.map %s ~f:(fun r -> (r.name, r)))}
+             |} e'
+        in (e', Type.Lan, ctx)
+     | _ -> incompat "Set_rules" [typ] [Type.(List Rule)]
+     end
   | _ -> failwith "unreachable"
 and compile_bool ctx b = match b with
   | Exp.Bool b -> (Bool.to_string b, Type.Bool, ctx)

@@ -69,17 +69,37 @@ exp:
     {
       Exp.Let {
           recursive = Some rec_type;
-          name;
+          names = [name];
           args;
           exp;
           body;
         }
     }
-  | LET name = NAME args = list(let_arg)EQ exp = exp IN body = exp
+  | LET name = NAME args = list(let_arg) EQ exp = exp IN body = exp
     {
       Exp.Let {
           recursive = None;
-          name;
+          names = [name];
+          args;
+          exp;
+          body;
+        }
+    }
+  | LET LPAREN name1 = NAME COMMA name2 = NAME RPAREN EQ exp = exp IN body = exp
+    {
+      Exp.Let {
+          recursive = None;
+          names = [name1; name2];
+          args = [];
+          exp;
+          body;
+        }
+    }
+  | LET LPAREN name1 = NAME COMMA name2 = NAME COMMA names = separated_nonempty_list(COMMA, NAME) RPAREN EQ exp = exp IN body = exp
+    {
+      Exp.Let {
+          recursive = None;
+          names = name1 :: name2 :: names;
           args = [];
           exp;
           body;

@@ -55,7 +55,7 @@ module Exp = struct
     (* control operations *)
     | Let of {
         recursive: Type.t option;
-        name: string;
+        names: string list;
         args: (string * Type.t) list;
         exp: t;
         body: t;
@@ -202,7 +202,7 @@ module Exp = struct
        Printf.sprintf "int_str(%s)"
          (to_string e)
     | Bool_exp b -> string_of_boolean b
-    | Let {recursive; name; args; exp; body} ->
+    | Let {recursive; names; args; exp; body} ->
        let args_str = match args with
          | [] -> " "
          | _ ->
@@ -219,8 +219,15 @@ module Exp = struct
          | None -> ""
          | Some typ -> Printf.sprintf " : %s " (Type.to_string typ)
        in
+       let names_str = match names with
+         | [] -> failwith "unreachable"
+         | x :: [] -> x
+         | _ ->
+            Printf.sprintf "(%s)"
+              (String.concat names ~sep:", ")
+       in
        Printf.sprintf "%s %s%s%s= %s in %s"
-         let_str name args_str rec_typ
+         let_str names_str args_str rec_typ
          (to_string exp) (to_string body)
     | Apply (e, args) ->
        Printf.sprintf "%s(%s)" (to_string e)
@@ -461,7 +468,8 @@ let reserved_name v =
 
 let bind_var ctx v typ =
   reserved_name v;
-  Map.set ctx.type_env v typ
+  let type_env = Map.set ctx.type_env v typ in
+  {type_env}
 
 let incompat name ts ts' =
   let expect = match ts' with
@@ -545,10 +553,10 @@ let rec compile ctx e = match e with
      | _ -> incompat "Int_str" [typ] [Type.Int]
      end
   | Exp.Bool_exp b -> compile_bool ctx b
-  | Exp.Let {recursive; name; args; exp; body} ->
+  | Exp.Let {recursive; names; args; exp; body} ->
      (* don't allow users to bind special
       * names used internally by the compiler *)
-     reserved_name name;
+     List.iter names ~f:reserved_name;
      List.iter args ~f:(fun (v, _) -> reserved_name v);
      let type_env_exp = match String.Map.of_alist args with
        | `Ok m -> m
@@ -561,6 +569,7 @@ let rec compile ctx e = match e with
        | Some typ ->
           let typs = List.map args ~f:snd in
           let typ = Type.Arrow (typs @ [typ]) in
+          let name = List.hd_exn names in
           match Map.add type_env_exp name typ with
           | `Ok m -> m
           | `Duplicate ->
@@ -575,15 +584,25 @@ let rec compile ctx e = match e with
        in {type_env}
      in
      let (exp', exp_typ, _) = compile ctx_exp exp in
-     let ctx_body =
-       let type_env = match recursive with
-         | None -> bind_var ctx name exp_typ
-         | Some typ ->
-            if Type.equal typ exp_typ then
-              let typs = List.map args ~f:snd in
-              bind_var ctx name (Type.Arrow (typs @ [typ]))
-            else incompat "Let" [exp_typ] [typ]
-       in {type_env}
+     let ctx_body = match recursive with
+       | None ->
+          let num_names = List.length names in
+          if num_names > 1 then
+            match exp_typ with
+            | Type.Tuple typs ->
+               begin match List.zip names typs with
+               | Unequal_lengths -> incompat "Let" typs []
+               | Ok m ->
+                  List.fold m ~init:ctx ~f:(fun ctx (v, typ) ->
+                      bind_var ctx v typ)
+               end
+            | _ -> failwith "Let: expected tuple, cannot destructure"
+          else bind_var ctx (List.hd_exn names) exp_typ
+       | Some typ ->
+          if Type.equal typ exp_typ then
+            let typs = List.map args ~f:snd in
+            bind_var ctx (List.hd_exn names) (Type.Arrow (typs @ [typ]))
+          else incompat "Let" [exp_typ] [typ]
      in
      let let_str = match recursive with
        | None -> "let"
@@ -594,9 +613,14 @@ let rec compile ctx e = match e with
        | _ -> " " ^ (List.map args ~f:fst |> String.concat ~sep:" ")
      in
      let (body', body_typ, _) = compile ctx_body body in
+     let names_str = match names with
+       | [] -> failwith "unreachable"
+       | x :: [] -> x
+       | _ -> Printf.sprintf "(%s)" (String.concat names ~sep:", ")
+     in
      let e' =
        Printf.sprintf "%s %s%s = %s in %s"
-         let_str name args_str exp' body'
+         let_str names_str args_str exp' body'
      in (e', body_typ, ctx_body)
   | Exp.Apply (e, es) ->
      let (e', typ, _) = compile ctx e in

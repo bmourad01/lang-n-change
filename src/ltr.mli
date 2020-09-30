@@ -37,7 +37,7 @@ module Exp: sig
     (* control operations *)
     | Let of {
         recursive: Type.t option;
-        name: string;
+        names: string list;
         args: (string * Type.t) list;
         exp: t;
         body: t;

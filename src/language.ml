@@ -839,7 +839,7 @@ module Grammar = struct
         name: string;
         meta_var: string;
         terms: Term_set.t;
-      }
+      } [@@deriving equal, compare]
 
     let to_string c =
       Printf.sprintf "%s %s ::= %s"
@@ -855,7 +855,7 @@ module Grammar = struct
              | _ -> None)
   end
 
-  type t = Category.t String.Map.t
+  type t = Category.t String.Map.t [@@deriving equal, compare]
 
   let to_string g =
     Map.data g
@@ -867,7 +867,7 @@ module Hint = struct
   type t = {
       name: string;
       elements: (string list) String.Map.t;
-    }
+    } [@@deriving equal, compare]
 
   let to_string h =
     Printf.sprintf "%s: %s" h.name
@@ -883,7 +883,7 @@ type t = {
     relations: Term.t list String.Map.t;
     rules: Rule.t String.Map.t;
     hints: Hint.t String.Map.t;
-  }
+  } [@@deriving equal, compare]
 
 let to_string lan =
   let relations_str =

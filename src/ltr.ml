@@ -54,7 +54,7 @@ module Exp = struct
     | Bool_exp of boolean
     (* control operations *)
     | Let of {
-        recursive: bool;
+        recursive: Type.t option;
         name: string;
         args: (string * Type.t) list;
         exp: t;
@@ -137,9 +137,9 @@ module Exp = struct
     | Lookup_hint of string
   and boolean =
     | Bool of bool
-    | Not of boolean
-    | And of boolean * boolean
-    | Or of boolean * boolean
+    | Not of t
+    | And of t * t
+    | Or of t * t
     | Eq of t * t
     | Is_member of t * t
     | Is_nothing of t
@@ -211,9 +211,17 @@ module Exp = struct
                   a (Type.to_string t))
             |> String.concat ~sep:" "
        in
-       let let_str = if recursive then "let rec" else "let" in
-       Printf.sprintf "%s %s%s= %s in %s"
-         let_str name args_str (to_string exp) (to_string body)
+       let let_str = match recursive with
+         | None -> "let"
+         | Some _ -> "let rec"
+       in
+       let rec_typ = match recursive with
+         | None -> ""
+         | Some typ -> Printf.sprintf " : %s " (Type.to_string typ)
+       in
+       Printf.sprintf "%s %s%s%s= %s in %s"
+         let_str name args_str rec_typ
+         (to_string exp) (to_string body)
     | Apply (e, args) ->
        Printf.sprintf "%s(%s)" (to_string e)
          (List.map args ~f:to_string
@@ -317,13 +325,13 @@ module Exp = struct
     | Lookup_hint hint -> Printf.sprintf "hint(%s)" hint
   and string_of_boolean = function
     | Bool b -> Bool.to_string b
-    | Not b -> Printf.sprintf "not(%s)" (string_of_boolean b)
-    | And (b1, b2) ->
+    | Not e -> Printf.sprintf "not(%s)" (to_string e)
+    | And (e1, e2) ->
        Printf.sprintf "and(%s, %s)"
-         (string_of_boolean b1) (string_of_boolean b2)
-    | Or (b1, b2) ->
+         (to_string e1) (to_string e2)
+    | Or (e1, e2) ->
        Printf.sprintf "or(%s, %s)"
-         (string_of_boolean b1) (string_of_boolean b2)
+         (to_string e1) (to_string e2)
     | Eq (e1, e2) ->
        Printf.sprintf "%s = %s"
          (to_string e1) (to_string e2)
@@ -433,3 +441,297 @@ module Exp = struct
        Printf.sprintf "&subset %s %s"
          (to_string e1) (to_string e2)
 end
+
+type ctx = {
+    type_env: Type.t String.Map.t;
+  }
+
+let typeof_var ctx v = match Map.find ctx.type_env v with
+  | Some typ -> typ
+  | None -> failwith (Printf.sprintf "var '%s' is unbound" v)
+
+let bind_var ctx v typ =
+  Map.set ctx.type_env v typ [@@inline]
+
+let incompat name ts ts' =
+  let expect = match ts' with
+    | [] -> ""
+    | _ ->
+       Printf.sprintf "; expected %s"
+         (List.map ts' ~f:Type.to_string
+          |> String.concat ~sep:", ")
+  in
+  failwith
+    (Printf.sprintf
+       "%s: incompatible type(s) %s%s"
+       name
+       (List.map ts ~f:Type.to_string
+        |> String.concat ~sep:", ")
+       expect)
+
+let type_equal t =
+  let no_equal t =
+    failwith
+      (Printf.sprintf "Eq: no predicate exits for type %s"
+         (Type.to_string t))
+  in
+  let rec eq t = match t with
+    | Type.Lan -> "Language.equal"
+    | Type.Syntax -> "Language.Grammar.Category.equal"
+    | Type.Rule -> "Language.Rule.equal"
+    | Type.Formula -> "Language.Formula.equal"
+    | Type.Term -> "Language.Term.equal"
+    | Type.String -> "String.equal"
+    | Type.Bool -> "Bool.equal"
+    | Type.Int -> "Int.equal"
+    | Type.List t -> Printf.sprintf "(List.equal %s)" (eq t)
+    | Type.Tuple _
+      | Type.Option _
+      | Type.Arrow _ -> no_equal t
+  in eq t
+
+let rec compile e ctx = match e with
+  | Exp.Self ->
+     let typ = typeof_var ctx "self" in
+     ("self", typ, ctx)
+  | Exp.Var v ->
+     let typ = typeof_var ctx v in
+     (v, typ, ctx)
+  | Exp.Str s ->
+     let e' = Printf.sprintf "\"%s\"" s in
+     (e', Type.String, ctx)
+  | Exp.Str_concat (e1, e2) ->
+     let (e1', typ1, _) = compile e1 ctx in
+     let (e2', typ2, _) = compile e2 ctx in
+     begin match (typ1, typ2) with
+     | (Type.String, Type.String) ->
+        let e' = Printf.sprintf "(%s ^ %s)" e1' e2' in
+        (e', Type.String, ctx)
+     | _ -> incompat "Str_concat" [typ1; typ2] [Type.String; Type.String]
+     end
+  | Exp.Uppercase e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.String ->
+        let e' = Printf.sprintf "(String.uppercase %s)" e' in
+        (e', typ, ctx)
+     | _ -> incompat "Uppercase" [typ] [Type.String]
+     end
+  | Exp.Lowercase e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.String ->
+        let e' = Printf.sprintf "(String.lowercase %s)" e' in
+        (e', typ, ctx)
+     | _ -> incompat "Lowercase" [typ] [Type.String]
+     end
+  | Exp.Int i -> (Int.to_string i, Type.Int, ctx)
+  | Exp.Int_str e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Int ->
+        let e' = Printf.sprintf "(Int.to_string %s)" e' in
+        (e', Type.String, ctx)
+     | _ -> incompat "Int_str" [typ] [Type.Int]
+     end
+  | Exp.Bool_exp b -> compile_bool b ctx
+  | Exp.Let {recursive; name; args; exp; body} ->
+     let type_env_exp = match String.Map.of_alist args with
+       | `Ok m -> m
+       | `Duplicate_key a -> 
+          failwith
+            (Printf.sprintf "Let: duplicate arg %s" a)
+     in
+     let type_env_exp = match recursive with
+       | None -> type_env_exp
+       | Some typ ->
+          let typs = List.map args ~f:snd in
+          let typ = Type.Arrow (typs @ [typ]) in
+          match Map.add type_env_exp name typ with
+          | `Ok m -> m
+          | `Duplicate ->
+             failwith
+               (Printf.sprintf
+                  "Let: recursive name %s is redefined" name)
+     in
+     let ctx_exp =
+       let type_env =
+         Map.merge_skewed type_env_exp ctx.type_env
+           ~combine:(fun ~key t _ -> t)
+       in {type_env}
+     in
+     let (exp', exp_typ, _) = compile exp ctx_exp in
+     let ctx_body =
+       let type_env = match recursive with
+         | None -> Map.set ctx.type_env name exp_typ
+         | Some typ ->
+            if Type.equal typ exp_typ then
+              let typs = List.map args ~f:snd in
+              let typ = Type.Arrow (typs @ [typ]) in
+              Map.set ctx.type_env name typ
+            else incompat "Let" [exp_typ] [typ]
+       in {type_env}
+     in
+     compile body ctx_body
+  | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
+  | _ -> failwith "unreachable"
+and compile_bool b ctx = match b with
+  | Exp.Bool b -> (Bool.to_string b, Type.Bool, ctx)
+  | Exp.Not e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Bool ->
+        let e' = Printf.sprintf "(not %s)" e' in
+        (e', typ, ctx)
+     | _ -> incompat "Not" [typ] [Type.Bool]
+     end
+  | Exp.And (e1, e2) ->
+     let (e1', typ1, _) = compile e1 ctx in
+     let (e2', typ2, _) = compile e2 ctx in
+     begin match (typ1, typ2) with
+     | (Type.Bool, Type.Bool) ->
+        let e' = Printf.sprintf "(%s && %s)" e1' e2' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "And" [typ1; typ2] [Type.Bool; Type.Bool]
+     end
+  | Exp.Or (e1, e2) ->
+     let (e1', typ1, _) = compile e1 ctx in
+     let (e2', typ2, _) = compile e2 ctx in
+     begin match (typ1, typ2) with
+     | (Type.Bool, Type.Bool) ->
+        let e' = Printf.sprintf "(%s || %s)" e1' e2' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Or" [typ1; typ2] [Type.Bool; Type.Bool]
+     end
+  | Exp.Eq (e1, e2) ->
+     let (e1', typ1, _) = compile e1 ctx in
+     let (e2', typ2, _) = compile e2 ctx in
+     if Type.equal typ1 typ2 then
+       let e' = Printf.sprintf "(%s %s %s)" (type_equal typ1) e1' e2' in
+       (e', Type.Bool, ctx)
+     else incompat "Eq" [typ1; typ2] []
+  | Exp.Is_member (e1, e2) ->
+     let (e1', typ1, _) = compile e1 ctx in
+     let (e2', typ2, _) = compile e2 ctx in
+     begin match typ2 with
+     | Type.List typ2' when Type.equal typ1 typ2' ->
+        let eq = type_equal typ1 in
+        let e' = Printf.sprintf "(List.mem %s %s ~equal:%s)" e2' e1' eq in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_member" [typ1; typ2] [typ1; Type.List typ1]
+     end
+  | Exp.Is_nothing e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Option _ ->
+        let e' = Printf.sprintf "(Option.is_none %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_nothing" [typ] []
+     end
+  | Exp.Is_something e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Option _ ->
+        let e' = Printf.sprintf "(Option.is_some %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_something" [typ] []
+     end
+  | Exp.Is_empty e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.List _ ->
+        let e' = Printf.sprintf "(List.is_empty %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_empty" [typ] []
+     end
+  | Exp.Is_var e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_var %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_var" [typ] [Type.Term]
+     end
+  | Exp.Is_str e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_str %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_str" [typ] [Type.Term]
+     end
+  | Exp.Is_constructor e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_constructor %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_constructor" [typ] [Type.Term]
+     end
+  | Exp.Is_binding e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_binding %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_binding" [typ] [Type.Term]
+     end
+  | Exp.Is_subst e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_subst %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_subst" [typ] [Type.Term]
+     end
+  | Exp.Is_list e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_list %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_list" [typ] [Type.Term]
+     end
+  | Exp.Is_map e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_map %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_map" [typ] [Type.Term]
+     end
+  | Exp.Is_tuple e ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' = Printf.sprintf "(Language.Term.is_tuple %s)" e' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_tuple" [typ] [Type.Term]
+     end
+  | Exp.Is_var_kind (e, k) ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.Term ->
+        let e' =
+          Printf.sprintf
+            {|
+             begin match %s with
+             | Language.Term.Var v -> Language.is_var_kind lan v %s
+             | _ -> failwith \"Is_var_kind: expected var\"
+             end
+             |}
+            e' k
+        in (e', Type.Bool, ctx)
+     | _ -> incompat "Is_var_kind" [typ] [Type.Term]
+     end
+  | Exp.Is_op_kind (e, k) ->
+     let (e', typ, _) = compile e ctx in
+     begin match typ with
+     | Type.String ->
+        let e' = Printf.sprintf "(Language.is_op_kind lan %s %s)" e' k in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Is_var_kind" [typ] [Type.String]
+     end
+  | Exp.Has_syntax s ->
+     let e' = Printf.sprintf "(Map.mem lan.grammar \"%s\")" s in
+     (e', Type.Bool, ctx)

@@ -36,7 +36,7 @@ module Exp: sig
     | Bool_exp of boolean
     (* control operations *)
     | Let of {
-        recursive: bool;
+        recursive: Type.t option;
         name: string;
         args: (string * Type.t) list;
         exp: t;
@@ -119,9 +119,9 @@ module Exp: sig
     | Lookup_hint of string
   and boolean =
     | Bool of bool
-    | Not of boolean
-    | And of boolean * boolean
-    | Or of boolean * boolean
+    | Not of t
+    | And of t * t
+    | Or of t * t
     | Eq of t * t
     | Is_member of t * t
     | Is_nothing of t

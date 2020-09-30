@@ -65,10 +65,10 @@ exp:
     { Exp.Int_str $3 }
   | boolean
     { Exp.Bool_exp $1 }
-  | LET REC name = NAME args = list(let_arg) EQ exp = exp IN body = exp
+  | LET REC name = NAME args = list(let_arg) COLON rec_type = typ EQ exp = exp IN body = exp
     {
       Exp.Let {
-          recursive = true;
+          recursive = Some rec_type;
           name;
           args;
           exp;
@@ -78,7 +78,7 @@ exp:
   | LET name = NAME args = list(let_arg)EQ exp = exp IN body = exp
     {
       Exp.Let {
-          recursive = false;
+          recursive = None;
           name;
           args = [];
           exp;
@@ -273,11 +273,11 @@ boolean:
     { Exp.Bool true }
   | FALSE
     { Exp.Bool false }
-  | NOT LPAREN boolean RPAREN
+  | NOT LPAREN exp RPAREN
     { Exp.Not $3 }
-  | AND LPAREN boolean COMMA boolean RPAREN
+  | AND LPAREN exp COMMA exp RPAREN
     { Exp.And ($3, $5) }
-  | OR LPAREN boolean COMMA boolean RPAREN
+  | OR LPAREN exp COMMA exp RPAREN
     { Exp.And ($3, $5) }
   | exp EQ exp
     { Exp.Eq ($1, $3) }

@@ -149,13 +149,13 @@ module Grammar: sig
         name: string;
         meta_var: string;
         terms: Term_set.t;
-      }
+      } [@@deriving equal, compare]
 
     val to_string: t -> string
     val term_vars_of: t -> string list
   end
 
-  type t = Category.t String.Map.t
+  type t = Category.t String.Map.t [@@deriving equal, compare]
 
   val to_string: t -> string
 end
@@ -164,7 +164,7 @@ module Hint: sig
   type t = {
       name: string;
       elements: (string list) String.Map.t;
-    }
+    } [@@deriving equal, compare]
 
   val to_string: t -> string
 end
@@ -174,7 +174,7 @@ type t = {
     relations: Term.t list String.Map.t;
     rules: Rule.t String.Map.t;
     hints: Hint.t String.Map.t;
-  }
+  } [@@deriving equal, compare]
 
 val to_string: t -> string
 val kind_of_var: t -> string -> string option

@@ -78,13 +78,9 @@ let_arg:
 
 hint_element:
   | NAME MAPSTO nonempty_list(NAME)
-    {
-      ($1, $3)
-    }
+    { ($1, $3) }
   | NAME
-    {
-      ($1, [])
-    }
+    { ($1, []) }
 
 exp:
   | SELF

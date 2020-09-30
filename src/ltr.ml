@@ -69,7 +69,7 @@ module Exp = struct
         pattern: t;
         body: t;
       }
-    (* list operations *)
+    (* list/tuple operations *)
     | Tuple of t list
     | List of t list
     | Head of t

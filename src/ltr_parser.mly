@@ -182,12 +182,39 @@ exp:
     { Exp.Ticked_restricted ($1, $4) }
   | UNIQUIFY LPAREN exp RPAREN
     { Exp.Uniquify_term $3 }
-  | REMOVESYNTAX LPAREN NAME RPAREN
-    { Exp.Remove_syntax $3 }
-  | METAVAR LPAREN NAME RPAREN
-    { Exp.Meta_var_of $3 }
-  | SYNTAX LPAREN NAME RPAREN
-    { Exp.Syntax_terms_of $3 }
+  | REMOVESYNTAX LPAREN name = NAME RPAREN
+    {
+      let open Core_kernel in
+      if String.(equal name (capitalize name)) then
+        Exp.Remove_syntax name
+      else
+        invalid_arg
+          (Printf.sprintf
+             "invalid category name %s, must be capitalized"
+             name)
+    }
+  | METAVAR LPAREN name = NAME RPAREN
+    {
+      let open Core_kernel in
+      if String.(equal name (capitalize name)) then
+        Exp.Meta_var_of name
+      else
+        invalid_arg
+          (Printf.sprintf
+             "invalid category name %s, must be capitalized"
+             name)
+    }
+  | SYNTAX LPAREN name = NAME RPAREN
+    {
+      let open Core_kernel in
+      if String.(equal name (capitalize name)) then
+        Exp.Syntax_terms_of name
+      else
+        invalid_arg
+          (Printf.sprintf
+             "invalid category name %s, must be capitalized"
+             name)
+    }
   | UNIQUIFY LPAREN formulae = exp COMMA hint_map = exp COMMA hint_var = STR RPAREN
     { Exp.Uniquify_formulae {formulae; hint_map; hint_var} }
   | RULENAME LPAREN exp RPAREN

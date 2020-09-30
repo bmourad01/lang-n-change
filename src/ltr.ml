@@ -482,7 +482,7 @@ let incompat name ts ts' =
 let type_equal pref t =
   let no_equal t =
     failwith
-      (Printf.sprintf "%s: no predicate exits for type %s"
+      (Printf.sprintf "%s: no equality predicate exits for type %s"
          pref (Type.to_string t))
   in
   let rec eq t = match t with

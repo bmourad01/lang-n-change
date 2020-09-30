@@ -2,6 +2,7 @@ open Core_kernel
 
 module Type = struct
   type t =
+    | Any
     | Lan
     | Syntax
     | Rule
@@ -16,6 +17,7 @@ module Type = struct
     | Arrow of t list [@@deriving equal]
 
   let rec to_string = function
+    | Any -> "any"
     | Lan -> "lan"
     | Syntax -> "syntax"
     | Rule -> "rule"
@@ -69,8 +71,9 @@ module Exp = struct
         pattern: t;
         body: t;
       }
-    (* list/tuple operations *)
+    (* tuple operations *)
     | Tuple of t list
+    (* list operations *)
     | List of t list
     | Head of t
     | Tail of t
@@ -503,9 +506,32 @@ let type_equal pref t =
     | Type.Bool -> "Bool.equal"
     | Type.Int -> "Int.equal"
     | Type.List t -> Printf.sprintf "(List.equal %s)" (eq t)
-    | Type.Tuple _
+    | Type.Any
+      | Type.Tuple _
       | Type.Option _
       | Type.Arrow _ -> no_equal t
+  in eq t
+
+let type_compare pref t =
+  let no_compare t =
+    failwith
+      (Printf.sprintf "%s: no comparison predicate exits for type %s"
+         pref (Type.to_string t))
+  in
+  let rec eq t = match t with
+    | Type.Lan -> "Language.compare"
+    | Type.Syntax -> "Language.Grammar.Category.compare"
+    | Type.Rule -> "Language.Rule.compare"
+    | Type.Formula -> "Language.Formula.compare"
+    | Type.Term -> "Language.Term.compare"
+    | Type.String -> "String.compare"
+    | Type.Bool -> "Bool.compare"
+    | Type.Int -> "Int.compate"
+    | Type.List t -> Printf.sprintf "(List.compare %s)" (eq t)
+    | Type.Any
+      | Type.Tuple _
+      | Type.Option _
+      | Type.Arrow _ -> no_compare t
   in eq t
 
 let rec compile ctx e = match e with
@@ -656,6 +682,123 @@ let rec compile ctx e = match e with
         let e' = Printf.sprintf "let lan = %s in %s" e1' e2' in
         (e', Type.Lan, ctx2)
      | _ -> incompat "Seq" [typ1; typ2] [Type.Lan; Type.Lan]
+     end
+  | Exp.Tuple es ->
+     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
+     let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:", ") in
+     (e', Type.Tuple typs, ctx)
+  | Exp.List es ->
+     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
+     let typ = match List.hd typs with
+       | None -> Type.Any
+       | Some typ -> typ
+     in
+     if List.for_all typs ~f:(Type.equal typ) then
+       let e' = Printf.sprintf "[%s]" (String.concat es' ~sep:"; ") in
+       (e', typ, ctx)
+     else incompat "List" typs []
+  | Exp.Head e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List typ' ->
+        let e' = Printf.sprintf "(List.hd_exn %s)" e' in
+        (e', typ', ctx)
+     | _ -> incompat "Head" [typ] []
+     end
+  | Exp.Tail e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List _ ->
+        let e' = Printf.sprintf "(List.tl_exn %s)" e' in
+        (e', typ, ctx)
+     | _ -> incompat "Tail" [typ] []
+     end
+  | Exp.Last e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List typ' ->
+        let e' = Printf.sprintf "(List.last_exn %s)" e' in
+        (e', typ', ctx)
+     | _ -> incompat "Last" [typ] []
+     end
+  | Exp.Nth (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.List typ', Type.Int) ->
+        let e' = Printf.sprintf "(List.nth_exn %s %s)" e1' e2' in
+        (e', typ', ctx)
+     | _ -> incompat "Nth" [typ1; typ2] []
+     end
+  | Exp.List_concat e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.(List (List _ as typ')) ->
+        let e' = Printf.sprintf "(List.concat %s)" e' in
+        (e', typ', ctx)
+     | _ -> incompat "Last" [typ] []
+     end
+  | Exp.Rev e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List _ ->
+        let e' = Printf.sprintf "(List.rev %s)" e' in
+        (e', typ, ctx)
+     | _ -> incompat "Rev" [typ] []
+     end
+  | Exp.Dedup e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List typ' ->
+        let cmp = type_compare "Dedup" typ' in
+        let e' =
+          Printf.sprintf "(Aux.dedup_list_stable %s ~compare:%s)"
+            e' cmp
+        in (e', typ, ctx)
+     | _ -> incompat "Rev" [typ] []
+     end
+  | Exp.Append (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.List typ1', Type.List typ2') when Type.equal typ1' typ2' ->
+        let e' = Printf.sprintf "(List.append %s %s)" e1' e2' in
+        (e', typ1, ctx)
+     | _ -> incompat "Append" [typ1; typ2] []
+     end
+  | Exp.Diff (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.List typ1', Type.List typ2') when Type.equal typ1' typ2' ->
+        let eq = type_equal "Diff" typ1' in
+        let e' =
+          Printf.sprintf "(Aux.diff_list_stable %s %s ~equal:%s)"
+            e1' e2' eq
+        in (e', typ1, ctx)
+     | _ -> incompat "Diff" [typ1; typ2] []
+     end
+  | Exp.Zip (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.List typ1', Type.List typ2') ->
+        let e' = Printf.sprintf "(List.zip_exn %s %s)" e1' e2' in
+        (e', Type.(List (Tuple [typ1; typ2])), ctx)
+     | _ -> incompat "Zip" [typ1; typ2] []
+     end
+  | Exp.Assoc (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match typ2 with
+     | Type.(List (Tuple (typ1' :: typ2' :: [])))
+          when Type.equal typ1 typ1' ->
+        let eq = type_equal "Assoc" typ1 in
+        let e' =
+          Printf.sprintf "(List.Assoc.find %s %s ~equal:%s)"
+            e2' e1' eq
+        in (e', typ2', ctx)
+     | _ -> incompat "Assoc" [typ1; typ2] []
      end
   | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
   | _ -> failwith "unreachable"

@@ -2,6 +2,7 @@ open Core_kernel
 
 module Type: sig
   type t =
+    | Any
     | Lan
     | Syntax
     | Rule
@@ -51,8 +52,9 @@ module Exp: sig
         pattern: t;
         body: t;
       }
-    (* list/tuple operations *)
+    (* tuple operations *)
     | Tuple of t list
+    (* list operations *)
     | List of t list
     | Head of t
     | Tail of t

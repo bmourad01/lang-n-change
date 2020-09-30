@@ -479,11 +479,11 @@ let incompat name ts ts' =
         |> String.concat ~sep:", ")
        expect)
 
-let type_equal t =
+let type_equal pref t =
   let no_equal t =
     failwith
-      (Printf.sprintf "Eq: no predicate exits for type %s"
-         (Type.to_string t))
+      (Printf.sprintf "%s: no predicate exits for type %s"
+         pref (Type.to_string t))
   in
   let rec eq t = match t with
     | Type.Lan -> "Language.equal"
@@ -667,7 +667,7 @@ and compile_bool ctx b = match b with
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in
      if Type.equal typ1 typ2 then
-       let e' = Printf.sprintf "(%s %s %s)" (type_equal typ1) e1' e2' in
+       let e' = Printf.sprintf "(%s %s %s)" (type_equal "Eq" typ1) e1' e2' in
        (e', Type.Bool, ctx)
      else incompat "Eq" [typ1; typ2] []
   | Exp.Is_member (e1, e2) ->
@@ -675,7 +675,7 @@ and compile_bool ctx b = match b with
      let (e2', typ2, _) = compile ctx e2 in
      begin match typ2 with
      | Type.List typ2' when Type.equal typ1 typ2' ->
-        let eq = type_equal typ1 in
+        let eq = type_equal "Is_member" typ1 in
         let e' = Printf.sprintf "(List.mem %s %s ~equal:%s)" e2' e1' eq in
         (e', Type.Bool, ctx)
      | _ -> incompat "Is_member" [typ1; typ2] [typ1; Type.List typ1]

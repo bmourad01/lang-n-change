@@ -165,4 +165,6 @@ module Exp: sig
   and subst =
     | Subst_pair of t * string
     | Subst_var of string * string
+
+  val to_string: t -> string
 end

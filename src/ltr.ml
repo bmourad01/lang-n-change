@@ -800,6 +800,19 @@ let rec compile ctx e = match e with
         in (e', typ2', ctx)
      | _ -> incompat "Assoc" [typ1; typ2] []
      end
+  | Exp.Nothing -> ("None", Type.(Option Any), ctx)
+  | Exp.Something e ->
+     let (e', typ, _) = compile ctx e in
+     let e' = Printf.sprintf "Some %s" e' in
+     (e', Type.Option typ, ctx)
+  | Exp.Option_get e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Option typ' ->
+        let e' = Printf.sprintf "(Option.value_exn %s)" e' in
+        (e', typ', ctx)
+     | _ -> incompat "Option_get" [typ] []
+     end
   | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
   | _ -> failwith "unreachable"
 and compile_bool ctx b = match b with

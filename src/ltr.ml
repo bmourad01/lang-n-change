@@ -61,7 +61,7 @@ module Exp = struct
         body: t;
       }
     | Apply of t * t list
-    | Ite of boolean * t * t
+    | Ite of t * t * t
     | Seq of t * t
     | Select of {
         keep: bool;
@@ -228,7 +228,7 @@ module Exp = struct
           |> String.concat ~sep:", ")
     | Ite (b, e1, e2) ->
        Printf.sprintf "if %s then %s else %s"
-         (string_of_boolean b) (to_string e1) (to_string e2)
+         (to_string b) (to_string e1) (to_string e2)
     | Seq (e1, e2) ->
        Printf.sprintf "%s; %s"
          (to_string e1) (to_string e2)
@@ -611,6 +611,18 @@ let rec compile ctx e = match e with
           in (e', List.last_exn typs', ctx)
         else incompat "Apply" typs typs'
      | _ -> incompat "Apply" [typ] []
+     end
+  | Exp.Ite (b, e1, e2) ->
+     let (b', b_typ, _) = compile ctx b in
+     begin match b_typ with
+     | Type.Bool ->
+        let (e1', typ1, _) = compile ctx e1 in
+        let (e2', typ2, _) = compile ctx e2 in
+        if Type.equal typ1 typ2 then
+          let e' = Printf.sprintf "if %s then %s else %s" b' e1' e2' in
+          (e', typ1, ctx)
+        else incompat "Ite" [typ1; typ2] []
+     | _ -> incompat "Ite" [b_typ] [Type.Bool]
      end
   | Exp.Seq (e1, e2) ->
      let (e1', typ1, ctx1) = compile ctx e1 in

@@ -87,7 +87,7 @@ exp:
     }
   | exp LPAREN separated_nonempty_list(COMMA, exp) RPAREN
     { Exp.Apply ($1, $3) }
-  | IF boolean THEN exp ELSE exp
+  | IF exp THEN exp ELSE exp
     { Exp.Ite ($2, $4, $6) }
   | exp SEMI exp
     { Exp.Seq ($1, $3) }

@@ -43,7 +43,7 @@ module Exp: sig
         body: t;
       }
     | Apply of t * t list
-    | Ite of boolean * t * t
+    | Ite of t * t * t
     | Seq of t * t
     | Select of {
         keep: bool;

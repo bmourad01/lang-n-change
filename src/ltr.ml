@@ -189,7 +189,7 @@ module Exp = struct
     | Var v -> v
     | Str s -> Printf.sprintf "\"%s\"" s
     | Str_concat (e1, e2) ->
-       Printf.sprintf "(%s ^ %s)"
+       Printf.sprintf "%s ^ %s"
          (to_string e1) (to_string e2)
     | Uppercase e ->
        Printf.sprintf "uppercase(%s)"
@@ -247,7 +247,7 @@ module Exp = struct
     | Rev e -> Printf.sprintf "rev(%s)" (to_string e)       
     | Dedup e -> Printf.sprintf "dedup(%s)" (to_string e)
     | Append (e1, e2) ->
-       Printf.sprintf "append(%s, %s)"
+       Printf.sprintf "%s @ %s"
          (to_string e1) (to_string e2)
     | Diff (e1, e2) ->
        Printf.sprintf "diff(%s, %s)"

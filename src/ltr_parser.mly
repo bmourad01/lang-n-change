@@ -117,6 +117,8 @@ exp:
     { Exp.Dedup $3 }
   | APPEND LPAREN exp COMMA exp RPAREN
     { Exp.Append ($3, $5) }
+  | exp AT exp
+    { Exp.Append ($1, $3) }
   | DIFF LPAREN exp COMMA exp RPAREN
     { Exp.Diff ($3, $5) }
   | ZIP LPAREN exp COMMA exp RPAREN

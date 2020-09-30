@@ -536,12 +536,8 @@ let type_compare pref t =
   in eq t
 
 let rec compile ctx e = match e with
-  | Exp.Self ->
-     let typ = typeof_var ctx "self" in
-     ("self", typ, ctx)
-  | Exp.Var v ->
-     let typ = typeof_var ctx v in
-     (v, typ, ctx)
+  | Exp.Self -> ("self", typeof_var ctx "self", ctx)
+  | Exp.Var v -> (v, typeof_var ctx v, ctx)
   | Exp.Str s ->
      let e' = Printf.sprintf "\"%s\"" s in
      (e', Type.String, ctx)

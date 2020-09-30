@@ -1,0 +1,25 @@
+rules![(op args) --> rhs]: {
+  let exprs = syntax(Expression)[(op exprs)]: {exprs} in
+  if empty?(exprs) then
+    nothing
+  else
+    let v_res = fresh_var(v) in
+    let exprs = head(exprs) in
+    let emap = zip(exprs, args) in
+    
+    [rule_name(self)] {
+      emap[(expr, arg)]: {
+        if and(var?(arg), not(member?(arg, vars(et)))) then
+          nothing
+        else
+          expr' --> arg
+      },
+      if not(member?(et, args)) then
+        nothing
+      else
+        et --> v_res,
+      rule_premises(self)
+      ---------------------------------
+      conclusion(self)
+    }
+}

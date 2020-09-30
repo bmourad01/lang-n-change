@@ -14,14 +14,21 @@
 let digit = ['0'-'9']
 let integer = digit+
 let alpha = ['a'-'z' 'A'-'Z']
-let name = ['a'-'z' 'A'-'Z'] (alpha | '_' | '-' | '\'' | digit)*
+let alnum = (alpha | '_' | '-' | digit)*
+let cap_name = ['A'-'Z'] (alpha | '_' | '-' | digit)*
+let name = ['a'-'z'] (alpha | '_' | '-' | digit)*
+let any_name = alpha (alpha | '_' | '-' | digit)*
 
 rule token = parse
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
-  | "\"" (name as s) "\"" {STR s}
+  | integer as n {NUM (int_of_string n)}
+  | "\"" (alnum as s) "\"" {STR s}
   | '%' {MOD}
   | "#" {HASH}
+  | "$" {DOLLAR}
+  | "@" {AT}
+  | "&" {AMPERSAND}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
   | "::" {CONS}
@@ -126,8 +133,10 @@ rule token = parse
   | "list" {LIST}
   | "true" {TRUE}
   | "false" {FALSE}
+  | "in" {IN}
+  | cap_name as n {CAPNAME n}
   | name as n {NAME n}
-  | integer as n {NUM (int_of_string n)}
+  | any_name as n {ANYNAME n}
   | eof {EOF}
   | _ {raise (Error
         (Printf.sprintf "At offset %d: unexpected token %s.\n"

@@ -20,4 +20,9 @@ let parse filename =
       | Language_parser.Error ->
          failwith
            (Printf.sprintf "%s parse error: %s"
+              filename (file_pos lexbuf))
+      | _ ->
+         failwith
+           (Printf.sprintf "%s unknown error: %s"
               filename (file_pos lexbuf)))
+

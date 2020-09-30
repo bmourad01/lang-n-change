@@ -51,7 +51,8 @@ module Exp: sig
         pattern: t;
         body: t;
       }
-    (* list operations *)
+    (* list/tuple operations *)
+    | Tuple of t list
     | List of t list
     | Head of t
     | Tail of t
@@ -78,7 +79,6 @@ module Exp: sig
     | Var_overlap of t * t
     | Ticked of t
     | Ticked_restricted of t * t
-    | Uniquify_term of t
     (* grammar operations *)
     | New_syntax of {
         extend: bool;
@@ -99,9 +99,9 @@ module Exp: sig
         hint_var: string;
       }
     (* rule operations *)
-    | Rule of {
+    | New_rule of {
         name: t;
-        premises: t;
+        premises: t list;
         conclusion: t;
       }
     | Rule_name of t

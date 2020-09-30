@@ -70,6 +70,7 @@ module Exp = struct
         body: t;
       }
     (* list operations *)
+    | Tuple of t list
     | List of t list
     | Head of t
     | Tail of t
@@ -96,7 +97,6 @@ module Exp = struct
     | Var_overlap of t * t
     | Ticked of t
     | Ticked_restricted of t * t
-    | Uniquify_term of t
     (* grammar operations *)
     | New_syntax of {
         extend: bool;
@@ -117,9 +117,9 @@ module Exp = struct
         hint_var: string;
       }
     (* rule operations *)
-    | Rule of {
+    | New_rule of {
         name: t;
-        premises: t;
+        premises: t list;
         conclusion: t;
       }
     | Rule_name of t
@@ -229,6 +229,10 @@ module Exp = struct
        let field_str = if keep then field_str ^ "!" else field_str in
        Printf.sprintf "%s[%s]: {%s}"
          field_str (to_string pattern) (to_string body)
+    | Tuple es ->
+       Printf.sprintf "(%s)"
+         (List.map es ~f:to_string
+          |> String.concat ~sep:", ")
     | List es ->
        Printf.sprintf "[%s]"
          (List.map es ~f:to_string
@@ -257,7 +261,7 @@ module Exp = struct
     | Nothing -> "nothing"
     | Something e -> Printf.sprintf "something(%s)" (to_string e)
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
-    | New_term t -> "$" ^ string_of_term t
+    | New_term t -> string_of_term t
     | Vars_of e -> Printf.sprintf "vars(%s)" (to_string e)
     | Fresh_var v -> Printf.sprintf "fresh_var(%s)" v
     | Unbind e -> Printf.sprintf "unbind(%s)" (to_string e)
@@ -272,7 +276,6 @@ module Exp = struct
     | Ticked_restricted (e1, e2) ->
        Printf.sprintf "%s'|%s"
          (to_string e1) (to_string e2)
-    | Uniquify_term e -> Printf.sprintf "uniquify(%s)" (to_string e)
     | New_syntax {extend; name; meta_var; terms} ->
        let extend_str = if extend then " ... | " else " " in
        Printf.sprintf "%s %s ::=%s%s"
@@ -291,9 +294,12 @@ module Exp = struct
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
        Printf.sprintf "uniquify(%s, %s, \"%s\")"
          (to_string formulae) (to_string hint_map) hint_var
-    | Rule {name; premises; conclusion} ->
-       Printf.sprintf "[%s]\n%s\n---------------------\n%s.\n"
-         (to_string name) (to_string premises) (to_string conclusion)
+    | New_rule {name; premises; conclusion} ->
+       Printf.sprintf "[%s] {%s---------------------%s}"
+         (to_string name)
+         (List.map premises ~f:to_string
+          |> String.concat ~sep:", ")
+         (to_string conclusion)
     | Rule_name e -> Printf.sprintf "rule_name(%s)" (to_string e)
     | Rule_premises e -> Printf.sprintf "premises(%s)" (to_string e)
     | Rule_conclusion e -> Printf.sprintf "conclusion(%s)" (to_string e)
@@ -365,9 +371,9 @@ module Exp = struct
          (to_string e) kind
     | Has_syntax name -> Printf.sprintf "syntax?(%s)" name
   and string_of_term = function
-    | Term_nil -> "nil"
-    | Term_var v -> v
-    | Term_str s -> Printf.sprintf "\"%s\"" s
+    | Term_nil -> "$nil"
+    | Term_var v -> "$" ^ v
+    | Term_str s -> Printf.sprintf "$\"%s\"" s
     | Term_constructor (name, e) ->
        Printf.sprintf "(%s %s)"
          (to_string name) (to_string e)
@@ -387,8 +393,8 @@ module Exp = struct
     | Term_map_update (key, value, map) ->
        Printf.sprintf "[%s => %s]%s"
          (to_string key) (to_string value) (to_string map)
-    | Term_map_domain e -> Printf.sprintf "dom(%s)" (to_string e)
-    | Term_map_range e -> Printf.sprintf "range(%s)" (to_string e)
+    | Term_map_domain e -> Printf.sprintf "$dom(%s)" (to_string e)
+    | Term_map_range e -> Printf.sprintf "$range(%s)" (to_string e)
     | Term_cons (e1, e2) ->
        Printf.sprintf "(%s :: %s)"
          (to_string e1) (to_string e2)
@@ -401,29 +407,29 @@ module Exp = struct
          (List.map es ~f:to_string
           |> String.concat ~sep:", ")
     | Term_union es ->
-       Printf.sprintf "union(%s)"
+       Printf.sprintf "$union(%s)"
          (List.map es ~f:to_string
           |> String.concat ~sep:", ")
     | Term_map_union es ->
-       Printf.sprintf "map_union(%s)"
+       Printf.sprintf "$map_union(%s)"
          (List.map es ~f:to_string
           |> String.concat ~sep:", ")
     | Term_zip (e1, e2) ->
-       Printf.sprintf "zip(%s, %s)"
+       Printf.sprintf "$zip(%s, %s)"
          (to_string e1) (to_string e2)
-    | Term_fresh e -> Printf.sprintf "fresh(%s)" (to_string e)
+    | Term_fresh e -> Printf.sprintf "$fresh(%s)" (to_string e)
   and string_of_formula = function
-    | Formula_not e -> Printf.sprintf "$not(%s)" (to_string e)
+    | Formula_not e -> Printf.sprintf "&not(%s)" (to_string e)
     | Formula_eq (e1, e2) ->
-       Printf.sprintf "%s = %s"
+       Printf.sprintf "&(%s = %s)"
          (to_string e1) (to_string e2)
     | Formula_prop (e1, e2) ->
-       Printf.sprintf "%s %s"
+       Printf.sprintf "&(%s %s)"
          (to_string e1) (to_string e2)
     | Formula_member (e1, e2) ->
-       Printf.sprintf "$member %s %s"
+       Printf.sprintf "&member %s %s"
          (to_string e1) (to_string e2)
     | Formula_subset (e1, e2) ->
-       Printf.sprintf "$subset %s %s"
+       Printf.sprintf "&subset %s %s"
          (to_string e1) (to_string e2)
 end

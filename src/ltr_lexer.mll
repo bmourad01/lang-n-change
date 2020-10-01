@@ -38,7 +38,7 @@ rule token = parse
   | "'" {TICK}
   | "!" {EXCL}
   | "^" {CARET}
-  | "|-" {TURNSTYLE}
+  | "|-" {TURNSTILE}
   | "-->" {STEP}
   | "->" {ARROW}
   | "<:" {SUBTYPE}

@@ -26,7 +26,7 @@ rule token = parse
   | ":" {COLON}
   | "." {DOT}
   | "_" {WILDCARD}
-  | "|-" {TURNSTYLE}
+  | "|-" {TURNSTILE}
   | "-->" {STEP}
   | "<:" {SUBTYPE}
   | "|" {MID}

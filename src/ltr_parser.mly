@@ -14,7 +14,7 @@
 %token AT
 %token AMPERSAND
 %token GRAMMARASSIGN
-%token TURNSTYLE
+%token TURNSTILE
 %token SUBTYPE
 %token STEP
 %token ARROW
@@ -273,13 +273,13 @@ hint_element:
     { ($1, []) }
 
 sugared_relation:
-  | exp TURNSTYLE exp COLON exp
+  | exp TURNSTILE exp COLON exp
     { Exp.New_relation (Language.Predicate.Builtin.typeof, [$1; $3; $5]) }
   | exp STEP exp
     { Exp.New_relation (Language.Predicate.Builtin.step, [$1; $3]) }
   | exp SUBTYPE exp
     { Exp.New_relation (Language.Predicate.Builtin.subtype, [$1; $3]) }
-  | exp TURNSTYLE exp SUBTYPE exp
+  | exp TURNSTILE exp SUBTYPE exp
     { Exp.New_relation (Language.Predicate.Builtin.subtype, [$1; $3; $5]) }
 
 relation:
@@ -377,7 +377,7 @@ term:
     { Exp.Term_fresh $4 }
 
 sugared_formula:
-  | exp TURNSTYLE exp COLON exp
+  | exp TURNSTILE exp COLON exp
     {
       let predicate = Exp.Str Language.Predicate.Builtin.typeof in
       let args = Exp.List [$1; $3; $5] in
@@ -395,7 +395,7 @@ sugared_formula:
       let args = Exp.List [$1; $3] in
       Exp.Formula_prop (predicate, args)
     }
-  | exp TURNSTYLE exp SUBTYPE exp
+  | exp TURNSTILE exp SUBTYPE exp
     {
       let predicate = Exp.Str Language.Predicate.Builtin.subtype in
       let args = Exp.List [$1; $3; $5] in

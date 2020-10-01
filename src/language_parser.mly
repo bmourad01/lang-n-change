@@ -31,7 +31,7 @@
 %token MOD
 %token GRAMMARASSIGN
 %token WILDCARD
-%token TURNSTYLE
+%token TURNSTILE
 %token SUBTYPE
 %token STEP
 %token MID
@@ -105,13 +105,13 @@ rule:
     { Rule.{name; premises; conclusion} }
 
 sugared_relation:
-  | term TURNSTYLE term COLON term DOT
+  | term TURNSTILE term COLON term DOT
     { (Predicate.Builtin.typeof, [$1; $3; $5]) }
   | term STEP term DOT
     { (Predicate.Builtin.step, [$1; $3]) }
   | term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3]) }
-  | term TURNSTYLE term SUBTYPE term DOT
+  | term TURNSTILE term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3; $5]) }
 
 relation:
@@ -121,7 +121,7 @@ relation:
     { ($1, $2) }
 
 sugared_formula:
-  | term TURNSTYLE term COLON term
+  | term TURNSTILE term COLON term
     {
       let predicate = Predicate.Builtin.typeof in
       let args = [$1; $3; $5] in
@@ -139,7 +139,7 @@ sugared_formula:
       let args = [$1; $3] in
       Formula.Prop {predicate; args}
     }
-  | term TURNSTYLE term SUBTYPE term
+  | term TURNSTILE term SUBTYPE term
     {
       let predicate = Predicate.Builtin.subtype in
       let args = [$1; $3; $5] in

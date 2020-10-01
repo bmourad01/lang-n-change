@@ -917,7 +917,7 @@ let rec compile ctx e = match e with
           Printf.sprintf
             {|
              let lan = %s in
-             lan_vars := List.map (Map.data lan.rules) ~f:R.vars;
+             lan_vars := (List.map (Map.data lan.rules) ~f:R.vars |> List.concat |> L.Term_set.of_list);
              %s)
              |}
             e1' e2'
@@ -941,7 +941,12 @@ let rec compile ctx e = match e with
             | typ -> (Printf.sprintf "(Some %s)" body', typ)
           in
           let p' =
-            let keep_str = if keep then "(Some x)" else "None" in
+            let keep_var = if matching_concl then "self" else "x" in
+            let keep_str =
+              if keep
+              then Printf.sprintf "(Some %s)" keep_var
+              else "None"
+            in
             let match_str =
               if matching_concl
               then "R.(self.conclusion)"
@@ -1098,7 +1103,7 @@ let rec compile ctx e = match e with
        | _ -> incompat "Vars_of" [typ] []
      in (e', Type.(List Term), ctx)
   | Exp.Fresh_var v ->
-     let e' = Printf.sprintf "(lan_fresh_var %s)" v in
+     let e' = Printf.sprintf "(lan_fresh_var \"%s\")" v in
      (e', Type.Term, ctx)
   | Exp.Unbind e ->
      let (e', typ, _) = compile ctx e in
@@ -1200,7 +1205,7 @@ let rec compile ctx e = match e with
               Map.set lan.grammar %s (T_set.union c.terms %s)
               end
               |} name name new_cat meta_var name terms'
-         else Printf.sprintf "(Map.set lan.grammar %s %s)" name new_cat
+         else Printf.sprintf "(Map.set lan.grammar \"%s\" %s)" name new_cat
        in (e', Type.Lan, ctx)
      else incompat "New_syntax" term_typs []
   | Exp.Remove_syntax s ->
@@ -1208,7 +1213,7 @@ let rec compile ctx e = match e with
        Printf.sprintf
          {|
           {lan with grammar =
-          Map.remove lan.grammar %s}
+          Map.remove lan.grammar "%s"}
           |} s
      in (e', Type.Lan, ctx)
   | Exp.Meta_var_of s ->
@@ -1216,7 +1221,7 @@ let rec compile ctx e = match e with
        Printf.sprintf
          {|
           ((fun (c: C.t) ->  c.meta_var)
-          (Map.find_exn lan.grammar %s))
+          (Map.find_exn lan.grammar "%s"))
           |} s
      in (e', Type.String, ctx)
   | Exp.Syntax_terms_of s ->
@@ -1224,8 +1229,8 @@ let rec compile ctx e = match e with
        Printf.sprintf
          {|
           ((fun (c: C.t) ->
-          c.terms |> Set.to_list |> T.uniquify)
-          (Map.find_exn lan.grammar %s))
+          c.terms |> Set.to_list |> List.map ~f:T.uniquify)
+          (Map.find_exn lan.grammar "%s"))
           |} s
      in (e', Type.(List Term), ctx)
   | Exp.New_relation (name, es) ->
@@ -1285,7 +1290,7 @@ let rec compile ctx e = match e with
                          Printf.sprintf "[%s]" p
                       | Type.(List Formula) -> p
                       | Type.(Option Formula) ->
-                         Printf.sprintf "(List.filter_map [%s] ~f:id)" p
+                         Printf.sprintf "(List.filter_map [%s] ~f:(fun x -> x))" p
                       | _ -> failwith "unreachable")
                |> String.concat ~sep:" @ "
                |> Printf.sprintf "(%s)"
@@ -1764,7 +1769,7 @@ and compile_formula ctx f = match f with
      | (Type.String, Type.(List Term)) ->
         let e' =
           Printf.sprintf
-            "(F.(Prop {predicate = %s; args = %s)))"
+            "(F.(Prop {predicate = %s; args = %s}))"
             e1' e2'
         in (e', Type.Formula, ctx)
      | _ ->
@@ -1811,5 +1816,15 @@ let generate_caml e =
      module C = G.Category
      module H = L.Hint
      
-     let transform (lan: L.t) = %s
+     let transform (lan: L.t) =
+     let lan_vars = ref (Map.data lan.rules |> List.map ~f:R.vars |> List.concat |> L.Term_set.of_list) in
+     let lan_fresh_var v =
+     let rec aux i =
+     let var = T.Var (v ^ Int.to_string i) in
+     if Set.mem !lan_vars var
+     then aux (succ i)
+     else (lan_vars := Set.add !lan_vars var; var)
+     in aux 1
+     in
+     %s
      |} s

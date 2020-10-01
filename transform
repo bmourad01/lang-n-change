@@ -1,0 +1,7 @@
+#!/bin/sh
+
+LAN=$1
+LTR=$2
+
+dune exec lnc/bin/compile_ltr.exe $LTR > support/bin/transform.ml
+dune exec support/bin/transformer.exe $LAN

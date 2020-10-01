@@ -849,7 +849,7 @@ let rec compile ctx e = match e with
           Printf.sprintf
             {|
              begin match %s with
-             | Language.Term.Binding {var; body} -> var
+             | Language.Term.(Binding {var; body}) -> var
              | _ -> failwith "Bound_of: expected binding"
              end
              |} e'
@@ -902,6 +902,37 @@ let rec compile ctx e = match e with
         incompat "Ticked_restricted"
           [typ1; typ2] [Type.Term; Type.(List Term)]
      end
+  | Exp.New_syntax {extend; name; meta_var; terms} ->
+     let (terms', term_typs, _) =
+       List.map terms ~f:(compile ctx)
+       |> List.unzip3
+     in
+     if List.for_all term_typs ~f:(Type.(equal Term)) then
+       (* todo: deuniquify the vars *)
+       let terms' =
+         Printf.sprintf "(Language.Term_set.of_list [%s])"
+           (String.concat terms' ~sep:"; ")
+       in
+       let new_cat =
+         Printf.sprintf
+           "(Language.Grammar.Category.{name = %s; meta_var = %s; terms = %s})"
+           name meta_var terms'
+       in
+       let e' =
+         if extend then
+           Printf.sprintf
+             {|
+              begin match Map.find lan.grammar %s with
+              | None ->
+              Map.set lan.grammar %s %s
+              | Some c ->
+              let c = Language.Grammar.Category.{c with meta_var = %s} in
+              Map.set lan.grammar %s (Language.Term_set.union c.terms %s)
+              end
+              |} name name new_cat meta_var name terms'
+         else Printf.sprintf "(Map.set lan.grammar %s %s)" name new_cat
+       in (e', Type.Lan, ctx)
+     else incompat "New_syntax" term_typs []
   | Exp.Remove_syntax s ->
      let e' =
        Printf.sprintf
@@ -927,6 +958,76 @@ let rec compile ctx e = match e with
           (Map.find_exn lan.grammar %s))
           |} s
      in (e', Type.(List Term), ctx)
+  | Exp.New_relation (name, es) ->
+     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
+     if List.for_all typs ~f:Type.(equal Term) then
+       let e' =
+         Printf.sprintf
+           "(Map.set lan.relations %s [%s])" name
+           (String.concat es' ~sep:"; ")
+       in (e', Type.Lan, ctx)
+     else incompat "New_relation" typs []
+  | Exp.New_formula f -> compile_formula ctx f
+  | Exp.Uniquify_formulae {formulae; hint_map; hint_var} ->
+     let (formulae', formulae_typ, _) = compile ctx formulae in
+     let (hint_map', hint_map_typ, _) = compile ctx hint_map in
+     begin match (formulae_typ, hint_map_typ) with
+     | (Type.(List Formula), Type.(List (Tuple [String; List String]))) ->
+        let e' =
+          Printf.sprintf
+            "(Language.uniquify_formulae %s ~hint_map:%s ~hint_var:\"%s\")"
+            formulae' hint_map' hint_var
+        in
+        let typ' =
+          Type.(
+            Tuple
+              [List Formula;
+               List (Tuple [Term; List Term])])
+        in (e', typ', ctx)
+     | _ ->
+        incompat "Uniquify_formulae"
+          [formulae_typ; hint_map_typ]
+          Type.[List Formula; List (Tuple [String; List String])]
+     end
+  | Exp.New_rule {name; premises; conclusion} ->
+     let (name', name_typ, _) = compile ctx name in
+     let (premises', premise_typs, _) =
+       List.map premises ~f:(compile ctx)
+       |> List.unzip3
+     in
+     let (conclusion', conclusion_typ, _) = compile ctx conclusion in
+     let check_prems = function
+       | Type.Formula
+         | Type.(List Formula) -> true
+       | _ -> false
+     in
+     if List.for_all premise_typs ~f:check_prems then
+       match name_typ with
+       | Type.String ->
+          begin match conclusion_typ with
+          | Type.Formula ->
+             let premises' =
+               List.zip_exn premises' premise_typs
+               |> List.map ~f:(fun (p, typ) ->
+                      match typ with
+                      | Type.Formula ->
+                         Printf.sprintf "[%s]" p
+                      | Type.(List Formula) -> p
+                      | _ -> failwith "unreachable")
+               |> String.concat ~sep:" @ "
+               |> Printf.sprintf "(%s)"
+             in
+             let e' =
+               Printf.sprintf
+                 "(Language.Rule.{name = %s; premises = %s; conclusion = %s})"
+                 name' premises' conclusion'
+             in (e', Type.Rule, ctx)
+          | _ ->
+             incompat "New_rule (conclusion)"
+               [conclusion_typ] [Type.Formula]
+          end
+       | _ -> incompat "New_rule (name)" [name_typ] [Type.String]
+     else incompat "New_rule (premises)" premise_typs []
   | Exp.Rule_name e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with
@@ -986,6 +1087,53 @@ let rec compile ctx e = match e with
         in (e', Type.Lan, ctx)
      | _ -> incompat "Set_rules" [typ] [Type.(List Rule)]
      end
+  | Exp.New_hint {extend; name; elements} ->
+     let elements' =
+       List.map elements ~f:(fun (k, v) ->
+           Printf.sprintf "(\"%s\", [%s])" k
+             (List.map v ~f:(fun v ->
+                  Printf.sprintf "\"%s\"" v)
+              |> String.concat ~sep:"; "))
+       |> String.concat ~sep:"; "
+       |> Printf.sprintf "[%s]"
+     in
+     let new_hint =
+       Printf.sprintf
+         {|
+          Language.Hint.{
+          name = %s;
+          elements =
+          List.fold %s ~init:String.Map.Empty ~f:(fun m (k, v) ->
+          Map.set m k v)}
+          |} name elements'
+     in
+     let e' =
+       if extend then
+         Printf.sprintf
+           {|
+            begin match Map.find lan.hints %s with
+            | None -> Map.set lan.hints %s %s
+            | Some h ->
+            let elements =
+            List.fold %s ~init:h.elements ~f:(fun m (k, v) ->
+            Map.set m k v)
+            in
+            let h = Language.Hint.{h with elements} in
+            Map.set lan.hints %s h
+            end
+            |} name name new_hint elements' name
+       else Printf.sprintf "(Map.set lan.hints %s %s)" name new_hint
+     in (e', Type.Lan, ctx)
+  | Exp.Lookup_hint name ->
+     let e' =
+       Printf.sprintf
+         {|
+          begin match Map.find lan.hints %s with
+          | None -> []
+          | Some h -> Map.to_alist h.elements
+          end
+          |} name
+     in (e', Type.(List (Tuple [String; List String])), ctx)
   | _ -> failwith "unreachable"
 and compile_bool ctx b = match b with
   | Exp.Bool b -> (Bool.to_string b, Type.Bool, ctx)
@@ -1170,7 +1318,7 @@ and compile_term ctx t = match t with
      | (Type.String, Type.(List Term)) ->
         let e' =
           Printf.sprintf
-            "(Language.Term.Constructor {name = %s; args = %s})"
+            "(Language.Term.(Constructor {name = %s; args = %s}))"
            name' args'
         in (e', Type.Term, ctx)
      | _ ->
@@ -1184,7 +1332,7 @@ and compile_term ctx t = match t with
      | (Type.String, Type.Term) ->
         let e' =
           Printf.sprintf
-           "(Language.Term.Binding {var = %s; body = %s})"
+           "(Language.Term.(Binding {var = %s; body = %s}))"
            var' body'
         in (e', Type.Term, ctx)
      | _ ->
@@ -1198,7 +1346,7 @@ and compile_term ctx t = match t with
      | Type.Term ->
         let e' =
           Printf.sprintf
-            "(Language.Term.Subst {body = %s; substs = %s})" e'
+            "(Language.Term.(Subst {body = %s; substs = %s}))" e'
             (Printf.sprintf "[%s]"
                (String.concat substs' ~sep:"; "))
         in (e', Type.Term, ctx)
@@ -1212,7 +1360,7 @@ and compile_term ctx t = match t with
      | (Type.Term, Type.Term, Type.Term) ->
         let e' =
           Printf.sprintf
-            "(Language.Term.Map_update {key = %s; value = %s; map = %s})"
+            "(Language.Term.(Map_update {key = %s; value = %s; map = %s}))"
            key' value' map'
         in (e', Type.Term, ctx)
      | _ ->
@@ -1259,7 +1407,7 @@ and compile_term ctx t = match t with
      | Type.Term ->
         let e' =
           Printf.sprintf
-            "(Language.Term.Map {key = %s; value = %s})"
+            "(Language.Term.(Map {key = %s; value = %s}))"
             key e'
         in (e', Type.Term, ctx)
      | _ -> incompat "Term_list" [typ] [Type.Term]
@@ -1319,3 +1467,56 @@ and compile_subst ctx subst = match subst with
      Printf.sprintf
        "(Language.Term.Subst_var (%s, %s))"
        v kind
+and compile_formula ctx f = match f with
+  | Exp.Formula_not e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Formula ->
+        let e' = Printf.sprintf "(Language.Formula.Not %s)" e' in
+        (e', Type.Formula, ctx)
+     | _ -> incompat "Formula_not" [typ] [Type.Formula]
+     end
+  | Exp.Formula_eq (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Term, Type.Term) ->
+        let e' = Printf.sprintf "(Language.Formula.Eq (%s, %s))" e1' e2' in
+        (e', Type.Formula, ctx)
+     | _ -> incompat "Formula_eq" [typ1; typ2] [Type.Term; Type.Term]
+     end
+  | Exp.Formula_prop (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.String, Type.(List Term)) ->
+        let e' =
+          Printf.sprintf
+            "(Language.Formula.(Prop {predicate = %s; args = %s)))"
+            e1' e2'
+        in (e', Type.Formula, ctx)
+     | _ ->
+        incompat "Formula_prop"
+          [typ1; typ2] [Type.String; Type.(List Term)]
+     end
+  | Exp.Formula_member (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Term, Type.Term) ->
+        let e' =
+          Printf.sprintf
+            "(Language.Formula.(Member {element = %s; collection = %s)))"
+            e1' e2'
+        in (e', Type.Formula, ctx)
+     | _ -> incompat "Formula_member" [typ1; typ2] [Type.Term; Type.Term]
+     end
+  | Exp.Formula_subset (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Term, Type.Term) ->
+        let e' = Printf.sprintf "(Language.Formula.Subset (%s, %s))" e1' e2' in
+        (e', Type.Formula, ctx)
+     | _ -> incompat "Formula_subset" [typ1; typ2] [Type.Term; Type.Term]
+     end

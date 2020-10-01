@@ -1787,7 +1787,7 @@ and compile_formula ctx f = match f with
      | (Type.Term, Type.Term) ->
         let e' =
           Printf.sprintf
-            "(F.(Member {element = %s; collection = %s)))"
+            "(F.(Member {element = %s; collection = %s}))"
             e1' e2'
         in (e', Type.Formula, ctx)
      | _ -> incompat "Formula_member" [typ1; typ2] [Type.Term; Type.Term]

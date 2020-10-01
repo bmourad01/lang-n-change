@@ -1,5 +1,5 @@
 _build/
-lprolog/
+lp/
 .mod
 .sig
 .lp

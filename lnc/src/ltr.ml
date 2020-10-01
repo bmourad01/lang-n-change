@@ -917,7 +917,10 @@ let rec compile ctx e = match e with
           Printf.sprintf
             {|
              let lan = %s in
-             lan_vars := (List.map (Map.data lan.rules) ~f:R.vars |> List.concat |> L.Term_set.of_list);
+             lan_vars :=
+             List.map (Map.data lan.rules) ~f:R.vars
+             |> List.concat
+             |> L.Term_set.of_list;
              %s)
              |}
             e1' e2'

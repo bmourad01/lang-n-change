@@ -17,14 +17,6 @@ Algorithms expressed in L-Tr are compiled to an OCaml program (`transform.ml`) w
 
 Additionally, the following OCaml packages are required (available through `opam` via `opam install <pkg>`):
 
-  "dune" {>= "2.7.1"}
-  "core_kernel" {>= "0.14.0"}
-  "menhir"
-  "ppx_compare"
-  "ppx_hash"
-  "ppx_let"
-  "ppx_sexp_conv"
-
 - dune (>= 2.7.1)
 - core_kernel (>= 0.14.0)
 - ppx_compare

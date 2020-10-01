@@ -810,6 +810,30 @@ let rec compile ctx e = match e with
         (e', typ', ctx)
      | _ -> incompat "Option_get" [typ] []
      end
+  | Exp.Remove_syntax s ->
+     let e' =
+       Printf.sprintf
+         {|
+          {lan with grammar =
+          Map.remove lan.grammar %s}
+          |} s
+     in (e', Type.Lan, ctx)
+  | Exp.Meta_var_of s ->
+     let e' =
+       Printf.sprintf
+         {|
+          ((fun (c: Language.Grammar.Category.t) ->  c.meta_var)
+          (Map.find_exn lan.grammar %s))
+          |} s
+     in (e', Type.String, ctx)
+  | Exp.Syntax_terms_of s ->
+     let e' =
+       Printf.sprintf
+         {|
+          ((fun (c: Language.Grammar.Category.t) -> c.terms |> Set.to_list)
+          (Map.find_exn lan.grammar %s))
+          |} s
+     in (e', Type.(List Term), ctx)
   | Exp.Rule_name e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with

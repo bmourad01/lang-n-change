@@ -13,6 +13,8 @@
 %token DOLLAR
 %token AT
 %token AMPERSAND
+%token SELECT
+%token WILDCARD
 %token GRAMMARASSIGN
 %token TURNSTILE
 %token SUBTYPE
@@ -111,9 +113,9 @@ exp:
     { Exp.Ite ($2, $4, $6) }
   | exp SEMI exp
     { Exp.Seq ($1, $3) }
-  | field = exp LSQUARE pattern = exp RSQUARE COLON LBRACE body = exp RBRACE
+  | field = exp SELECT LSQUARE pattern = pattern RSQUARE LBRACE body = exp RBRACE
     { Exp.Select {keep = false; field; pattern; body} }
-  | field = exp EXCL LSQUARE pattern = exp RSQUARE COLON LBRACE body = exp RBRACE
+  | field = exp SELECT EXCL LSQUARE pattern = pattern RSQUARE LBRACE body = exp RBRACE
     { Exp.Select {keep = true; field; pattern; body} }
   | LPAREN exp COMMA exp RPAREN
     { Exp.Tuple [$2; $4] }
@@ -417,3 +419,71 @@ formula:
     { Exp.Formula_member ($3, $4) }
   | AMPERSAND SUBSET exp exp
     { Exp.Formula_subset ($3, $4) }
+
+pattern:
+  | WILDCARD
+    { Exp.Pattern.Wildcard }
+  | NAME
+    { Exp.Pattern.Var $1 }
+  | STR
+    { Exp.Pattern.Str $1 }
+  | pattern_term
+    { Exp.Pattern.Term $1 }
+  | pattern_formula
+    { Exp.Pattern.Formula $1 }
+  | LSQUARE separated_list(COMMA, pattern) RSQUARE
+    { Exp.Pattern.List $2 }
+  | LPAREN pattern COMMA pattern RPAREN
+    { Exp.Pattern.Tuple [$2; $4] }
+  | LPAREN pattern COMMA pattern COMMA separated_nonempty_list(COMMA, pattern) RPAREN
+    { Exp.Pattern.Tuple ($2 :: $4 :: $6) }
+
+pattern_term:
+  | DOLLAR ANYNAME
+    { Exp.Pattern.Term_var $2 }
+  | DOLLAR EXCL pattern
+    { Exp.Pattern.Term_var_pat $3 }
+  | DOLLAR STR
+    { Exp.Pattern.Term_str $2 }
+  | LPAREN pattern pattern RPAREN
+    { Exp.Pattern.Term_constructor ($2, $3) }
+
+sugared_pattern_formula:
+  | pattern TURNSTILE pattern COLON pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.typeof in
+      let args = Exp.Pattern.List [$1; $3; $5] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+  | pattern STEP pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.step in
+      let args = Exp.Pattern.List [$1; $3] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+  | pattern SUBTYPE pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.subtype in
+      let args = Exp.Pattern.List [$1; $3] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+  | pattern TURNSTILE pattern SUBTYPE pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.subtype in
+      let args = Exp.Pattern.List [$1; $3; $5] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+
+pattern_formula:
+  | sugared_pattern_formula
+    { $1 }
+  | AMPERSAND NOT LPAREN pattern RPAREN
+    { Exp.Pattern.Formula_not $4 }
+  | AMPERSAND LPAREN pattern EQ pattern RPAREN
+    { Exp.Pattern.Formula_eq ($3, $5) }
+  | AMPERSAND LPAREN pattern pattern RPAREN
+    { Exp.Pattern.Formula_prop ($3, $4) }
+  | AMPERSAND MEMBER pattern pattern
+    { Exp.Pattern.Formula_member ($3, $4) }
+  | AMPERSAND SUBSET pattern pattern
+    { Exp.Pattern.Formula_subset ($3, $4) }

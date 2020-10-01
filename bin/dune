@@ -1,5 +1,5 @@
 (executables
- (names lprolog_mod lprolog_sig)
+ (names lprolog_mod lprolog_sig compile_ltr)
  (flags -w -33)
  (modes byte native)
  (libraries core_kernel lang-n-change))

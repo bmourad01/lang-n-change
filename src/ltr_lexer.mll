@@ -29,6 +29,8 @@ rule token = parse
   | "$" {DOLLAR}
   | "@" {AT}
   | "&" {AMPERSAND}
+  | ">>" {SELECT}
+  | "_" {WILDCARD}
   | "::=" {GRAMMARASSIGN}
   | "," {COMMA}
   | "::" {CONS}

@@ -20,6 +20,32 @@ module Type: sig
 end
 
 module Exp: sig
+  module Pattern: sig
+    type t =
+      | Wildcard
+      | Var of string
+      | Str of string
+      | Term of term
+      | Formula of formula
+      | List of t list
+      | Tuple of t list
+    and term =
+      | Term_var of string
+      | Term_var_pat of t
+      | Term_str of string
+      | Term_constructor of t * t
+    and formula =
+      | Formula_not of t
+      | Formula_eq of t * t
+      | Formula_prop of t * t
+      | Formula_member of t * t
+      | Formula_subset of t * t
+
+    val to_string: t -> string
+    val string_of_term: term -> string
+    val string_of_formula: formula -> string
+  end
+  
   type t =
     (* builtin *)
     | Self
@@ -49,7 +75,7 @@ module Exp: sig
     | Select of {
         keep: bool;
         field: t;
-        pattern: t;
+        pattern: Pattern.t;
         body: t;
       }
     (* tuple operations *)
@@ -170,4 +196,10 @@ module Exp: sig
     | Formula_subset of t * t
 
   val to_string: t -> string
+  val string_of_boolean: boolean -> string
+  val string_of_term: term -> string
+  val string_of_subst: subst -> string
+  val string_of_formula: formula -> string
 end
+
+val generate_caml: Exp.t -> string

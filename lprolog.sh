@@ -22,8 +22,8 @@ mkdir -p $BASEDIR
 mkdir -p $DIR
 
 # compile the signature and module
-dune exec bin/lprolog_sig.exe $FILE > "${DIR}${MODNAME}.sig"
-dune exec bin/lprolog_mod.exe $FILE > "${DIR}${MODNAME}.mod"
+dune exec lnc/bin/lprolog_sig.exe $FILE > "${DIR}${MODNAME}.sig"
+dune exec lnc/bin/lprolog_mod.exe $FILE > "${DIR}${MODNAME}.mod"
 
 CWD=$(pwd)
 cd $DIR

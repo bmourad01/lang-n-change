@@ -2,7 +2,7 @@
 
 ## What is it?
 
-lang-n-change is a tool for transforming languages. It provides a DSL, L-Tr (pronounced "Elter"), for expressing algorithms that perform language transformations.
+lang-n-change is a tool for transforming languages. It provides a domain-specific language, L-Tr (pronounced "Elter"), for expressing algorithms that perform language transformations.
 
 Given a language definition (`.lan` file) and an algorithm (`.tr` file), the algorithm is applied to the language definition, producing a new language definition.
 

@@ -143,6 +143,7 @@ module Exp: sig
   and term = 
     | Term_nil
     | Term_var of string
+    | Term_var_exp of t
     | Term_str of string
     | Term_constructor of t * t
     | Term_binding of t * t
@@ -158,15 +159,15 @@ module Exp: sig
     | Term_map_union of t list
     | Term_zip of t * t
     | Term_fresh of t
+  and subst =
+    | Subst_pair of t * string
+    | Subst_var of string * string
   and formula =
     | Formula_not of t
     | Formula_eq of t * t
     | Formula_prop of t * t
     | Formula_member of t * t
     | Formula_subset of t * t
-  and subst =
-    | Subst_pair of t * string
-    | Subst_var of string * string
 
   val to_string: t -> string
 end

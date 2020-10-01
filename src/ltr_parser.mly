@@ -343,6 +343,8 @@ term:
     { Exp.Term_nil }
   | DOLLAR ANYNAME
     { Exp.Term_var $2 }
+  | DOLLAR EXCL exp
+    { Exp.Term_var_exp $3 }
   | DOLLAR STR
     { Exp.Term_str $2 }
   | LPAREN exp exp RPAREN

@@ -830,7 +830,8 @@ let rec compile ctx e = match e with
      let e' =
        Printf.sprintf
          {|
-          ((fun (c: Language.Grammar.Category.t) -> c.terms |> Set.to_list)
+          ((fun (c: Language.Grammar.Category.t) ->
+          c.terms |> Set.to_list |> Language.Term.uniquify)
           (Map.find_exn lan.grammar %s))
           |} s
      in (e', Type.(List Term), ctx)

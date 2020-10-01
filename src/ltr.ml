@@ -680,8 +680,15 @@ let rec compile ctx e = match e with
      let (e2', typ2, ctx2) = compile ctx e2 in
      begin match (typ1, typ2) with
      | (Type.Lan, Type.Lan) ->
-        let e' = Printf.sprintf "let lan = %s in %s" e1' e2' in
-        (e', Type.Lan, ctx2)
+        let e' =
+          Printf.sprintf
+            {|
+             let lan = %s in
+             lan_vars := List.map (Map.data lan.rules) ~f:Language.Rule.vars;
+             %s)"
+             |}
+            e1' e2'
+        in (e', Type.Lan, ctx2)
      | _ -> incompat "Seq" [typ1; typ2] [Type.Lan; Type.Lan]
      end
   | Exp.Tuple es ->

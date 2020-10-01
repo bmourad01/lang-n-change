@@ -58,8 +58,8 @@ rule token = parse
   | "=>" {MAPSTO}
   | "=" {EQ}
   | "member?" {QMEMBER}
-  | "nothing?" {QNOTHING}
-  | "something?" {QSOMETHING}
+  | "none?" {QNOTHING}
+  | "some?" {QSOMETHING}
   | "empty?" {QEMPTY}
   | "var?" {QVAR}
   | "str?" {QSTR}
@@ -98,8 +98,8 @@ rule token = parse
   | "vars" {VARS}
   | "unbind" {UNBIND}
   | "bound" {BOUND}
-  | "nothing" {NOTHING}
-  | "something" {SOMETHING}
+  | "none" {NOTHING}
+  | "some" {SOMETHING}
   | "get" {GET}
   | "if" {IF}
   | "then" {THEN}

@@ -1,9 +1,9 @@
 set_rules(rules >>! [(op args) --> rhs] {
   let exprs = syntax(Expression) >> [(opp exprs)] {
-    if opp = op then something(exprs) else nothing
+    if opp = op then some(exprs) else none
   } in
   if empty?(exprs) then
-    nothing
+    none
   else
     let v_res = fresh_var(v) in
     let exprs = head(exprs) in
@@ -11,17 +11,17 @@ set_rules(rules >>! [(op args) --> rhs] {
     let new_args = emap >> [(expr, arg)] {expr'} in
     let new_target = if not(member?(rhs, args)) then v_res else rhs in
     
-    something([rule_name(self)] {
+    some([rule_name(self)] {
       emap >> [(expr, arg)] {
         if and(var?(arg), not(member?(arg, vars(rhs)))) then
-          nothing
+          none
         else
-          something(expr' --> arg)
+          some(expr' --> arg)
       },
 
       if not(member?(rhs, args))
-      then nothing
-      else something(rhs --> v_res),
+      then none
+      else some(rhs --> v_res),
     
       premises(self)
       ---------------------------------

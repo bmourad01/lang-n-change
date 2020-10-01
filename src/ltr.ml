@@ -333,8 +333,8 @@ module Exp = struct
     | Assoc (e1, e2) ->
        Printf.sprintf "assoc(%s, %s)"
          (to_string e1) (to_string e2)
-    | Nothing -> "nothing"
-    | Something e -> Printf.sprintf "something(%s)" (to_string e)
+    | Nothing -> "none"
+    | Something e -> Printf.sprintf "some(%s)" (to_string e)
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
     | New_term t -> string_of_term t
     | Vars_of e -> Printf.sprintf "vars(%s)" (to_string e)
@@ -406,10 +406,10 @@ module Exp = struct
        Printf.sprintf "member?(%s, %s)"
          (to_string e1) (to_string e2)
     | Is_nothing e ->
-       Printf.sprintf "nothing?(%s)"
+       Printf.sprintf "none?(%s)"
          (to_string e)
     | Is_something e ->
-       Printf.sprintf "something?(%s)"
+       Printf.sprintf "some?(%s)"
          (to_string e)
     | Is_empty e ->
        Printf.sprintf "empty?(%s)"

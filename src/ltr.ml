@@ -918,7 +918,7 @@ let rec compile ctx e = match e with
             {|
              let lan = %s in
              lan_vars := List.map (Map.data lan.rules) ~f:R.vars;
-             %s)"
+             %s)
              |}
             e1' e2'
         in (e', Type.Lan, ctx2)

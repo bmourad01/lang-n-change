@@ -144,6 +144,8 @@ exp:
     { Exp.List [$2] }
   | LSQUARE separated_list(COMMA, exp) RSQUARE
     { Exp.List $2 }
+  | LPAREN exp CONS exp RPAREN
+    { Exp.Cons ($2, $4) }
   | HEAD LPAREN exp RPAREN
     { Exp.Head $3 }
   | TAIL LPAREN exp RPAREN
@@ -390,8 +392,8 @@ term:
     { Exp.Term_map_domain $4 }
   | DOLLAR RANGE LPAREN exp RPAREN
     { Exp.Term_map_range $4 }
-  | LPAREN exp CONS exp RPAREN
-    { Exp.Term_cons ($2, $4) }
+  | DOLLAR LPAREN exp CONS exp RPAREN
+    { Exp.Term_cons ($3, $5) }
   | LSQUARE exp DOT DOT DOT RSQUARE
     { Exp.Term_list $2 }
   | LBRACE NAME MAPSTO exp RBRACE
@@ -462,6 +464,8 @@ pattern:
     { Exp.Pattern.Formula $1 }
   | LSQUARE separated_list(COMMA, pattern) RSQUARE
     { Exp.Pattern.List $2 }
+  | LPAREN pattern CONS pattern RPAREN 
+    { Exp.Pattern.Cons ($2, $4) }
   | LPAREN pattern COMMA pattern RPAREN
     { Exp.Pattern.Tuple [$2; $4] }
   | LPAREN pattern COMMA pattern COMMA separated_nonempty_list(COMMA, pattern) RPAREN

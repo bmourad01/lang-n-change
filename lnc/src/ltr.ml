@@ -47,6 +47,7 @@ module Exp = struct
       | Term of term
       | Formula of formula
       | List of t list
+      | Cons of t * t
       | Tuple of t list
     and term =
       | Term_var of string
@@ -70,6 +71,8 @@ module Exp = struct
          Printf.sprintf "[%s]"
            (List.map ps ~f:to_string
             |> String.concat ~sep:", ")
+      | Cons (p1, p2) ->
+         Printf.sprintf "(%s :: %s)" (to_string p1) (to_string p2)
       | Tuple ps ->
          Printf.sprintf "(%s)"
            (List.map ps ~f:to_string
@@ -131,6 +134,7 @@ module Exp = struct
     | Tuple of t list
     (* list operations *)
     | List of t list
+    | Cons of t * t
     | Head of t
     | Tail of t
     | Last of t
@@ -251,18 +255,11 @@ module Exp = struct
     | Var v -> v
     | Str s -> Printf.sprintf "\"%s\"" s
     | Str_concat (e1, e2) ->
-       Printf.sprintf "%s ^ %s"
-         (to_string e1) (to_string e2)
-    | Uppercase e ->
-       Printf.sprintf "uppercase(%s)"
-         (to_string e)
-    | Lowercase e ->
-       Printf.sprintf "lowercase(%s)"
-         (to_string e)
+       Printf.sprintf "%s ^ %s" (to_string e1) (to_string e2)
+    | Uppercase e -> Printf.sprintf "uppercase(%s)" (to_string e)
+    | Lowercase e -> Printf.sprintf "lowercase(%s)" (to_string e)
     | Int n -> Int.to_string n
-    | Int_str e ->
-       Printf.sprintf "int_str(%s)"
-         (to_string e)
+    | Int_str e -> Printf.sprintf "int_str(%s)" (to_string e)
     | Bool_exp b -> string_of_boolean b
     | Let {recursive; names; args; ret; exp; body} ->
        let args_str = match args with
@@ -313,6 +310,8 @@ module Exp = struct
          (List.map es ~f:to_string
           |> String.concat ~sep:", ")
          (if List.length es = 1 then "." else "")
+    | Cons (e1, e2) ->
+       Printf.sprintf "(%s :: %s)" (to_string e1) (to_string e2)
     | Head e -> Printf.sprintf "head(%s)" (to_string e)
     | Tail e -> Printf.sprintf "tail(%s)" (to_string e)
     | Last e -> Printf.sprintf "last(%s)" (to_string e)
@@ -630,7 +629,8 @@ let rec compile_pattern ctx expected_typ p = match p with
           List.map ps ~f:(compile_pattern ctx typ)
           |> List.unzip3
         in
-        if List.for_all typs ~f:Type.(equal typ) then
+        let check_typ typ' = Type.(equal typ' Any || equal typ' typ) in
+        if List.for_all typs ~f:check_typ then
           let p' =
             Printf.sprintf "[%s]"
               (String.concat ps' ~sep:"; ")
@@ -645,6 +645,31 @@ let rec compile_pattern ctx expected_typ p = match p with
         failwith
           (Printf.sprintf
              "List pattern: incompatible with expected type %s"
+             (Type.to_string expected_typ))
+     end
+  | Exp.Pattern.Cons (p1, p2) ->
+     begin match expected_typ with
+     | Type.List typ ->
+        let (p1', typ1, ctx1) = compile_pattern ctx typ p1 in
+        let (p2', typ2, ctx2) = compile_pattern ctx typ p2 in
+        begin match typ2 with
+        | Type.List typ'
+             when Type.(
+               (equal typ' Any || equal typ' typ2)
+               && equal typ' typ
+               && equal typ1 typ) ->
+           let p' = Printf.sprintf "((%s) :: (%s))" p1' p2' in
+           (p', expected_typ, merge_type_env ctx1 ctx2)             
+        | _ ->
+           failwith
+             (Printf.sprintf
+                "Cons pattern: incompatible with expected type %s"
+                (Type.to_string expected_typ))    
+        end
+     | _ ->
+        failwith
+          (Printf.sprintf
+             "Cons pattern: incompatible with expected type %s"
              (Type.to_string expected_typ))
      end
   | Exp.Pattern.Tuple ps ->
@@ -985,6 +1010,16 @@ let rec compile ctx e = match e with
        let e' = Printf.sprintf "[%s]" (String.concat es' ~sep:"; ") in
        (e', Type.(List typ), ctx)
      else incompat "List" typs []
+  | Exp.Cons (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match typ2 with
+     | Type.(List typ')
+          when Type.(equal typ' Any || equal typ' typ1) ->
+        let e' = Printf.sprintf "((%s) :: (%s))" e1' e2' in
+        (e', Type.(List typ1), ctx)
+     | _ -> incompat "Cons" [typ1; typ2] []
+     end
   | Exp.Head e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with

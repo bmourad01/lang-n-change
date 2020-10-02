@@ -28,6 +28,7 @@ module Exp: sig
       | Term of term
       | Formula of formula
       | List of t list
+      | Cons of t * t
       | Tuple of t list
     and term =
       | Term_var of string
@@ -83,6 +84,7 @@ module Exp: sig
     | Tuple of t list
     (* list operations *)
     | List of t list
+    | Cons of t * t
     | Head of t
     | Tail of t
     | Last of t

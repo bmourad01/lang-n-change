@@ -659,11 +659,7 @@ let rec compile_pattern ctx expected_typ p = match p with
                && equal typ1 typ) ->
            let p' = Printf.sprintf "((%s) :: (%s))" p1' p2' in
            (p', expected_typ, merge_type_env ctx1 ctx2)             
-        | _ ->
-           failwith
-             (Printf.sprintf
-                "Cons pattern: incompatible with expected type %s"
-                (Type.to_string expected_typ))    
+        | _ -> incompat "Cons pattern" [typ1; typ2] [typ; expected_typ]
         end
      | _ ->
         failwith

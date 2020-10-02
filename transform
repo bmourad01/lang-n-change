@@ -3,5 +3,8 @@
 LAN=$1
 LTR=$2
 
-dune exec lnc/bin/compile_ltr.exe $LTR > support/bin/transform.ml
+TARGET="./support/bin/transform.ml"
+
+rm -f $TARGET
+dune exec lnc/bin/compile_ltr.exe $LTR > $TARGET
 dune exec support/bin/transformer.exe $LAN

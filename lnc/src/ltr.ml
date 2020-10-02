@@ -1806,37 +1806,44 @@ and compile_formula ctx f = match f with
      end
 
 let generate_caml e =
-  let type_env = String.Map.of_alist_exn [("lan", Type.Lan)] in
+  (* we don't need to bind 'lan' or any of the
+   * helpers, since users are forbidden from
+   * shadowing these definitions + L-Tr doesn't 
+   * provide any ability to refer to them *)
+  let type_env = String.Map.empty in
   let ctx = {type_env} in
-  let (s, _, _) = compile ctx e in
-  Printf.sprintf
-    {|
-     open Core_kernel
-     open Lang_n_change
-     
-     module L = Language
-     module T = L.Term
-     module F = L.Formula
-     module R = L.Rule
-     module G = L.Grammar
-     module C = G.Category
-     module H = L.Hint
-     
-     let transform (lan: L.t) =
-     let lan_vars =
-     Map.data lan.rules
-     |> List.map ~f:R.vars
-     |> List.concat
-     |> L.Term_set.of_list
-     |> ref
-     in
-     let lan_fresh_var v =
-     let rec aux i =
-     let var = T.Var (v ^ Int.to_string i) in
-     if Set.mem !lan_vars var
-     then aux (succ i)
-     else (lan_vars := Set.add !lan_vars var; var)
-     in aux 1
-     in
-     %s
-     |} s
+  let (s, typ, _) = compile ctx e in
+  match typ with
+  | Type.Lan ->
+     Printf.sprintf
+       {|
+        open Core_kernel
+        open Lang_n_change
+        
+        module L = Language
+        module T = L.Term
+        module F = L.Formula
+        module R = L.Rule
+        module G = L.Grammar
+        module C = G.Category
+        module H = L.Hint
+        
+        let transform (lan: L.t) =
+        let lan_vars =
+        Map.data lan.rules
+        |> List.map ~f:R.vars
+        |> List.concat
+        |> L.Term_set.of_list
+        |> ref
+        in
+        let lan_fresh_var v =
+        let rec aux i =
+        let var = T.Var (v ^ Int.to_string i) in
+        if Set.mem !lan_vars var
+        then aux (succ i)
+        else (lan_vars := Set.add !lan_vars var; var)
+        in aux 1
+        in
+        %s
+        |} s
+  | _ -> incompat "Toplevel" [typ] [Type.Lan]

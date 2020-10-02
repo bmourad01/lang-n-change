@@ -5,6 +5,9 @@ LTR=$2
 
 TARGET="./support/bin/transform.ml"
 
+# remove existing file to force recompilation
 rm -f $TARGET
+# compile the transformation
 dune exec lnc/bin/compile_ltr.exe $LTR > $TARGET
+# link with the driver program and execute
 dune exec support/bin/transformer.exe $LAN

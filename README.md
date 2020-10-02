@@ -25,7 +25,7 @@ Additionally, the following OCaml packages are required (available through `opam
 - ppx_sexp_conv
 - menhir
 
-For compiling to λ-Prolog, the most recent version of Teyjus (https://github.com/teyjus/teyjus) is needed to execute the generated `.mod` and `.sig` files.
+For compiling to λProlog, the most recent version of Teyjus (https://github.com/teyjus/teyjus) is needed to execute the generated `.mod` and `.sig` files.
 
 ## Building
 
@@ -37,7 +37,7 @@ Run `dune build lnc` to build the project.
 
 Run `./transform <.lan> <.tr>`. The transformed language definition is printed to `stdout`.
 
-## Compiling to λ-Prolog
+## Compiling to λProlog
 
 Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively).
 

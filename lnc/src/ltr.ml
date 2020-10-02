@@ -1823,7 +1823,13 @@ let generate_caml e =
      module H = L.Hint
      
      let transform (lan: L.t) =
-     let lan_vars = ref (Map.data lan.rules |> List.map ~f:R.vars |> List.concat |> L.Term_set.of_list) in
+     let lan_vars =
+     Map.data lan.rules
+     |> List.map ~f:R.vars
+     |> List.concat
+     |> L.Term_set.of_list
+     |> ref
+     in
      let lan_fresh_var v =
      let rec aux i =
      let var = T.Var (v ^ Int.to_string i) in

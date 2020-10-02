@@ -380,7 +380,7 @@ module Term = struct
        | Zip (t1, t2) -> Zip (f t1, f t2)
        | Fresh t -> Fresh (f t)
 
-  let uniquify_map include_bindings min t =
+  let uniquify_map include_bindings underscore min t =
     let vars = vars_dup t ~include_bindings in
     let vars' =
       List.fold vars ~init:[] ~f:(fun vars t ->
@@ -391,8 +391,11 @@ module Term = struct
     let rec aux t n = function
       | [] -> []
       | ((Var v) as x) :: xs when equal x t ->
-         let v = Printf.sprintf "%s_%d" v n in
-         Var v :: aux t (succ n) xs
+         let v =
+           if underscore
+           then Printf.sprintf "%s_%d" v n
+           else Printf.sprintf "%s%d" v n
+         in Var v :: aux t (succ n) xs
       | _ :: xs -> aux t n xs
     in
     List.filter_map vars' ~f:(fun t ->
@@ -524,8 +527,12 @@ module Term = struct
          (Fresh t, m)
     in aux t m
 
-  let uniquify ?(include_bindings = false) ?(min = 1) t =
-    uniquify_map include_bindings min t
+  let uniquify
+        ?(include_bindings = false)
+        ?(underscore = true)
+        ?(min = 1)
+        t =
+    uniquify_map include_bindings underscore min t
     |> uniquify' t ~include_bindings
     |> fst [@@inline]
 end

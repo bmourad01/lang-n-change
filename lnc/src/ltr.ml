@@ -943,25 +943,28 @@ let rec compile ctx e = match e with
             | Type.Option typ -> (body', typ)
             | typ -> (Printf.sprintf "(Some %s)" body', typ)
           in
-          let p' =
-            let keep_var = if matching_concl then "self" else "x" in
-            let keep_str =
-              if keep
-              then Printf.sprintf "(Some %s)" keep_var
-              else "None"
-            in
-            let match_str =
-              if matching_concl
-              then "R.(self.conclusion)"
-              else "self"
-            in
-            Printf.sprintf
-              {|
-               (List.filter_map %s ~f:(fun self ->
-               match %s with
-               | %s -> %s
-               | x -> %s))
-               |} field' match_str pat' body' keep_str
+          if keep && not (Type.equal typ' body_typ) then
+            incompat "Select (body)" [body_typ] [typ']
+          else
+            let p' =
+              let keep_var = if matching_concl then "self" else "x" in
+              let keep_str =
+                if keep
+                then Printf.sprintf "(Some %s)" keep_var
+                else "None"
+              in
+              let match_str =
+                if matching_concl
+                then "R.(self.conclusion)"
+                else "self"
+              in
+              Printf.sprintf
+                {|
+                 (List.filter_map %s ~f:(fun self ->
+                 match %s with
+                 | %s -> %s
+                 | x -> %s))
+                 |} field' match_str pat' body' keep_str
           in (p', Type.(List body_typ), ctx)
         else incompat "Select (pattern)" [pat_typ] [typ']
      | _ -> incompat "Select (field)" [field_typ] []

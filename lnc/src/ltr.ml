@@ -941,7 +941,7 @@ let rec compile ctx e = match e with
           let (body', body_typ, body_ctx) = compile pat_ctx body in
           let (body', body_typ) = match body_typ with
             | Type.Option typ -> (body', typ)
-            | typ -> (Printf.sprintf "(Some %s)" body', typ)
+            | typ -> (Printf.sprintf "Some (%s)" body', typ)
           in
           if keep && not (Type.equal typ' body_typ) then
             incompat "Select (body)" [body_typ] [typ']
@@ -950,7 +950,7 @@ let rec compile ctx e = match e with
               let keep_var = if matching_concl then "self" else "x" in
               let keep_str =
                 if keep
-                then Printf.sprintf "(Some %s)" keep_var
+                then Printf.sprintf "Some (%s)" keep_var
                 else "None"
               in
               let match_str =
@@ -1083,13 +1083,13 @@ let rec compile ctx e = match e with
         let e' =
           Printf.sprintf "(List.Assoc.find %s %s ~equal:%s)"
             e2' e1' eq
-        in (e', typ2', ctx)
+        in (e', Type.Option typ2', ctx)
      | _ -> incompat "Assoc" [typ1; typ2] []
      end
   | Exp.Nothing -> ("None", Type.(Option Any), ctx)
   | Exp.Something e ->
      let (e', typ, _) = compile ctx e in
-     let e' = Printf.sprintf "Some %s" e' in
+     let e' = Printf.sprintf "Some (%s)" e' in
      (e', Type.Option typ, ctx)
   | Exp.Option_get e ->
      let (e', typ, _) = compile ctx e in
@@ -1559,7 +1559,7 @@ and compile_bool ctx b = match b with
           Printf.sprintf
             {|
              begin match %s with
-             | T.Var v -> L.is_var_kind lan v %s
+             | T.Var v -> L.is_var_kind lan v "%s"
              | _ -> failwith "Is_var_kind: expected var"
              end
              |}
@@ -1571,7 +1571,7 @@ and compile_bool ctx b = match b with
      let (e', typ, _) = compile ctx e in
      begin match typ with
      | Type.String ->
-        let e' = Printf.sprintf "(L.is_op_kind lan %s %s)" e' k in
+        let e' = Printf.sprintf "(L.is_op_kind lan %s \"%s\")" e' k in
         (e', Type.Bool, ctx)
      | _ -> incompat "Is_var_kind" [typ] [Type.String]
      end

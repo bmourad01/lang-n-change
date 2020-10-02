@@ -1,0 +1,40 @@
+set_rules(rules >>! [(op args) --> rhs] {
+  let exprs = syntax(Expression) >> [(opp exprs)] {
+    if opp = op then some(exprs) else none
+  } in
+  if empty?(exprs) then
+    none
+  else
+    let v_res = fresh_var(v) in
+    let exprs = head(exprs) in
+    let emap = zip(args, exprs) in
+    let pm = args >> [e] {
+      if and(not(binding?(e)), not(var?(e)))
+      then some(e)
+      else none
+    } in
+    let vs = args >> [e] {
+      if and(var?(e), var_kind?(e, Value))
+      then some(e)
+      else none
+    } in
+    let pmvs = append(pm, vs) in
+    let new_args = emap >> [(arg, expr)] {
+      if member?(arg, pmvs)
+      then expr
+      else arg
+    } in
+    
+    some([rule_name(self)] {
+      pmvs >> [e] {
+        let lhs = assoc(e, emap) in
+        if some?(lhs)
+        then some(get(lhs) --> e)
+        else none
+      },
+      rhs --> v_res,
+      premises(self)
+      -------------------------
+      (op new_args) --> v_res
+    })
+})

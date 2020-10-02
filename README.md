@@ -31,7 +31,7 @@ For compiling to λProlog, the most recent version of Teyjus (https://github.com
 
 Run `dune build lnc` to build the project.
 
-**DO NOT** run `dune build`, as the program `support/bin/transformer.ml` requires the generated `transform.ml` file, which is obviously not there by default.
+**DO NOT** run `dune build`, as the program `support/transformer.ml` requires the generated `transform.ml` file, which is obviously not there by default.
 
 ## Transforming languages
 

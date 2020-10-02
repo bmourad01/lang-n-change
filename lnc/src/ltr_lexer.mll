@@ -14,16 +14,16 @@
 let digit = ['0'-'9']
 let integer = digit+
 let alpha = ['a'-'z' 'A'-'Z']
-let alnum = (alpha | '_' | '-' | digit)*
+let alnum = (alpha | '_' | digit)*
+let alnum' = (alpha | '_' | '-' | digit)*
 let cap_name = ['A'-'Z'] alnum
 let name = ['a'-'z'] alnum
-let any_name = alpha alnum
 
 rule token = parse
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
   | integer as n {NUM (int_of_string n)}
-  | "\"" (alnum as s) "\"" {STR s}
+  | "\"" (alnum' as s) "\"" {STR s}
   | '%' {MOD}
   | "#" {HASH}
   | "$" {DOLLAR}
@@ -139,7 +139,6 @@ rule token = parse
   | "in" {IN}
   | cap_name as n {CAPNAME n}
   | name as n {NAME n}
-  | any_name as n {ANYNAME n}
   | eof {EOF}
   | _ {raise (Error
         (Printf.sprintf "At offset %d: unexpected token %s.\n"

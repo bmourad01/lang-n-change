@@ -119,7 +119,7 @@ module Exp: sig
     | Meta_var_of of string
     | Syntax_terms_of of string
     (* relation operations *)
-    | New_relation of string * t list
+    | New_relation of string * t
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of {

@@ -22,7 +22,7 @@ set_rules(rules >>! [(op args) --> rhs] {
     none
   else
     let v_res = fresh_var(v) in
-    let exprs = head(exprs) in
+    let exprs = head(exprs)' in
     let emap = zip(args, exprs) in
     let pm = get_pm(args) in
     let vs = get_vs(args) in
@@ -76,5 +76,7 @@ add_rules(concat(
     }
   }
 ));
+
+% $e --> $v %;
 
 remove_syntax(Context)

@@ -6,7 +6,6 @@
 %token <string> STR
 %token <string> CAPNAME
 %token <string> NAME
-%token <string> ANYNAME
 %token <int> NUM
 %token MOD
 %token HASH
@@ -47,6 +46,12 @@
 
 ltr:
   | exp EOF { $1 }
+
+meta_var:
+  | CAPNAME
+    { $1 }
+  | NAME
+    { $1 }
 
 exp:
   | SELF
@@ -186,7 +191,7 @@ exp:
     { Exp.Ticked $1 }
   | exp TICK MID exp
     { Exp.Ticked_restricted ($1, $4) }
-  | name = CAPNAME meta_var = ANYNAME GRAMMARASSIGN DOT DOT DOT MID terms = separated_nonempty_list(MID, exp)
+  | name = CAPNAME meta_var = meta_var GRAMMARASSIGN DOT DOT DOT MID terms = separated_nonempty_list(MID, exp)
     {
       Exp.New_syntax {
           extend = true;
@@ -195,7 +200,7 @@ exp:
           terms;
         }
     }
-  | name = CAPNAME meta_var = ANYNAME GRAMMARASSIGN terms = separated_nonempty_list(MID, exp)
+  | name = CAPNAME meta_var = meta_var GRAMMARASSIGN terms = separated_nonempty_list(MID, exp)
     {
       Exp.New_syntax {
           extend = false;
@@ -210,7 +215,7 @@ exp:
     { Exp.Meta_var_of name }
   | SYNTAX LPAREN name = CAPNAME RPAREN
     { Exp.Syntax_terms_of name }
-  | MOD relation
+  | MOD relation MOD
     { $2 }
   | formula
     { Exp.New_formula $1 }
@@ -293,18 +298,18 @@ hint_element:
 
 sugared_relation:
   | exp TURNSTILE exp COLON exp
-    { Exp.New_relation (Language.Predicate.Builtin.typeof, [$1; $3; $5]) }
+    { Exp.New_relation (Language.Predicate.Builtin.typeof, Exp.List [$1; $3; $5]) }
   | exp STEP exp
-    { Exp.New_relation (Language.Predicate.Builtin.step, [$1; $3]) }
+    { Exp.New_relation (Language.Predicate.Builtin.step, Exp.List [$1; $3]) }
   | exp SUBTYPE exp
-    { Exp.New_relation (Language.Predicate.Builtin.subtype, [$1; $3]) }
+    { Exp.New_relation (Language.Predicate.Builtin.subtype, Exp.List [$1; $3]) }
   | exp TURNSTILE exp SUBTYPE exp
-    { Exp.New_relation (Language.Predicate.Builtin.subtype, [$1; $3; $5]) }
+    { Exp.New_relation (Language.Predicate.Builtin.subtype, Exp.List [$1; $3; $5]) }
 
 relation:
   | sugared_relation
     { $1 }
-  | NAME nonempty_list(exp)
+  | NAME exp
     { Exp.New_relation ($1, $2) }
 
 boolean:
@@ -364,7 +369,7 @@ subst:
 term:
   | DOLLAR NIL
     { Exp.Term_nil }
-  | DOLLAR ANYNAME
+  | DOLLAR meta_var
     { Exp.Term_var $2 }
   | DOLLAR EXCL exp
     { Exp.Term_var_exp $3 }
@@ -460,7 +465,7 @@ pattern:
     { Exp.Pattern.Tuple ($2 :: $4 :: $6) }
 
 pattern_term:
-  | DOLLAR ANYNAME
+  | DOLLAR meta_var
     { Exp.Pattern.Term_var $2 }
   | DOLLAR EXCL pattern
     { Exp.Pattern.Term_var_pat $3 }

@@ -167,7 +167,7 @@ module Exp = struct
     | Meta_var_of of string
     | Syntax_terms_of of string
     (* relation operations *)
-    | New_relation of string * t list
+    | New_relation of string * t
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of {
@@ -359,11 +359,8 @@ module Exp = struct
     | Remove_syntax name -> Printf.sprintf "remove_syntax(%s)" name
     | Meta_var_of name -> Printf.sprintf "meta_var(%s)" name
     | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
-    | New_relation (predicate, terms) ->
-       Printf.sprintf "%%%s %s"
-         predicate
-         (List.map terms ~f:to_string
-          |> String.concat ~sep:" ")
+    | New_relation (predicate, e) ->
+       Printf.sprintf "%% %s %s %%" predicate (to_string e)
     | New_formula f -> string_of_formula f
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
        Printf.sprintf "uniquify(%s, %s, \"%s\")"
@@ -926,7 +923,7 @@ let rec compile ctx e = match e with
              |}
             e1' e2'
         in (e', Type.Lan, ctx2)
-     | _ -> incompat "Seq" [typ1; typ2] [Type.Lan; Type.Lan]
+     | _ -> incompat "Seq" [typ1; typ2] Type.[Lan; Lan]
      end
   | Exp.Select {keep; field; pattern; body} ->
      let (field', field_typ, _) = compile ctx field in
@@ -1236,19 +1233,21 @@ let rec compile ctx e = match e with
        Printf.sprintf
          {|
           ((fun (c: C.t) ->
-          c.terms |> Set.to_list |> List.map ~f:T.uniquify)
+          c.terms |> Set.to_list |> List.map ~f:(T.uniquify ~underscore:false))
           (Map.find_exn lan.grammar "%s"))
           |} s
      in (e', Type.(List Term), ctx)
-  | Exp.New_relation (name, es) ->
-     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     if List.for_all typs ~f:Type.(equal Term) then
-       let e' =
-         Printf.sprintf
-           "{lan with relations = Map.set lan.relations %s [%s]}" name
-           (String.concat es' ~sep:"; ")
-       in (e', Type.Lan, ctx)
-     else incompat "New_relation" typs []
+  | Exp.New_relation (name, e) ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.(List Term) ->
+        let e' =
+          Printf.sprintf
+            "{lan with relations = Map.set lan.relations \"%s\" %s}"
+            name e'
+        in (e', Type.Lan, ctx)
+     | _ -> incompat "New_relation" [typ] Type.[List Term]
+     end
   | Exp.New_formula f -> compile_formula ctx f
   | Exp.Uniquify_formulae {formulae; hint_map; hint_var} ->
      let (formulae', formulae_typ, _) = compile ctx formulae in
@@ -1590,13 +1589,13 @@ and compile_bool ctx b = match b with
 and compile_term ctx t = match t with
   | Exp.Term_nil -> ("T.Nil", Type.Term, ctx)
   | Exp.Term_var v ->     
-     let e' = Printf.sprintf "(T.Var %s)" v in
+     let e' = Printf.sprintf "(T.Var \"%s\")" v in
      (e', Type.Term, ctx)
   | Exp.Term_var_exp e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with
      | Type.String ->
-        let e' = Printf.sprintf "(T.Var %s)" e' in
+        let e' = Printf.sprintf "(T.Var (%s))" e' in
         (e', Type.Term, ctx)
      | _ -> incompat "Term_var_exp" [typ] [Type.String]
      end
@@ -1787,10 +1786,7 @@ and compile_formula ctx f = match f with
             "(F.(Prop {predicate = %s; args = %s}))"
             e1' e2'
         in (e', Type.Formula, ctx)
-     | _ ->
-        Printf.eprintf "%s\n" (Exp.string_of_formula f);
-        incompat "Formula_prop"
-          [typ1; typ2] [Type.String; Type.(List Term)]
+     | _ -> incompat "Formula_prop" [typ1; typ2] Type.[String; List Term]
      end
   | Exp.Formula_member (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in

@@ -137,6 +137,7 @@ module Exp: sig
     | Rule_conclusion of t
     | Rules_of
     | Add_rule of t
+    | Add_rules of t
     | Set_rules of t
     (* hint operations *)
     | New_hint of {
@@ -148,8 +149,8 @@ module Exp: sig
   and boolean =
     | Bool of bool
     | Not of t
-    | And of t * t
-    | Or of t * t
+    | And of t list
+    | Or of t list
     | Eq of t * t
     | Is_member of t * t
     | Is_nothing of t

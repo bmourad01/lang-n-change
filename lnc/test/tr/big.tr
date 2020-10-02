@@ -37,4 +37,44 @@ set_rules(rules >>! [(op args) --> rhs] {
       -------------------------
       (op new_args) --> v_res
     })
-})
+});
+
+add_rules(concat(
+  syntax(Value) >> [(op vs)] {
+    syntax(Expression) >> [(opp es)] {
+      if op = opp then
+        let emap = zip(vs, es) in
+        let pm = vs >> [e] {
+          if and(not(binding?(e)), not(var?(e)))
+          then some(e)
+          else none
+        } in
+        let vs = vs >> [e] {
+          if and(var?(e), var_kind?(e, Value))
+          then some(e)
+          else none
+        } in
+        let pmvs = append(pm, vs) in
+        let args = emap >> [(v, e)] {
+          if member?(v, pmvs)
+          then e
+          else v
+        } in
+        
+        some(["R-VALUE-" ^ uppercase(op)] {
+          pmvs >> [e] {
+            let ee = get(assoc(e, emap)) in
+            if or(and(var?(e), var_kind?(e, Type)),
+                  and(var?(ee), var_kind?(ee, Type)))
+            then none
+            else some(ee --> e)
+          }
+          -----------------------
+          (op args) --> (op vs)
+        })
+      else none
+    }
+  }
+));
+
+remove_syntax(Context)

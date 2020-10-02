@@ -118,6 +118,7 @@ rule token = parse
   | "premises" {PREMISES}
   | "conclusion" {CONCLUSION}
   | "rules" {RULES}
+  | "add_rules" {ADDRULES}
   | "add_rule" {ADDRULE}
   | "set_rules" {SETRULES}
   | "hint" {HINT}

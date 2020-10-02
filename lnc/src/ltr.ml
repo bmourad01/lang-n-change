@@ -185,6 +185,7 @@ module Exp = struct
     | Rule_conclusion of t
     | Rules_of
     | Add_rule of t
+    | Add_rules of t
     | Set_rules of t
     (* hint operations *)
     | New_hint of {
@@ -196,8 +197,8 @@ module Exp = struct
   and boolean =
     | Bool of bool
     | Not of t
-    | And of t * t
-    | Or of t * t
+    | And of t list
+    | Or of t list
     | Eq of t * t
     | Is_member of t * t
     | Is_nothing of t
@@ -380,6 +381,7 @@ module Exp = struct
     | Rule_conclusion e -> Printf.sprintf "conclusion(%s)" (to_string e)
     | Rules_of -> "rules"
     | Add_rule e -> Printf.sprintf "add_rule(%s)" (to_string e)
+    | Add_rules e -> Printf.sprintf "add_rules(%s)" (to_string e)
     | Set_rules e -> Printf.sprintf "set_rules(%s)" (to_string e)
     | New_hint {extend; name; elements} ->
        let extend_str = if extend then " ... | " else " " in
@@ -393,12 +395,14 @@ module Exp = struct
   and string_of_boolean = function
     | Bool b -> Bool.to_string b
     | Not e -> Printf.sprintf "not(%s)" (to_string e)
-    | And (e1, e2) ->
-       Printf.sprintf "and(%s, %s)"
-         (to_string e1) (to_string e2)
-    | Or (e1, e2) ->
-       Printf.sprintf "or(%s, %s)"
-         (to_string e1) (to_string e2)
+    | And es ->
+       Printf.sprintf "and(%s)"
+         (List.map es ~f:to_string
+          |> String.concat ~sep:", ")
+    | Or es ->
+       Printf.sprintf "or(%s)"
+         (List.map es ~f:to_string
+          |> String.concat ~sep:", ")
     | Eq (e1, e2) ->
        Printf.sprintf "%s = %s"
          (to_string e1) (to_string e2)
@@ -921,7 +925,7 @@ let rec compile ctx e = match e with
              List.map (Map.data lan.rules) ~f:R.vars
              |> List.concat
              |> L.Term_set.of_list;
-             %s)
+             %s
              |}
             e1' e2'
         in (e', Type.Lan, ctx2)
@@ -1357,6 +1361,20 @@ let rec compile ctx e = match e with
         in (e', Type.Lan, ctx)
      | _ -> incompat "Add_rule" [typ] [Type.Rule]
      end
+  | Exp.Add_rules e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.(List Rule) ->  
+        let e' =
+          Printf.sprintf
+            {|
+             {lan with rules =
+             (List.fold (%s) ~init:lan.rules ~f:(fun m (r: R.t) ->
+             Map.add_exn m r.name r))}
+             |} e'
+        in (e', Type.Lan, ctx)
+     | _ -> incompat "Add_rule" [typ] [Type.Rule]
+     end
   | Exp.Set_rules e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with
@@ -1428,24 +1446,18 @@ and compile_bool ctx b = match b with
         (e', typ, ctx)
      | _ -> incompat "Not" [typ] [Type.Bool]
      end
-  | Exp.And (e1, e2) ->
-     let (e1', typ1, _) = compile ctx e1 in
-     let (e2', typ2, _) = compile ctx e2 in
-     begin match (typ1, typ2) with
-     | (Type.Bool, Type.Bool) ->
-        let e' = Printf.sprintf "(%s && %s)" e1' e2' in
-        (e', Type.Bool, ctx)
-     | _ -> incompat "And" [typ1; typ2] [Type.Bool; Type.Bool]
-     end
-  | Exp.Or (e1, e2) ->
-     let (e1', typ1, _) = compile ctx e1 in
-     let (e2', typ2, _) = compile ctx e2 in
-     begin match (typ1, typ2) with
-     | (Type.Bool, Type.Bool) ->
-        let e' = Printf.sprintf "(%s || %s)" e1' e2' in
-        (e', Type.Bool, ctx)
-     | _ -> incompat "Or" [typ1; typ2] [Type.Bool; Type.Bool]
-     end
+  | Exp.And es ->
+     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
+     if List.for_all typs ~f:Type.(equal Bool) then
+       let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:" && ") in
+       (e', Type.Bool, ctx)
+     else incompat "And" typs []
+  | Exp.Or es ->
+     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
+     if List.for_all typs ~f:Type.(equal Bool) then
+       let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:" || ") in
+       (e', Type.Bool, ctx)
+     else incompat "Or" typs []
   | Exp.Eq (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in

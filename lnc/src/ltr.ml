@@ -111,9 +111,10 @@ module Exp = struct
     | Bool_exp of boolean
     (* control operations *)
     | Let of {
-        recursive: Type.t option;
+        recursive: bool;
         names: string list;
         args: (string * Type.t) list;
+        ret: Type.t option;
         exp: t;
         body: t;
       }
@@ -262,7 +263,7 @@ module Exp = struct
        Printf.sprintf "int_str(%s)"
          (to_string e)
     | Bool_exp b -> string_of_boolean b
-    | Let {recursive; names; args; exp; body} ->
+    | Let {recursive; names; args; ret; exp; body} ->
        let args_str = match args with
          | [] -> " "
          | _ ->
@@ -272,11 +273,8 @@ module Exp = struct
             |> String.concat ~sep:" "
             |> Printf.sprintf " %s"
        in
-       let let_str = match recursive with
-         | None -> "let"
-         | Some _ -> "let rec"
-       in
-       let rec_typ = match recursive with
+       let let_str = if recursive then "let" else "let rec" in
+       let ret_typ = match ret with
          | None -> ""
          | Some typ -> Printf.sprintf " : %s " (Type.to_string typ)
        in
@@ -288,7 +286,7 @@ module Exp = struct
               (String.concat names ~sep:", ")
        in
        Printf.sprintf "%s %s%s%s= %s in %s"
-         let_str names_str args_str rec_typ
+         let_str names_str args_str ret_typ
          (to_string exp) (to_string body)
     | Apply (e, args) ->
        Printf.sprintf "%s(%s)" (to_string e)
@@ -801,7 +799,7 @@ let rec compile ctx e = match e with
      | _ -> incompat "Int_str" [typ] [Type.Int]
      end
   | Exp.Bool_exp b -> compile_bool ctx b
-  | Exp.Let {recursive; names; args; exp; body} ->
+  | Exp.Let {recursive; names; args; ret; exp; body} ->
      (* don't allow users to bind special
       * names used internally by the compiler *)
      List.iter names ~f:reserved_name;
@@ -812,18 +810,20 @@ let rec compile ctx e = match e with
           failwith
             (Printf.sprintf "Let: duplicate arg %s" a)
      in
-     let type_env_exp = match recursive with
+     let type_env_exp = match ret with
        | None -> type_env_exp
        | Some typ ->
           let typs = List.map args ~f:snd in
           let typ = Type.Arrow (typs @ [typ]) in
-          let name = List.hd_exn names in
-          match Map.add type_env_exp name typ with
-          | `Ok m -> m
-          | `Duplicate ->
-             failwith
-               (Printf.sprintf
-                  "Let: recursive name %s is redefined" name)
+          if recursive then
+            let name = List.hd_exn names in
+            match Map.add type_env_exp name typ with
+            | `Ok m -> m
+            | `Duplicate ->
+               failwith
+                 (Printf.sprintf
+                    "Let: recursive name %s is redefined" name)
+          else type_env_exp
      in
      let ctx_exp =
        let type_env =
@@ -832,7 +832,7 @@ let rec compile ctx e = match e with
        in {type_env}
      in
      let (exp', exp_typ, _) = compile ctx_exp exp in
-     let ctx_body = match recursive with
+     let ctx_body = match ret with
        | None ->
           let num_names = List.length names in
           if num_names > 1 then
@@ -852,10 +852,7 @@ let rec compile ctx e = match e with
             bind_var ctx (List.hd_exn names) (Type.Arrow (typs @ [typ]))
           else incompat "Let" [exp_typ] [typ]
      in
-     let let_str = match recursive with
-       | None -> "let"
-       | Some _ -> "let rec"
-     in
+     let let_str = if recursive then "let rec" else "let" in
      let args_str = match args with
        | [] -> ""
        | _ -> " " ^ (List.map args ~f:fst |> String.concat ~sep:" ")
@@ -881,8 +878,8 @@ let rec compile ctx e = match e with
             Printf.sprintf "(%s %s)" e'
               (String.concat es' ~sep:" ")
           in (e', List.last_exn typs', ctx)
-        else incompat "Apply" typs typs'
-     | _ -> incompat "Apply" [typ] []
+        else incompat "Apply (args)" typs typs'
+     | _ -> incompat "Apply (function)" [typ] []
      end
   | Exp.Ite (b, e1, e2) ->
      let (b', b_typ, _) = compile ctx b in

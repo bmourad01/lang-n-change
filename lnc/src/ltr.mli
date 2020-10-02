@@ -63,9 +63,10 @@ module Exp: sig
     | Bool_exp of boolean
     (* control operations *)
     | Let of {
-        recursive: Type.t option;
+        recursive: bool;
         names: string list;
         args: (string * Type.t) list;
+        ret: Type.t option;
         exp: t;
         body: t;
       }

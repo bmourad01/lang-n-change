@@ -67,22 +67,35 @@ exp:
     { Exp.Int_str $3 }
   | boolean
     { Exp.Bool_exp $1 }
-  | LET REC name = NAME args = list(let_arg) COLON rec_type = typ EQ exp = exp IN body = exp
+  | LET REC name = NAME args = nonempty_list(let_arg) COLON ret = typ EQ exp = exp IN body = exp
     {
       Exp.Let {
-          recursive = Some rec_type;
+          recursive = true;
           names = [name];
           args;
+          ret = Some ret;
           exp;
           body;
         }
     }
-  | LET name = NAME args = list(let_arg) EQ exp = exp IN body = exp
+  | LET name = NAME args = nonempty_list(let_arg) COLON ret = typ EQ exp = exp IN body = exp
     {
       Exp.Let {
-          recursive = None;
+          recursive = false;
           names = [name];
           args;
+          ret = Some ret;
+          exp;
+          body;
+        }
+    }
+  | LET name = NAME EQ exp = exp IN body = exp
+    {
+      Exp.Let {
+          recursive = false;
+          names = [name];
+          args = [];
+          ret = None;
           exp;
           body;
         }
@@ -90,9 +103,10 @@ exp:
   | LET LPAREN name1 = NAME COMMA name2 = NAME RPAREN EQ exp = exp IN body = exp
     {
       Exp.Let {
-          recursive = None;
+          recursive = false;
           names = [name1; name2];
           args = [];
+          ret = None;
           exp;
           body;
         }
@@ -100,9 +114,10 @@ exp:
   | LET LPAREN name1 = NAME COMMA name2 = NAME COMMA names = separated_nonempty_list(COMMA, NAME) RPAREN EQ exp = exp IN body = exp
     {
       Exp.Let {
-          recursive = None;
+          recursive = false;
           names = name1 :: name2 :: names;
           args = [];
+          ret = None;
           exp;
           body;
         }

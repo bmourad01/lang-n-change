@@ -1203,13 +1203,13 @@ let rec compile ctx e = match e with
          if extend then
            Printf.sprintf
              {|
-              begin match Map.find lan.grammar %s with
+              {lan with grammar =
+              (match Map.find lan.grammar %s with
               | None ->
               Map.set lan.grammar %s %s
               | Some c ->
               let c = C.{c with meta_var = %s} in
-              Map.set lan.grammar %s (T_set.union c.terms %s)
-              end
+              Map.set lan.grammar %s (T_set.union c.terms %s))}
               |} name name new_cat meta_var name terms'
          else Printf.sprintf "(Map.set lan.grammar \"%s\" %s)" name new_cat
        in (e', Type.Lan, ctx)
@@ -1244,7 +1244,7 @@ let rec compile ctx e = match e with
      if List.for_all typs ~f:Type.(equal Term) then
        let e' =
          Printf.sprintf
-           "(Map.set lan.relations %s [%s])" name
+           "{lan with relations = Map.set lan.relations %s [%s]}" name
            (String.concat es' ~sep:"; ")
        in (e', Type.Lan, ctx)
      else incompat "New_relation" typs []
@@ -1395,7 +1395,8 @@ let rec compile ctx e = match e with
        if extend then
          Printf.sprintf
            {|
-            begin match Map.find lan.hints %s with
+            {lan with hints =
+            (match Map.find lan.hints %s with
             | None -> Map.set lan.hints %s %s
             | Some h ->
             let elements =
@@ -1403,8 +1404,7 @@ let rec compile ctx e = match e with
             Map.set m k v)
             in
             let h = H.{h with elements} in
-            Map.set lan.hints %s h
-            end
+            Map.set lan.hints %s h)}
             |} name name new_hint elements' name
        else Printf.sprintf "(Map.set lan.hints %s %s)" name new_hint
      in (e', Type.Lan, ctx)

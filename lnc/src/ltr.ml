@@ -655,8 +655,7 @@ let rec compile_pattern ctx expected_typ p = match p with
         begin match typ2 with
         | Type.List typ'
              when Type.(
-               (equal typ' Any || equal typ' typ2)
-               && equal typ' typ
+               (equal typ' Any || equal typ' typ)
                && equal typ1 typ) ->
            let p' = Printf.sprintf "((%s) :: (%s))" p1' p2' in
            (p', expected_typ, merge_type_env ctx1 ctx2)             

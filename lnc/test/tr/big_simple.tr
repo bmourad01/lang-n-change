@@ -19,7 +19,7 @@ set_rules(rules >>! [(op args) --> rhs] {
           some(expr' --> arg)
       },
 
-      if not(member?(rhs, args))
+      if member?(rhs, args)
       then none
       else some(rhs --> v_res),
     

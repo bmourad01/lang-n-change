@@ -77,6 +77,6 @@ add_rules(concat(
   }
 ));
 
-% $e --> $v %;
-
+add_relation($e --> $v);
+add_relation("j" [$j.]);
 remove_syntax(Context)

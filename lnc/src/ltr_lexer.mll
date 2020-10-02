@@ -24,7 +24,6 @@ rule token = parse
   | [' ' '\t'] {token lexbuf}
   | integer as n {NUM (int_of_string n)}
   | "\"" (alnum' as s) "\"" {STR s}
-  | '%' {MOD}
   | "#" {HASH}
   | "$" {DOLLAR}
   | "@" {AT}
@@ -114,6 +113,8 @@ rule token = parse
   | "remove_syntax" {REMOVESYNTAX}
   | "meta_var" {METAVAR}
   | "syntax" {SYNTAX}
+  | "add_relation" {ADDRELATION}
+  | "remove_relation" {REMOVERELATION}
   | "rule_name" {RULENAME}
   | "premises" {PREMISES}
   | "conclusion" {CONCLUSION}

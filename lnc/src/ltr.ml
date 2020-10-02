@@ -168,6 +168,7 @@ module Exp = struct
     | Syntax_terms_of of string
     (* relation operations *)
     | New_relation of string * t
+    | Remove_relation of string
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of {
@@ -308,9 +309,10 @@ module Exp = struct
          (List.map es ~f:to_string
           |> String.concat ~sep:", ")
     | List es ->
-       Printf.sprintf "[%s]"
+       Printf.sprintf "[%s%s]"
          (List.map es ~f:to_string
           |> String.concat ~sep:", ")
+         (if List.length es = 1 then "." else "")
     | Head e -> Printf.sprintf "head(%s)" (to_string e)
     | Tail e -> Printf.sprintf "tail(%s)" (to_string e)
     | Last e -> Printf.sprintf "last(%s)" (to_string e)
@@ -360,7 +362,9 @@ module Exp = struct
     | Meta_var_of name -> Printf.sprintf "meta_var(%s)" name
     | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
     | New_relation (predicate, e) ->
-       Printf.sprintf "%% %s %s %%" predicate (to_string e)
+       Printf.sprintf "add_relation(\"%s\" %s)" predicate (to_string e)
+    | Remove_relation predicate ->
+       Printf.sprintf "remove_relation(\"%s\")" predicate
     | New_formula f -> string_of_formula f
     | Uniquify_formulae {formulae; hint_map; hint_var} ->
        Printf.sprintf "uniquify(%s, %s, \"%s\")"
@@ -1248,6 +1252,12 @@ let rec compile ctx e = match e with
         in (e', Type.Lan, ctx)
      | _ -> incompat "New_relation" [typ] Type.[List Term]
      end
+  | Exp.Remove_relation name ->
+     let e' =
+       Printf.sprintf
+         "{lan with relations = Map.remove lan.relations \"%s\"}"
+         name
+     in (e', Type.Lan, ctx)
   | Exp.New_formula f -> compile_formula ctx f
   | Exp.Uniquify_formulae {formulae; hint_map; hint_var} ->
      let (formulae', formulae_typ, _) = compile ctx formulae in

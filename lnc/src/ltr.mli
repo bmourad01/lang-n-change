@@ -120,6 +120,7 @@ module Exp: sig
     | Syntax_terms_of of string
     (* relation operations *)
     | New_relation of string * t
+    | Remove_relation of string
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of {

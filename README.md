@@ -6,7 +6,7 @@ lang-n-change is a tool for transforming languages. It provides a domain-specifi
 
 Given a language definition (`.lan` file) and an algorithm (`.tr` file), the algorithm is applied to the language definition, producing a new language definition.
 
-L-Tr is based on a calculus described in [1]. A prototype of lang-n-change is presented in [2]. The current tool is a newer and vastly improved version of the prototype.
+L-Tr is based on a calculus described in [1]. A prototype of lang-n-change is presented in [2]. The current tool is a new and improved version of the prototype.
 
 Algorithms expressed in L-Tr are compiled to an OCaml program (`transform.ml`) which is then run with the language definition as the sole argument.
 

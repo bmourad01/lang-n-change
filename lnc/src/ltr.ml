@@ -753,7 +753,7 @@ and compile_pattern_formula ctx f = match f with
      let (p2', typ2, ctx2) = compile_pattern ctx Type.Term p2 in
      begin match (typ1, typ2) with
      | (Type.Term, Type.Term) ->
-        let p' = Printf.sprintf "(F.Subset (%s, %s))" p1' p2' in
+        let p' = Printf.sprintf "(F.(Subset {sub = %s; super = %s}))" p1' p2' in
         (p', Type.Formula, merge_type_env ctx1 ctx2)
      | _ -> incompat "Formula_subset pattern" [typ1; typ2] [Type.Term; Type.Term]
      end
@@ -1797,7 +1797,7 @@ and compile_formula ctx f = match f with
      let (e2', typ2, _) = compile ctx e2 in
      begin match (typ1, typ2) with
      | (Type.Term, Type.Term) ->
-        let e' = Printf.sprintf "(F.Subset (%s, %s))" e1' e2' in
+        let e' = Printf.sprintf "(F.(Subset {sub = %s; super = %s}))" e1' e2' in
         (e', Type.Formula, ctx)
      | _ -> incompat "Formula_subset" [typ1; typ2] [Type.Term; Type.Term]
      end

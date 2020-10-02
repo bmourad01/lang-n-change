@@ -640,16 +640,16 @@ let rec compile_pattern ctx expected_typ p = match p with
         else incompat "List pattern" typs []
      | _ ->
         failwith
-           (Printf.sprintf
-              "List pattern: incompatible with expected type %s"
-              (Type.to_string expected_typ))
+          (Printf.sprintf
+             "List pattern: incompatible with expected type %s"
+             (Type.to_string expected_typ))
      end
   | Exp.Pattern.Tuple ps ->
      let incompat' () =
-        failwith
-           (Printf.sprintf
-              "Tuple pattern: incompatible with expected type %s"
-              (Type.to_string expected_typ))
+       failwith
+         (Printf.sprintf
+            "Tuple pattern: incompatible with expected type %s"
+            (Type.to_string expected_typ))
      in
      begin match expected_typ with
      | Type.Tuple typs ->
@@ -965,7 +965,7 @@ let rec compile ctx e = match e with
                  | %s -> %s
                  | x -> %s))
                  |} field' match_str pat' body' keep_str
-          in (p', Type.(List body_typ), ctx)
+            in (p', Type.(List body_typ), ctx)
         else incompat "Select (pattern)" [pat_typ] [typ']
      | _ -> incompat "Select (field)" [field_typ] []
      end
@@ -1602,7 +1602,7 @@ and compile_term ctx t = match t with
         let e' =
           Printf.sprintf
             "(T.(Constructor {name = %s; args = %s}))"
-           name' args'
+            name' args'
         in (e', Type.Term, ctx)
      | _ ->
         incompat "Term_constructor"
@@ -1615,12 +1615,12 @@ and compile_term ctx t = match t with
      | (Type.String, Type.Term) ->
         let e' =
           Printf.sprintf
-           "(T.(Binding {var = %s; body = %s}))"
-           var' body'
+            "(T.(Binding {var = %s; body = %s}))"
+            var' body'
         in (e', Type.Term, ctx)
      | _ ->
         incompat "Term_binding"
-           [var_typ; body_typ] [Type.String; Type.Term]
+          [var_typ; body_typ] [Type.String; Type.Term]
      end
   | Exp.Term_subst (e, substs) ->
      let (e', typ, _) = compile ctx e in
@@ -1644,7 +1644,7 @@ and compile_term ctx t = match t with
         let e' =
           Printf.sprintf
             "(T.(Map_update {key = %s; value = %s; map = %s}))"
-           key' value' map'
+            key' value' map'
         in (e', Type.Term, ctx)
      | _ ->
         incompat "Term_map_update"

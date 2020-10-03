@@ -273,7 +273,7 @@ module Exp = struct
        in
        let let_str = if recursive then "let" else "let rec" in
        let ret_typ = match ret with
-         | None -> ""
+         | None -> " "
          | Some typ -> Printf.sprintf " : %s " (Type.to_string typ)
        in
        let names_str = match names with

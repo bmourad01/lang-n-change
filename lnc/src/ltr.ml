@@ -94,9 +94,9 @@ module Type_unify = struct
     | t :: [] -> Some t
     | _ ->
        let state =
-         Solution_set.of_list
-           (Aux.interleave_pairs_of_list typs
-            |> List.map ~f:(fun (t1, t2) -> Solution.Sub (t1, t2)))
+         Aux.interleave_pairs_of_list typs
+         |> List.map ~f:(fun (t1, t2) -> Solution.Sub (t1, t2))
+         |> Solution_set.of_list
        in
        let add_sub state (t1, t2) = Set.add state (Solution.Sub (t1, t2)) in
        (* this is ugly, but should work in practice *)

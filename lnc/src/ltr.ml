@@ -2,7 +2,7 @@ open Core_kernel
 
 module Type = struct
   type t =
-    | Any
+    | Var of string
     | Lan
     | Syntax
     | Rule
@@ -14,10 +14,10 @@ module Type = struct
     | Tuple of t list
     | Option of t
     | List of t
-    | Arrow of t list [@@deriving equal]
+    | Arrow of t list [@@deriving equal, compare, sexp]
 
   let rec to_string = function
-    | Any -> "any"
+    | Var v -> "'" ^ v
     | Lan -> "lan"
     | Syntax -> "syntax"
     | Rule -> "rule"
@@ -36,6 +36,140 @@ module Type = struct
        List.map ts ~f:to_string
        |> String.concat ~sep:" -> "
        |> Printf.sprintf "(%s)"
+
+  let rec vars t = match t with
+    | Var _ -> [t]
+    | Tuple ts
+      | Arrow ts ->
+       List.map ts ~f:vars
+       |> List.concat
+       |> List.dedup_and_sort ~compare
+    | Option t
+      | List t -> vars t
+    | _ -> []
+
+  let rec substitute t sub =
+    let f t = substitute t sub in
+    match List.Assoc.find sub t ~equal with
+    | Some t -> t
+    | None ->
+       match t with
+       | Var _
+         | Lan
+         | Syntax
+         | Rule
+         | Formula
+         | Term
+         | String
+         | Bool
+         | Int -> t
+       | Tuple ts -> Tuple (List.map ts ~f)
+       | Option t -> Option (f t)
+       | List t -> List (f t)
+       | Arrow ts -> Arrow (List.map ts ~f)
+end
+
+module Type_unify = struct
+  module Solution = struct
+    type t =
+      | Sub of Type.t * Type.t
+      | Soln of Type.t [@@deriving equal, compare, sexp]
+
+    let is_sub = function
+      | Sub _ -> true
+      | _ -> false
+
+    let is_soln = function
+      | Soln _ -> true
+      | _ -> false
+  end
+
+  module Solution_comparable = struct
+    include Solution
+    include Comparable.Make(Solution)
+  end
+
+  module Solution_set = Set.Make(Solution_comparable)
+
+  let run typs = match typs with
+    | [] -> None
+    | t :: [] -> Some t
+    | _ ->
+       let state =
+         Solution_set.of_list
+           (Aux.interleave_pairs_of_list typs
+            |> List.map ~f:(fun (t1, t2) -> Solution.Sub (t1, t2)))
+       in
+       let add_sub state (t1, t2) = Set.add state (Solution.Sub (t1, t2)) in
+       (* this is ugly, but should work in practice *)
+       let toplevel = ref true in
+       let add_soln state typ =
+         if !toplevel
+         then (toplevel := false; Set.add state (Solution.Soln typ))
+         else state
+       in
+       let rec loop state = match Set.find state ~f:Solution.is_sub with
+         | Some (Solution.Sub (t1, t2) as soln) ->
+            let zip_and_loop state ts ts' = match List.zip ts ts' with
+              | Unequal_lengths -> None
+              | Ok subs -> List.fold subs ~init:state ~f:add_sub |> loop
+            in
+            let state' = Set.remove state soln in
+            let open Type in
+            begin match (t1, t2) with
+            | (Lan, Lan)
+              | (Syntax, Syntax)
+              | (Rule, Rule)
+              | (Formula, Formula)
+              | (Term, Term)
+              | (String, String)
+              | (Bool, Bool)
+              | (Int, Int) -> loop (add_soln state' t1)
+            | (Tuple ts, Tuple ts')
+              | (Arrow ts, Arrow ts') ->
+               let state' = add_soln state' t1 in
+               let state' = add_soln state' t2 in
+               zip_and_loop state' ts ts'
+            | (Option t1', Option t2')
+              | (List t1', List t2') ->
+               let state' = add_soln state' t1 in
+               let state' = add_soln state' t2 in
+               zip_and_loop state' [t1'] [t2']
+            | (Var v1, Var v2) when String.equal v1 v2 -> loop state'
+            | (Var _, Var _) -> None
+            | (_, Var _) -> add_sub state' (t2, t1) |> loop
+            | (Var _, _) ->
+               let tvars = vars t2 in
+               if not (List.mem tvars t1 ~equal) then
+                 let tvars =
+                   Set.to_list state'
+                   |> List.map ~f:(function
+                          | Solution.Sub (t1, t2) -> vars t1 @ vars t2
+                          | Solution.Soln t -> vars t)
+                   |> List.concat
+                   |> List.dedup_and_sort ~compare
+                 in
+                 if List.mem tvars t1 ~equal then
+                   let sub = [(t1, t2)] in
+                   Solution_set.map state ~f:(function
+                       | Solution.Sub (t1, t2) ->
+                          Solution.Sub (
+                              substitute t1 sub,
+                              substitute t2 sub)
+                       | Solution.Soln t ->
+                          Solution.Soln (substitute t sub))
+                   |> loop
+                 else loop state'
+               else None
+            | _ -> None
+            end
+         | _ -> Some state
+       in
+       Option.(
+         loop state >>= fun state ->
+         Set.find state ~f:Solution.is_soln >>= function
+         | Solution.Soln t -> return t
+         | _ -> None)
 end
 
 module Exp = struct
@@ -519,7 +653,16 @@ end
 
 type ctx = {
     type_env: Type.t String.Map.t;
+    mutable type_vars: String.Set.t;
   }
+
+let fresh_type_var ctx =
+  let rec aux i =
+    let v = "T" ^ Int.to_string i in
+    if Set.mem ctx.type_vars v
+    then aux (succ i)
+    else (ctx.type_vars <- Set.add ctx.type_vars v; Type.Var v)      
+  in aux 1
 
 let typeof_var ctx v = match Map.find ctx.type_env v with
   | Some typ -> typ
@@ -539,7 +682,7 @@ let reserved_name v =
 let bind_var ctx v typ =
   reserved_name v;
   let type_env = Map.set ctx.type_env v typ in
-  {type_env}
+  {ctx with type_env}
 
 let incompat name ts ts' =
   let expect = match ts' with
@@ -573,7 +716,7 @@ let type_equal pref t =
     | Type.Bool -> "Bool.equal"
     | Type.Int -> "Int.equal"
     | Type.List t -> Printf.sprintf "(List.equal %s)" (eq t)
-    | Type.Any
+    | Type.Var _
       | Type.Tuple _
       | Type.Option _
       | Type.Arrow _ -> no_equal t
@@ -595,7 +738,7 @@ let type_compare pref t =
     | Type.Bool -> "Bool.compare"
     | Type.Int -> "Int.compate"
     | Type.List t -> Printf.sprintf "(List.compare %s)" (eq t)
-    | Type.Any
+    | Type.Var _
       | Type.Tuple _
       | Type.Option _
       | Type.Arrow _ -> no_compare t
@@ -611,9 +754,9 @@ let bind_var_pat ctx v typ =
          (Printf.sprintf
             "incompatible types (%s, %s) for pattern var %s"
             (Type.to_string typ) (Type.to_string typ') v)
-  in {type_env}
+  in {ctx with type_env}
 
-let merge_type_env ctx1 ctx2 =
+let merge_ctx ctx1 ctx2 =
   let type_env =
     Map.merge_skewed ctx1.type_env ctx2.type_env
       ~combine:(fun ~key typ1 typ2 ->
@@ -621,7 +764,9 @@ let merge_type_env ctx1 ctx2 =
           failwith
             (Printf.sprintf "incompatible types (%s, %s) for pattern var %s"
                (Type.to_string typ1) (Type.to_string typ2) key))
-  in {type_env}
+  in
+  let type_vars = Set.union ctx1.type_vars ctx2.type_vars in
+  {type_env; type_vars}
 
 let rec compile_pattern ctx expected_typ p = match p with
   | Exp.Pattern.Wildcard -> ("_", expected_typ, ctx)
@@ -636,18 +781,19 @@ let rec compile_pattern ctx expected_typ p = match p with
           List.map ps ~f:(compile_pattern ctx typ)
           |> List.unzip3
         in
-        let check_typ typ' = Type.(equal typ' Any || equal typ' typ) in
-        if List.for_all typs ~f:check_typ then
-          let p' =
-            Printf.sprintf "[%s]"
-              (String.concat ps' ~sep:"; ")
-          in
-          let ctx =
-            let init = List.hd_exn ctxs in
-            List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
-                merge_type_env ctx ctx')
-          in (p', expected_typ, ctx)
-        else incompat "List pattern" typs []
+        begin match Type_unify.run typs with
+        | None -> incompat "List pattern" typs []
+        | Some _ ->
+           let p' =
+             Printf.sprintf "[%s]"
+               (String.concat ps' ~sep:"; ")
+           in
+           let ctx =
+             let init = List.hd_exn ctxs in
+             List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
+                 merge_ctx ctx ctx')
+           in (p', expected_typ, ctx)
+        end
      | _ ->
         failwith
           (Printf.sprintf
@@ -661,11 +807,9 @@ let rec compile_pattern ctx expected_typ p = match p with
         let (p2', typ2, ctx2) = compile_pattern ctx typ p2 in
         begin match typ2 with
         | Type.List typ'
-             when Type.(
-               (equal typ' Any || equal typ' typ)
-               && equal typ1 typ) ->
+              when Option.is_some (Type_unify.run [typ; typ']) ->
            let p' = Printf.sprintf "((%s) :: (%s))" p1' p2' in
-           (p', expected_typ, merge_type_env ctx1 ctx2)             
+           (p', expected_typ, merge_ctx ctx1 ctx2)             
         | _ -> incompat "Cons pattern" [typ1; typ2] [typ; expected_typ]
         end
      | _ ->
@@ -698,7 +842,7 @@ let rec compile_pattern ctx expected_typ p = match p with
              let ctx =
                let init = List.hd_exn ctxs in
                List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
-                   merge_type_env ctx ctx')
+                   merge_ctx ctx ctx')
              in (p', expected_typ, ctx)
            else incompat "Tuple pattern" typs' typs
         | Unequal_lengths -> incompat' ()
@@ -729,7 +873,7 @@ and compile_pattern_term ctx t = match t with
           Printf.sprintf
             "(T.(Constructor {name = %s; args = %s}))"
             p1' p2'
-        in (p', Type.Term, merge_type_env ctx1 ctx2)
+        in (p', Type.Term, merge_ctx ctx1 ctx2)
      | _ ->
         incompat "Term_constructor pattern"
           [typ1; typ2] [Type.String; Type.(List Term)]
@@ -749,7 +893,7 @@ and compile_pattern_formula ctx f = match f with
      begin match (typ1, typ2) with
      | (Type.Term, Type.Term) ->
         let p' = Printf.sprintf "(F.Eq (%s, %s))" p1' p2' in
-        (p', Type.Formula, merge_type_env ctx1 ctx2)
+        (p', Type.Formula, merge_ctx ctx1 ctx2)
      | _ -> incompat "Formula_eq pattern" [typ1; typ2] [Type.Term; Type.Term]
      end
   | Exp.Pattern.Formula_prop (p1, p2) ->
@@ -761,7 +905,7 @@ and compile_pattern_formula ctx f = match f with
           Printf.sprintf
             "(F.(Prop {predicate = %s; args = %s}))"
             p1' p2'
-        in (p', Type.Formula, merge_type_env ctx1 ctx2)
+        in (p', Type.Formula, merge_ctx ctx1 ctx2)
      | _ ->
         incompat "Formula_prop pattern"
           [typ1; typ2] [Type.String; Type.(List Term)]
@@ -775,7 +919,7 @@ and compile_pattern_formula ctx f = match f with
           Printf.sprintf
             "(F.(Member {element = %s; collection = %s}))"
             p1' p2'
-        in (p', Type.Formula, merge_type_env ctx1 ctx2)
+        in (p', Type.Formula, merge_ctx ctx1 ctx2)
      | _ -> incompat "Formula_member pattern" [typ1; typ2] [Type.Term; Type.Term]
      end
   | Exp.Pattern.Formula_subset (p1, p2) ->
@@ -784,7 +928,7 @@ and compile_pattern_formula ctx f = match f with
      begin match (typ1, typ2) with
      | (Type.Term, Type.Term) ->
         let p' = Printf.sprintf "(F.(Subset {sub = %s; super = %s}))" p1' p2' in
-        (p', Type.Formula, merge_type_env ctx1 ctx2)
+        (p', Type.Formula, merge_ctx ctx1 ctx2)
      | _ -> incompat "Formula_subset pattern" [typ1; typ2] [Type.Term; Type.Term]
      end
 
@@ -859,7 +1003,7 @@ let rec compile ctx e = match e with
        let type_env =
          Map.merge_skewed type_env_exp ctx.type_env
            ~combine:(fun ~key t _ -> t)
-       in {type_env}
+       in {ctx with type_env}
      in
      let (exp', exp_typ, _) = compile ctx_exp exp in
      let ctx_body = match ret with
@@ -921,24 +1065,11 @@ let rec compile ctx e = match e with
         let (e1', typ1, _) = compile ctx e1 in
         let (e2', typ2, _) = compile ctx e2 in
         (* fixme: this is a hack *)
-        let typ = match (typ1, typ2) with
-          | (Any, Any)
-            | (Option Any, Option Any)
-            | (List Any, List Any) -> None
-          | (_, Any)
-            | (Option _, Option Any)
-            | (List _, List Any) -> Some typ1
-          | (Any, _)
-            | (Option Any, Option _)
-            | (List Any, List _) -> Some typ2
-          | _ when Type.equal typ1 typ2 -> Some typ1
-          | _ -> None
-        in
-        begin match typ with
+        begin match Type_unify.run [typ1; typ2] with
+        | None -> incompat "Ite" [typ1; typ2] []
         | Some typ ->
            let e' = Printf.sprintf "if %s then %s else %s" b' e1' e2' in
            (e', typ, ctx)
-        | None -> incompat "Ite" [typ1; typ2] []
         end
      | _ -> incompat "Ite" [b_typ] [Type.Bool]
      end
@@ -1012,37 +1143,17 @@ let rec compile ctx e = match e with
            (p', e', typ))
        |> List.unzip3
      in
-     (* FIXME *)
-     let typs' =
-       let rec aux acc res = function
-         | [] -> List.rev res
-         | x :: xs ->
-            let x = match x with
-              | Type.Any -> Option.value ~default:x acc
-              | Type.(List Any) ->
-                 begin match acc with
-                 | Some Type.(List _ as x) -> x
-                 | _ -> x
-                 end
-              | Type.(Option Any) ->
-                 begin match acc with
-                 | Some Type.(Option _ as x) -> x
-                 | _ -> x
-                 end
-              | _ -> x
-            in aux (Some x) (x :: res) xs
-       in aux None [] typs
-     in
-     let typ' = List.hd_exn typs' in
-     if List.for_all (List.tl_exn typs') ~f:(Type.equal typ') then
-       let cases_str =
-         List.map (List.zip_exn ps' es') ~f:(fun (p', e') ->
-             Printf.sprintf "(%s) -> (%s)" p' e')
-         |> String.concat ~sep:" | "
-       in
-       let e' = Printf.sprintf "(match %s with %s)" exp' cases_str in
-       (e', typ', ctx)
-     else incompat "Match" typs' []
+     begin match Type_unify.run typs with
+     | None -> incompat "Match" typs []
+     | Some typ ->
+        let cases_str =
+          List.map (List.zip_exn ps' es') ~f:(fun (p', e') ->
+              Printf.sprintf "(%s) -> (%s)" p' e')
+          |> String.concat ~sep:" | "
+        in
+        let e' = Printf.sprintf "(match %s with %s)" exp' cases_str in
+        (e', typ, ctx)
+     end
   | Exp.Tuple es ->
      let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
      let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:", ") in
@@ -1050,7 +1161,7 @@ let rec compile ctx e = match e with
   | Exp.List es ->
      let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
      let typ = match List.hd typs with
-       | None -> Type.Any
+       | None -> fresh_type_var ctx
        | Some typ -> typ
      in
      if List.for_all typs ~f:(Type.equal typ) then
@@ -1062,7 +1173,7 @@ let rec compile ctx e = match e with
      let (e2', typ2, _) = compile ctx e2 in
      begin match typ2 with
      | Type.(List typ')
-          when Type.(equal typ' Any || equal typ' typ1) ->
+          when Option.is_some (Type_unify.run [typ1; typ']) ->
         let e' = Printf.sprintf "((%s) :: (%s))" e1' e2' in
         (e', Type.(List typ1), ctx)
      | _ -> incompat "Cons" [typ1; typ2] []
@@ -1170,7 +1281,7 @@ let rec compile ctx e = match e with
         in (e', Type.Option typ2', ctx)
      | _ -> incompat "Assoc" [typ1; typ2] []
      end
-  | Exp.Nothing -> ("None", Type.(Option Any), ctx)
+  | Exp.Nothing -> ("None", Type.(Option (fresh_type_var ctx)), ctx)
   | Exp.Something e ->
      let (e', typ, _) = compile ctx e in
      let e' = Printf.sprintf "Some (%s)" e' in
@@ -1914,7 +2025,8 @@ let generate_caml e =
    * shadowing these definitions + L-Tr doesn't 
    * provide any ability to refer to them *)
   let type_env = String.Map.empty in
-  let ctx = {type_env} in
+  let type_vars = String.Set.empty in
+  let ctx = {type_env; type_vars} in
   let (s, typ, _) = compile ctx e in
   match typ with
   | Type.Lan ->

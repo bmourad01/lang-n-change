@@ -2,7 +2,7 @@ open Core_kernel
 
 module Type: sig
   type t =
-    | Any
+    | Var of string
     | Lan
     | Syntax
     | Rule

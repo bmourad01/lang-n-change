@@ -1,11 +1,11 @@
-let get_pm (es: term list) : term list =
+let get_pm (es: term list) =
   es >> e >>
     if and(not(binding?(e)), not(var?(e)))
     then some(e)
     else none
 in
 
-let get_vs (es: term list) : term list =
+let get_vs (es: term list) =
   es >> e >>
     if and(var?(e), var_kind?(e, Value))
     then some(e)

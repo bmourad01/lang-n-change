@@ -825,18 +825,21 @@ let rec compile ctx e = match e with
       * names used internally by the compiler *)
      List.iter names ~f:reserved_name;
      List.iter args ~f:(fun (v, _) -> reserved_name v);
+     (* don't allow duplicate names in the args *)
      let type_env_exp = match String.Map.of_alist args with
        | `Ok m -> m
        | `Duplicate_key a -> 
           failwith
             (Printf.sprintf "Let: duplicate arg %s" a)
      in
-     let type_env_exp = match ret with
-       | None -> type_env_exp
-       | Some typ ->
-          let typs = List.map args ~f:snd in
-          let typ = Type.Arrow (typs @ [typ]) in
-          if recursive then
+     (* bind the name in the expression if it's recursive *)
+     let type_env_exp =
+       if not (recursive) then type_env_exp else
+         match ret with
+         | None -> type_env_exp
+         | Some typ ->
+            let typs = List.map args ~f:snd in
+            let typ = Type.Arrow (typs @ [typ]) in
             let name = List.hd_exn names in
             match Map.add type_env_exp name typ with
             | `Ok m -> m
@@ -844,7 +847,6 @@ let rec compile ctx e = match e with
                failwith
                  (Printf.sprintf
                     "Let: recursive name %s is redefined" name)
-          else type_env_exp
      in
      let ctx_exp =
        let type_env =
@@ -866,6 +868,9 @@ let rec compile ctx e = match e with
                       bind_var ctx v typ)
                end
             | _ -> failwith "Let: expected tuple, cannot destructure"
+          else if not (List.is_empty args) then
+            let typs = List.map args ~f:snd in
+            bind_var ctx (List.hd_exn names) (Type.Arrow (typs @ [exp_typ]))
           else bind_var ctx (List.hd_exn names) exp_typ
        | Some typ ->
           if Type.equal typ exp_typ then

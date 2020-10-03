@@ -97,6 +97,17 @@ exp:
           body;
         }
     }
+  | LET name = NAME args = nonempty_list(let_arg) EQ exp = exp IN body = exp
+    {
+      Exp.Let {
+          recursive = false;
+          names = [name];
+          args;
+          ret = None;
+          exp;
+          body;
+        }
+    }
   | LET name = NAME EQ exp = exp IN body = exp
     {
       Exp.Let {

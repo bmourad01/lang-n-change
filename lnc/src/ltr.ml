@@ -167,7 +167,7 @@ module Type_unify = struct
          loop state >>= fun state ->
          Set.find state ~f:Solution.is_soln >>= function
          | Solution.Soln t -> return t
-         | _ -> None)
+         | _ -> failwith "unreachable")
 end
 
 module Exp = struct

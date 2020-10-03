@@ -617,7 +617,7 @@ let merge_type_env ctx1 ctx2 =
   in {type_env}
 
 let rec compile_pattern ctx expected_typ p = match p with
-  | Exp.Pattern.Wildcard -> ("_", Type.Any, ctx)
+  | Exp.Pattern.Wildcard -> ("_", expected_typ, ctx)
   | Exp.Pattern.Var v -> (v, expected_typ, bind_var_pat ctx v expected_typ)
   | Exp.Pattern.Str s -> (Printf.sprintf "\"%s\"" s, Type.String, ctx)
   | Exp.Pattern.Term t -> compile_pattern_term ctx t

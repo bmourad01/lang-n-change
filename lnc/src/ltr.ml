@@ -1020,10 +1020,11 @@ let rec compile ctx e = match e with
             bind_var ctx (List.hd_exn names) (Type.Arrow (typs @ [exp_typ]))
           else bind_var ctx (List.hd_exn names) exp_typ
        | Some typ ->
-          if Type.equal typ exp_typ then
-            let typs = List.map args ~f:snd in
-            bind_var ctx (List.hd_exn names) (Type.Arrow (typs @ [typ]))
-          else incompat "Let" [exp_typ] [typ]
+          match Type_unify.run [exp_typ; typ] with
+          | None -> incompat "Let" [exp_typ] [typ]
+          | Some _ ->
+             let typs = List.map args ~f:snd in
+             bind_var ctx (List.hd_exn names) (Type.Arrow (typs @ [typ]))
      in
      let let_str = if recursive then "let rec" else "let" in
      let args_str = match args with
@@ -1238,21 +1239,29 @@ let rec compile ctx e = match e with
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in
      begin match (typ1, typ2) with
-     | (Type.List typ1', Type.List typ2') when Type.equal typ1' typ2' ->
-        let e' = Printf.sprintf "(List.append %s %s)" e1' e2' in
-        (e', typ1, ctx)
+     | (Type.List typ1', Type.List typ2') ->
+        begin match Type_unify.run [typ1'; typ2'] with
+        | None -> incompat "Append" [typ1; typ2] []
+        | Some typ' ->
+           let e' = Printf.sprintf "(List.append %s %s)" e1' e2' in
+           (e', Type.List typ', ctx)
+        end
      | _ -> incompat "Append" [typ1; typ2] []
      end
   | Exp.Diff (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in
      begin match (typ1, typ2) with
-     | (Type.List typ1', Type.List typ2') when Type.equal typ1' typ2' ->
-        let eq = type_equal "Diff" typ1' in
-        let e' =
-          Printf.sprintf "(Aux.diff_list_stable %s %s ~equal:%s)"
-            e1' e2' eq
-        in (e', typ1, ctx)
+     | (Type.List typ1', Type.List typ2') ->
+        begin match Type_unify.run [typ1'; typ2'] with
+        | None -> incompat "Diff" [typ1; typ2] []
+        | Some typ' ->
+           let eq = type_equal "Diff" typ1' in
+           let e' =
+             Printf.sprintf "(Aux.diff_list_stable %s %s ~equal:%s)"
+               e1' e2' eq
+           in (e', Type.List typ', ctx)
+        end
      | _ -> incompat "Diff" [typ1; typ2] []
      end
   | Exp.Zip (e1, e2) ->

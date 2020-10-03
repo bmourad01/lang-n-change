@@ -13,7 +13,7 @@ set_rules(rules >>! (op args) --> rhs >>
     
     some([rule_name(self)] {
       emap >> (expr, arg) >>
-        if and(var?(arg), not(member?(arg, vars(rhs))))
+        if var?(arg) && not(member?(arg, vars(rhs)))
         then none
         else some(expr' --> arg),
 

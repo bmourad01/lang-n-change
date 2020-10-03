@@ -24,6 +24,8 @@ rule token = parse
   | [' ' '\t'] {token lexbuf}
   | integer as n {NUM (int_of_string n)}
   | "\"" (alnum' as s) "\"" {STR s}
+  | "&&" {AND}
+  | "||" {OR} 
   | "#" {HASH}
   | "$" {DOLLAR}
   | "@" {AT}
@@ -56,6 +58,8 @@ rule token = parse
   | "/" {FSLASH}
   | "=>" {MAPSTO}
   | "=" {EQ}
+  | "match" {MATCH}
+  | "with" {WITH}
   | "member?" {QMEMBER}
   | "none?" {QNOTHING}
   | "some?" {QSOMETHING}
@@ -123,8 +127,6 @@ rule token = parse
   | "add_rule" {ADDRULE}
   | "set_rules" {SETRULES}
   | "hint" {HINT}
-  | "and" {AND}
-  | "or" {OR} 
   | "lan" {LAN}
   | "rule" {RULE}
   | "formula" {FORMULA}

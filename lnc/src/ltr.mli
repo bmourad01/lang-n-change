@@ -80,6 +80,10 @@ module Exp: sig
         pattern: Pattern.t;
         body: t;
       }
+    | Match of {
+        exp: t;
+        cases: (Pattern.t * t) list;
+      }
     (* tuple operations *)
     | Tuple of t list
     (* list operations *)
@@ -153,8 +157,8 @@ module Exp: sig
   and boolean =
     | Bool of bool
     | Not of t
-    | And of t list
-    | Or of t list
+    | And of t * t
+    | Or of t * t
     | Eq of t * t
     | Is_member of t * t
     | Is_nothing of t

@@ -7,6 +7,7 @@
 %token <string> CAPNAME
 %token <string> NAME
 %token <int> NUM
+%token AND OR
 %token HASH
 %token DOLLAR
 %token AT
@@ -33,11 +34,12 @@
 %token MAPSTO
 %token EQ
 %token QMEMBER QNOTHING QSOMETHING QEMPTY QVAR QSTR QCONSTRUCTOR QBINDING QSUBST QLIST QMAP QTUPLE QVARKIND QOPKIND QSYNTAX
-%token FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF ASSOC APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE INTSTR SELF UNIQUIFY REMOVESYNTAX METAVAR SYNTAX ADDRELATION REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT AND OR
+%token MATCH WITH FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF ASSOC APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE INTSTR SELF UNIQUIFY REMOVESYNTAX METAVAR SYNTAX ADDRELATION REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT
 %token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP FRESH
 %token LAN RULE FORMULA TERM STRING BOOL INT TUPLE OPTION LIST
 %token TRUE FALSE
 
+%left AND OR
 %left CARET CONS
 
 %start ltr
@@ -151,6 +153,10 @@ exp:
     { Exp.Select {keep = false; field; pattern; body} }
   | field = exp SELECT EXCL pattern = pattern SELECT body = exp
     { Exp.Select {keep = true; field; pattern; body} }
+  | MATCH exp = exp WITH MID cases = separated_nonempty_list(MID, match_case)
+    { Exp.Match {exp; cases} }
+  | MATCH exp = exp WITH cases = separated_nonempty_list(MID, match_case)
+    { Exp.Match {exp; cases} }
   | LPAREN exp COMMA exp RPAREN
     { Exp.Tuple [$2; $4] }
   | LPAREN exp COMMA exp COMMA separated_nonempty_list(COMMA, exp) RPAREN
@@ -276,6 +282,10 @@ exp:
   | HINT LPAREN STR RPAREN
     { Exp.Lookup_hint $3 }
 
+match_case:
+  | pattern ARROW exp
+    { ($1, $3) }
+
 typ:
   | LAN
     { Type.Lan }
@@ -339,14 +349,10 @@ boolean:
     { Exp.Bool false }
   | NOT LPAREN exp RPAREN
     { Exp.Not $3 }
-  | AND LPAREN exp COMMA exp RPAREN
-    { Exp.And [$3; $5] }
-  | AND LPAREN exp COMMA exp COMMA separated_nonempty_list(COMMA, exp) RPAREN
-    { Exp.And ($3 :: $5 :: $7) }
-  | OR LPAREN exp COMMA exp RPAREN
-    { Exp.Or [$3; $5] }
-  | OR LPAREN exp COMMA exp COMMA separated_nonempty_list(COMMA, exp) RPAREN
-    { Exp.Or ($3 :: $5 :: $7) }
+  | exp AND exp
+    { Exp.And ($1, $3) }
+  | exp OR exp
+    { Exp.Or ($1, $3) }
   | exp EQ exp
     { Exp.Eq ($1, $3) }
   | QMEMBER LPAREN exp COMMA exp RPAREN

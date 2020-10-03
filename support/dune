@@ -1,5 +1,5 @@
 (executables
  (names transformer)
- (flags -w -33-11)
+ (flags -w -33-11-26)
  (modes byte native)
  (libraries core_kernel lang-n-change))

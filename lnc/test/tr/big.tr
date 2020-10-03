@@ -1,13 +1,13 @@
 let get_pm (es: term list) =
   es >> e >>
-    if and(not(binding?(e)), not(var?(e)))
+    if not(binding?(e)) && not(var?(e))
     then some(e)
     else none
 in
 
 let get_vs (es: term list) =
   es >> e >>
-    if and(var?(e), var_kind?(e, Value))
+    if var?(e) && var_kind?(e, Value)
     then some(e)
     else none
 in
@@ -59,8 +59,8 @@ add_rules(concat(
         some(["R-VALUE-" ^ uppercase(op)] {
           pmvs >> e >>
             let ee = get(assoc(e, emap)) in
-            if or(and(var?(e), var_kind?(e, Type)),
-                  and(var?(ee), var_kind?(ee, Type)))
+            if (var?(e) && var_kind?(e, Type))
+               || (var?(ee) && var_kind?(ee, Type))    
             then none
             else some(ee --> e)
           -----------------------

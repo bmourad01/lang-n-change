@@ -130,6 +130,10 @@ module Exp = struct
         pattern: Pattern.t;
         body: t;
       }
+    | Match of {
+        exp: t;
+        cases: (Pattern.t * t) list;
+      }
     (* tuple operations *)
     | Tuple of t list
     (* list operations *)
@@ -203,8 +207,8 @@ module Exp = struct
   and boolean =
     | Bool of bool
     | Not of t
-    | And of t list
-    | Or of t list
+    | And of t * t
+    | Or of t * t
     | Eq of t * t
     | Is_member of t * t
     | Is_nothing of t
@@ -301,6 +305,13 @@ module Exp = struct
        let op_str = if keep then ">>!" else ">>" in
        Printf.sprintf "%s %s %s >> (%s)"
          field_str op_str (Pattern.to_string pattern) (to_string body)
+    | Match {exp; cases} ->
+       let cases_str =
+         List.map cases ~f:(fun (p, e) ->
+             Printf.sprintf "%s -> (%s)"
+               (Pattern.to_string p) (to_string e))
+         |> String.concat ~sep:" | "
+       in Printf.sprintf "match %s with %s" (to_string exp) cases_str
     | Tuple es ->
        Printf.sprintf "(%s)"
          (List.map es ~f:to_string
@@ -393,14 +404,10 @@ module Exp = struct
   and string_of_boolean = function
     | Bool b -> Bool.to_string b
     | Not e -> Printf.sprintf "not(%s)" (to_string e)
-    | And es ->
-       Printf.sprintf "and(%s)"
-         (List.map es ~f:to_string
-          |> String.concat ~sep:", ")
-    | Or es ->
-       Printf.sprintf "or(%s)"
-         (List.map es ~f:to_string
-          |> String.concat ~sep:", ")
+    | And (e1, e2) ->
+       Printf.sprintf "(%s && %s)" (to_string e1) (to_string e2)
+    | Or (e1, e2) ->
+       Printf.sprintf "(%s || %s)" (to_string e1) (to_string e2)
     | Eq (e1, e2) ->
        Printf.sprintf "%s = %s"
          (to_string e1) (to_string e2)
@@ -996,6 +1003,46 @@ let rec compile ctx e = match e with
         else incompat "Select (pattern)" [pat_typ] [typ']
      | _ -> incompat "Select (field)" [field_typ] []
      end
+  | Exp.Match {exp; cases} ->
+     let (exp', exp_typ, _) = compile ctx exp in
+     let (ps', es', typs) =
+       List.map cases ~f:(fun (p, e) ->
+           let (p', _, pat_ctx) = compile_pattern ctx exp_typ p in
+           let (e', typ, _) = compile pat_ctx e in
+           (p', e', typ))
+       |> List.unzip3
+     in
+     (* FIXME *)
+     let typs' =
+       let rec aux acc res = function
+         | [] -> List.rev res
+         | x :: xs ->
+            let x = match x with
+              | Type.Any -> Option.value ~default:x acc
+              | Type.(List Any) ->
+                 begin match acc with
+                 | Some Type.(List _ as x) -> x
+                 | _ -> x
+                 end
+              | Type.(Option Any) ->
+                 begin match acc with
+                 | Some Type.(Option _ as x) -> x
+                 | _ -> x
+                 end
+              | _ -> x
+            in aux (Some x) (x :: res) xs
+       in aux None [] typs
+     in
+     let typ' = List.hd_exn typs' in
+     if List.for_all (List.tl_exn typs') ~f:(Type.equal typ') then
+       let cases_str =
+         List.map (List.zip_exn ps' es') ~f:(fun (p', e') ->
+             Printf.sprintf "(%s) -> (%s)" p' e')
+         |> String.concat ~sep:" | "
+       in
+       let e' = Printf.sprintf "(match %s with %s)" exp' cases_str in
+       (e', typ', ctx)
+     else incompat "Match" typs' []
   | Exp.Tuple es ->
      let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
      let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:", ") in
@@ -1487,18 +1534,24 @@ and compile_bool ctx b = match b with
         (e', typ, ctx)
      | _ -> incompat "Not" [typ] [Type.Bool]
      end
-  | Exp.And es ->
-     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     if List.for_all typs ~f:Type.(equal Bool) then
-       let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:" && ") in
-       (e', Type.Bool, ctx)
-     else incompat "And" typs []
-  | Exp.Or es ->
-     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     if List.for_all typs ~f:Type.(equal Bool) then
-       let e' = Printf.sprintf "(%s)" (String.concat es' ~sep:" || ") in
-       (e', Type.Bool, ctx)
-     else incompat "Or" typs []
+  | Exp.And (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Bool, Type.Bool) ->
+        let e' = Printf.sprintf "((%s) && (%s))" e1' e2' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "And" [typ1; typ2] Type.[Bool; Bool]
+     end
+  | Exp.Or (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Bool, Type.Bool) ->
+        let e' = Printf.sprintf "((%s) || (%s))" e1' e2' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Or" [typ1; typ2] Type.[Bool; Bool]
+     end
   | Exp.Eq (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in

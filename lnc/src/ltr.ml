@@ -126,12 +126,10 @@ module Type_unify = struct
             | (Tuple ts, Tuple ts')
               | (Arrow ts, Arrow ts') ->
                let state' = add_soln state' t1 in
-               let state' = add_soln state' t2 in
                zip_and_loop state' ts ts'
             | (Option t1', Option t2')
               | (List t1', List t2') ->
                let state' = add_soln state' t1 in
-               let state' = add_soln state' t2 in
                zip_and_loop state' [t1'] [t2']
             | (Var v1, Var v2) when String.equal v1 v2 -> loop state'
             | (Var _, Var _) -> None

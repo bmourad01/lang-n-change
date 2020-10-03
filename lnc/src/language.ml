@@ -860,6 +860,31 @@ module Grammar = struct
       |> List.filter_map ~f:(function
              | Term.Var v -> Some v
              | _ -> None)
+
+    let deuniquify_terms c =
+      let subs =
+        Set.to_list c.terms
+        |> List.map ~f:Term.vars
+        |> List.concat
+        |> List.dedup_and_sort ~compare:Term.compare
+        |> List.filter_map ~f:(function
+               | Term.Var v  ->
+                  let f = function
+                    | '0'..'9' -> true
+                    | _ -> false
+                  in
+                  begin match String.find v ~f with
+                  | None -> None
+                  | Some c ->
+                     let i = String.index_exn v c in
+                     Some (Term.Var v, Term.Var (String.subo v ~len:i))
+                  end
+               | _ -> None)
+      in
+      let terms =
+        Term_set.map c.terms ~f:(fun t ->
+            Term.substitute t subs)
+      in {c with terms}
   end
 
   type t = Category.t String.Map.t [@@deriving equal, compare]

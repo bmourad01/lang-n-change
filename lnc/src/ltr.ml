@@ -1389,14 +1389,16 @@ let rec compile ctx e = match e with
        |> List.unzip3
      in
      if List.for_all term_typs ~f:(Type.(equal Term)) then
-       (* todo: deuniquify the vars *)
        let terms' =
-         Printf.sprintf "(T_set.of_list [%s])"
+         Printf.sprintf "(L.Term_set.of_list [%s])"
            (String.concat terms' ~sep:"; ")
        in
        let new_cat =
          Printf.sprintf
-           "(C.{name = %s; meta_var = %s; terms = %s})"
+           {|
+            (C.{name = "%s"; meta_var = "%s"; terms = %s}
+            |> C.deuniquify_terms)
+            |}
            name meta_var terms'
        in
        let e' =
@@ -1404,13 +1406,14 @@ let rec compile ctx e = match e with
            Printf.sprintf
              {|
               {lan with grammar =
-              (match Map.find lan.grammar %s with
+              (match Map.find lan.grammar "%s" with
               | None ->
-              Map.set lan.grammar %s %s
+              Map.set lan.grammar "%s" %s
               | Some c ->
-              let c = C.{c with meta_var = %s} in
-              Map.set lan.grammar %s (T_set.union c.terms %s))}
-              |} name name new_cat meta_var name terms'
+              let terms = L.Term_set.union C.(c.terms) %s in
+              let c = C.{c with meta_var = "%s"; terms} |> C.deuniquify_terms in
+              Map.set lan.grammar "%s" c)}
+              |} name name new_cat terms' meta_var name
          else Printf.sprintf "(Map.set lan.grammar \"%s\" %s)" name new_cat
        in (e', Type.Lan, ctx)
      else incompat "New_syntax" term_typs []

@@ -158,6 +158,7 @@ module Grammar: sig
 
     val to_string: t -> string
     val term_vars_of: t -> string list
+    val deuniquify_terms: t -> t
   end
 
   type t = Category.t String.Map.t [@@deriving equal, compare]

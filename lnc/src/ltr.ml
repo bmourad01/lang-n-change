@@ -48,25 +48,23 @@ module Type = struct
       | List t -> vars t
     | _ -> []
 
-  let rec substitute t sub =
+  let rec substitute t ((a, b) as sub) =
     let f t = substitute t sub in
-    match List.Assoc.find sub t ~equal with
-    | Some t -> t
-    | None ->
-       match t with
-       | Var _
-         | Lan
-         | Syntax
-         | Rule
-         | Formula
-         | Term
-         | String
-         | Bool
-         | Int -> t
-       | Tuple ts -> Tuple (List.map ts ~f)
-       | Option t -> Option (f t)
-       | List t -> List (f t)
-       | Arrow ts -> Arrow (List.map ts ~f)
+    if equal t a then b else
+      match t with
+      | Var _
+        | Lan
+        | Syntax
+        | Rule
+        | Formula
+        | Term
+        | String
+        | Bool
+        | Int -> t
+      | Tuple ts -> Tuple (List.map ts ~f)
+      | Option t -> Option (f t)
+      | List t -> List (f t)
+      | Arrow ts -> Arrow (List.map ts ~f)
 end
 
 module Type_unify = struct
@@ -150,7 +148,7 @@ module Type_unify = struct
                    |> List.dedup_and_sort ~compare
                  in
                  if List.mem tvars t1 ~equal then
-                   let sub = [(t1, t2)] in
+                   let sub = (t1, t2) in
                    Solution_set.map state ~f:(function
                        | Solution.Sub (t1, t2) ->
                           Solution.Sub (

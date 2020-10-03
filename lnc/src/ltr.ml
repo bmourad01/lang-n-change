@@ -72,7 +72,7 @@ module Exp = struct
            (List.map ps ~f:to_string
             |> String.concat ~sep:", ")
       | Cons (p1, p2) ->
-         Printf.sprintf "(%s :: %s)" (to_string p1) (to_string p2)
+         Printf.sprintf "%s :: %s" (to_string p1) (to_string p2)
       | Tuple ps ->
          Printf.sprintf "(%s)"
            (List.map ps ~f:to_string
@@ -299,7 +299,7 @@ module Exp = struct
     | Select {keep; field; pattern; body} ->
        let field_str = to_string field in
        let op_str = if keep then ">>!" else ">>" in
-       Printf.sprintf "%s %s [%s] {%s}"
+       Printf.sprintf "%s %s %s >> (%s)"
          field_str op_str (Pattern.to_string pattern) (to_string body)
     | Tuple es ->
        Printf.sprintf "(%s)"
@@ -311,7 +311,7 @@ module Exp = struct
           |> String.concat ~sep:", ")
          (if List.length es = 1 then "." else "")
     | Cons (e1, e2) ->
-       Printf.sprintf "(%s :: %s)" (to_string e1) (to_string e2)
+       Printf.sprintf "%s :: %s" (to_string e1) (to_string e2)
     | Head e -> Printf.sprintf "head(%s)" (to_string e)
     | Tail e -> Printf.sprintf "tail(%s)" (to_string e)
     | Last e -> Printf.sprintf "last(%s)" (to_string e)

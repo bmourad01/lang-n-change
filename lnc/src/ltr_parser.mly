@@ -38,6 +38,8 @@
 %token LAN RULE FORMULA TERM STRING BOOL INT TUPLE OPTION LIST
 %token TRUE FALSE
 
+%left CARET CONS
+
 %start ltr
 %type <Ltr.Exp.t> ltr
 
@@ -53,6 +55,8 @@ meta_var:
     { $1 }
 
 exp:
+  | LPAREN exp RPAREN
+    { $2 }
   | SELF
     { Exp.Self }
   | NAME
@@ -132,9 +136,9 @@ exp:
     { Exp.Ite ($2, $4, $6) }
   | exp SEMI exp
     { Exp.Seq ($1, $3) }
-  | field = exp SELECT LSQUARE pattern = pattern RSQUARE LBRACE body = exp RBRACE
+  | field = exp SELECT pattern = pattern SELECT body = exp
     { Exp.Select {keep = false; field; pattern; body} }
-  | field = exp SELECT EXCL LSQUARE pattern = pattern RSQUARE LBRACE body = exp RBRACE
+  | field = exp SELECT EXCL pattern = pattern SELECT body = exp
     { Exp.Select {keep = true; field; pattern; body} }
   | LPAREN exp COMMA exp RPAREN
     { Exp.Tuple [$2; $4] }
@@ -144,8 +148,8 @@ exp:
     { Exp.List [$2] }
   | LSQUARE separated_list(COMMA, exp) RSQUARE
     { Exp.List $2 }
-  | LPAREN exp CONS exp RPAREN
-    { Exp.Cons ($2, $4) }
+  | exp CONS exp
+    { Exp.Cons ($1, $3) }
   | HEAD LPAREN exp RPAREN
     { Exp.Head $3 }
   | TAIL LPAREN exp RPAREN
@@ -382,8 +386,8 @@ term:
     { Exp.Term_str $2 }
   | LPAREN exp exp RPAREN
     { Exp.Term_constructor ($2, $3) }
-  | LPAREN exp RPAREN exp
-    { Exp.Term_binding ($2, $4) }
+  | DOLLAR LPAREN exp RPAREN exp
+    { Exp.Term_binding ($3, $5) }
   | exp LSQUARE separated_nonempty_list(COMMA, subst) RSQUARE
     { Exp.Term_subst ($1, $3) }
   | LSQUARE exp MAPSTO exp RSQUARE exp
@@ -464,8 +468,8 @@ pattern:
     { Exp.Pattern.Formula $1 }
   | LSQUARE separated_list(COMMA, pattern) RSQUARE
     { Exp.Pattern.List $2 }
-  | LPAREN pattern CONS pattern RPAREN 
-    { Exp.Pattern.Cons ($2, $4) }
+  | pattern CONS pattern
+    { Exp.Pattern.Cons ($1, $3) }
   | LPAREN pattern COMMA pattern RPAREN
     { Exp.Pattern.Tuple [$2; $4] }
   | LPAREN pattern COMMA pattern COMMA separated_nonempty_list(COMMA, pattern) RPAREN

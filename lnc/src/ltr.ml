@@ -1291,7 +1291,7 @@ let rec compile ctx e = match e with
      ("None", Type.Option typ, ctx)
   | Exp.Something e ->
      let (e', typ, _) = compile ctx e in
-     let e' = Printf.sprintf "Some (%s)" e' in
+     let e' = Printf.sprintf "(Some (%s))" e' in
      (e', Type.Option typ, ctx)
   | Exp.Option_get e ->
      let (e', typ, _) = compile ctx e in

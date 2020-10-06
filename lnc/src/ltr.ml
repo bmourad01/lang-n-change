@@ -179,6 +179,8 @@ module Exp = struct
       | List of t list
       | Cons of t * t
       | Tuple of t list
+      | Nothing
+      | Something of t
     and term =
       | Term_var of string
       | Term_var_pat of t
@@ -207,6 +209,8 @@ module Exp = struct
          Printf.sprintf "(%s)"
            (List.map ps ~f:to_string
             |> String.concat ~sep:", ")
+      | Nothing -> "none"
+      | Something p -> Printf.sprintf "some(%s)" (to_string p)
     and string_of_term = function
       | Term_var v -> "$" ^ v
       | Term_var_pat p -> "$!" ^ (to_string p)
@@ -280,6 +284,7 @@ module Exp = struct
     | Diff of t * t
     | Zip of t * t
     | Assoc of t * t
+    | Interleave_pairs of t
     (* option operations *)
     | Nothing
     | Something of t
@@ -474,6 +479,8 @@ module Exp = struct
     | Assoc (e1, e2) ->
        Printf.sprintf "assoc(%s, %s)"
          (to_string e1) (to_string e2)
+    | Interleave_pairs e ->
+       Printf.sprintf "interleave_pairs(%s)" (to_string e)
     | Nothing -> "none"
     | Something e -> Printf.sprintf "some(%s)" (to_string e)
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
@@ -845,6 +852,31 @@ let rec compile_pattern ctx expected_typ p = match p with
         end
      | _ -> incompat' ()
      end
+  | Exp.Pattern.Nothing ->
+     begin match expected_typ with
+     | Type.Option _ -> ("None", expected_typ, ctx)
+     | _ ->
+        failwith
+          (Printf.sprintf
+             "Nothing pattern: incompatible with expected type %s"
+             (Type.to_string expected_typ))
+     end
+  | Exp.Pattern.Something p ->
+     begin match expected_typ with
+     | Type.Option typ' ->
+        let (p', typ, ctx) = compile_pattern ctx typ' p in
+        begin match Type_unify.run [typ'; typ] with
+        | None -> incompat "Something pattern" [typ] [typ']
+        | Some _ ->
+           let p' = Printf.sprintf "(Some (%s))" p' in
+           (p', expected_typ, ctx)
+        end
+     | _ ->
+        failwith
+          (Printf.sprintf
+             "Something pattern: incompatible with expected type %s"
+             (Type.to_string expected_typ))
+     end
 and compile_pattern_term ctx t = match t with
   | Exp.Pattern.Term_var v ->
      let p' = Printf.sprintf "(T.Var \"%s\")" v in
@@ -1214,7 +1246,7 @@ let rec compile ctx e = match e with
      | Type.(List (List _ as typ')) ->
         let e' = Printf.sprintf "(List.concat %s)" e' in
         (e', typ', ctx)
-     | _ -> incompat "Last" [typ] []
+     | _ -> incompat "Concat" [typ] []
      end
   | Exp.Rev e ->
      let (e', typ, _) = compile ctx e in
@@ -1285,6 +1317,14 @@ let rec compile ctx e = match e with
             e2' e1' eq
         in (e', Type.Option typ2', ctx)
      | _ -> incompat "Assoc" [typ1; typ2] []
+     end
+  | Exp.Interleave_pairs e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List typ' ->
+        let e' = Printf.sprintf "(Aux.interleave_pairs_of_list (%s))" e' in
+        (e', Type.(List (Tuple [typ'; typ'])), ctx)
+     | _ -> incompat "Interleave_pairs" [typ] []
      end
   | Exp.Nothing ->
      let (ctx, typ) = fresh_type_var ctx in
@@ -1359,7 +1399,7 @@ let rec compile ctx e = match e with
      | (Type.Term, Type.Term) ->
         let e' = Printf.sprintf "(T.var_overlap %s %s)" e1' e2' in
         (e', Type.(List Term), ctx)
-     | _ -> incompat "Var_overlap" [typ1; typ2] [Type.Term; Type.Term]
+     | _ -> incompat "Var_overlap" [typ1; typ2] []
      end
   | Exp.Ticked e ->
      let (e', typ, _) = compile ctx e in
@@ -1615,9 +1655,9 @@ let rec compile ctx e = match e with
        Printf.sprintf
          {|
           H.{
-          name = %s;
+          name = "%s";
           elements =
-          List.fold %s ~init:String.Map.Empty ~f:(fun m (k, v) ->
+          List.fold %s ~init:String.Map.empty ~f:(fun m (k, v) ->
           Map.set m k v)}
           |} name elements'
      in
@@ -1626,23 +1666,23 @@ let rec compile ctx e = match e with
          Printf.sprintf
            {|
             {lan with hints =
-            (match Map.find lan.hints %s with
-            | None -> Map.set lan.hints %s %s
+            (match Map.find lan.hints "%s" with
+            | None -> Map.set lan.hints "%s" %s
             | Some h ->
             let elements =
             List.fold %s ~init:h.elements ~f:(fun m (k, v) ->
             Map.set m k v)
             in
             let h = H.{h with elements} in
-            Map.set lan.hints %s h)}
+            Map.set lan.hints "%s" h)}
             |} name name new_hint elements' name
-       else Printf.sprintf "(Map.set lan.hints %s %s)" name new_hint
+       else Printf.sprintf "(Map.set lan.hints \"%s\" %s)" name new_hint
      in (e', Type.Lan, ctx)
   | Exp.Lookup_hint name ->
      let e' =
        Printf.sprintf
          {|
-          begin match Map.find lan.hints %s with
+          begin match Map.find lan.hints "%s" with
           | None -> []
           | Some h -> Map.to_alist h.elements
           end

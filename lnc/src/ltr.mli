@@ -30,6 +30,8 @@ module Exp: sig
       | List of t list
       | Cons of t * t
       | Tuple of t list
+      | Nothing
+      | Something of t
     and term =
       | Term_var of string
       | Term_var_pat of t
@@ -100,6 +102,7 @@ module Exp: sig
     | Diff of t * t
     | Zip of t * t
     | Assoc of t * t
+    | Interleave_pairs of t
     (* option operations *)
     | Nothing
     | Something of t

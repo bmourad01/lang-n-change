@@ -94,6 +94,7 @@ rule token = parse
   | "last" {LAST}
   | "diff" {DIFF}
   | "assoc" {ASSOC}
+  | "interleave_pairs" {INTERLEAVEPAIRS}
   | "append" {APPEND}
   | "rev" {REV}
   | "dedup" {DEDUP}

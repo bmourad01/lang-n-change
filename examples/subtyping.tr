@@ -1,0 +1,171 @@
+set_rules(rules >>! gamma |- (op es) : t >> (
+  let (new_premises, tmap) =
+    uniquify(premises(self), hint("mode"), "out")
+  in
+
+  let r = [rule_name(self)] {
+    new_premises
+    ------------------
+    conclusion(self)
+  } in
+  
+  let contra_types = concat(
+    premises(r) >> gamma |- e : (c ts) >>
+      match assoc(c, hint("variance")) with
+      | none -> []
+      | some(variance) ->
+        let vmap = zip(ts, variance) in
+        (vmap >> (t, v) >> if v = "contra" then some(t) else none))
+  in
+ 
+  let inv_types = concat(
+    premises(r) >> gamma |- e : (c ts) >>
+      match assoc(c, hint("variance")) with
+      | none -> []
+      | some(variance) ->
+        let vmap = zip(ts, variance) in
+        (vmap >> (t, v) >> if v = "inv" then some(t) else none))
+  in
+  
+  let final_type = concat(
+    tmap >> (tk, tv) >> (
+      match conclusion(r) with
+      | gamma |- e : t ->
+        let t_types = vars(t) >> v >>
+          (if var_kind?(v, Type) then some(v) else none)
+        in
+        if empty?(t_types) then none else
+          some(concat(vars(e) >> v >>
+            match assoc(v, tmap) with
+            | none ->
+               let ov = dedup(concat(concat(
+                 tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
+               in
+               if empty?(ov)
+               then zip([tk.], [tk.])
+               else zip([tk.], ov)
+            | some(_) -> zip([tk.], [v.])))))
+  in
+  
+  let tpairs = concat(tmap >> (_, ts) >> interleave_pairs(ts)) in
+  let r = [rule_name(r)] {
+    premises(r),
+    tpairs >> (t1, t2) >> t1 <: t2
+    ------------------------------
+    conclusion(r) 
+  } in 
+  
+  let r = [rule_name(r)] {
+    premises(r) >>! t1 <: t2 >> (
+      let p = self in
+      let ps = premises(r) >> gamma |- e : (c ts) >> (
+        match assoc(c, hint("variance")) with
+        | none -> p
+        | some(variance) ->
+          let vmap = zip(ts, variance) in
+          match assoc(t1, vmap) with
+          | some("contra") -> t2 <: t1
+          | some("inv") ->
+            (match get(assoc(t2, vmap)) with
+            | "inv" -> &(t1 = t2)
+            | _ -> t2 <: t1)
+          | _ -> p)
+      in if empty?(ps) then p else head(ps))
+    ---------------------------------------
+    conclusion(r)
+  } in
+    
+  let r = [rule_name(r)] {
+    premises(r),
+    tmap >> (tk, tv) >> (
+      let ov = dedup(concat(concat(
+        tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
+      in
+      if not(empty?(ov)) then none else
+        let ov = dedup(concat(concat(
+          tv >> t >> (inv_types >> c >> var_overlap(t, c)))))
+        in
+        if empty?(ov)
+        then some(&("join" (tv @ [tk.])))
+        else
+          let final_type_range = final_type >> (_, v) >> v in
+          if member?(tk, final_type_range)
+          then some(&("join" (tv @ [tk.])))
+          else none)
+    -----------------------
+    conclusion(r)
+  } in
+  
+  let r = substitute(r, final_type) in
+  let r = [rule_name(r)] {
+    premises(r) >>! t1 <: t2 >> (
+      let joins = premises(r) >> &("join" ts) >> (
+        let ov1 = dedup(concat(ts >> t >> var_overlap(t1, t))) in
+        let ov2 = dedup(concat(ts >> t >> var_overlap(t2, t))) in
+        if empty?(ov1) || empty?(ov2) then none else some(self))
+      in
+      if empty?(joins) then some(self) else none)
+    --------------------------------------------
+    conclusion(r)
+  } in
+  
+  r
+));
+
+add_rules(syntax(Type) >> (c ts) >>
+  let vmap = match assoc(c, hint("variance")) with  
+    | none -> []
+    | some(variance) -> zip(ts, variance)
+  in
+  
+  ["JOIN-" ^ uppercase(c)] {
+    ts >> t >> (
+      let tu = unbind(t) in
+      match assoc(t, vmap) with
+      | some("contra") -> &("meet" [tu, tu', tu''])
+      | _ -> &("join" [tu, tu', tu'']))
+    -----------------------------------
+    &("join" [(c ts), (c ts'), (c ts'')])
+  }
+);
+
+add_rules(syntax(Type) >> (c ts) >>
+  let vmap = match assoc(c, hint("variance")) with  
+    | none -> []
+    | some(variance) -> zip(ts, variance)
+  in
+  
+  ["MEET-" ^ uppercase(c)] {
+    ts >> t >> (
+      let tu = unbind(t) in
+      match assoc(t, vmap) with
+      | some("contra") -> &("join" [tu, tu', tu''])
+      | _ -> &("meet" [tu, tu', tu'']))
+    -----------------------------------
+    &("meet" [(c ts), (c ts'), (c ts'')])
+  }
+);
+
+add_rules(syntax(Type) >> (c ts) >>
+  let vmap = match assoc(c, hint("variance")) with  
+    | none -> []
+    | some(variance) -> zip(ts, variance)
+  in
+
+  ["S-" ^ uppercase(c)] {
+    ts >> t >> (
+      let tu = unbind(t) in
+      match assoc(t, vmap) with
+      | some("contra") -> tu' <: tu
+      | some("inv") -> &(tu = tu')
+      | _ -> tu <: tu')
+    ----------------------------
+    (c ts) <: (c ts')
+  }
+);
+
+add_relation("join" [$T, $T, $T]);
+add_relation("meet" [$T, $T, $T]);
+add_relation($T <: $T);
+
+# mode: ... | join => inp inp out | meet => inp inp out | subtype => inp inp

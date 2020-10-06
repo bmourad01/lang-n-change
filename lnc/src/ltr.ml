@@ -649,7 +649,7 @@ end
 
 type ctx = {
     type_env: Type.t String.Map.t;
-    mutable type_vars: String.Set.t;
+    type_vars: String.Set.t;
   }
 
 let fresh_type_var ctx =
@@ -657,7 +657,7 @@ let fresh_type_var ctx =
     let v = "T" ^ Int.to_string i in
     if Set.mem ctx.type_vars v
     then aux (succ i)
-    else (ctx.type_vars <- Set.add ctx.type_vars v; Type.Var v)      
+    else ({ctx with type_vars = Set.add ctx.type_vars v}, Type.Var v)
   in aux 1
 
 let typeof_var ctx v = match Map.find ctx.type_env v with
@@ -1157,9 +1157,9 @@ let rec compile ctx e = match e with
      (e', Type.Tuple typs, ctx)
   | Exp.List es ->
      let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     let typ = match List.hd typs with
+     let (ctx, typ) = match List.hd typs with
        | None -> fresh_type_var ctx
-       | Some typ -> typ
+       | Some typ -> (ctx, typ)
      in
      if List.for_all typs ~f:(Type.equal typ) then
        let e' = Printf.sprintf "[%s]" (String.concat es' ~sep:"; ") in
@@ -1286,7 +1286,9 @@ let rec compile ctx e = match e with
         in (e', Type.Option typ2', ctx)
      | _ -> incompat "Assoc" [typ1; typ2] []
      end
-  | Exp.Nothing -> ("None", Type.(Option (fresh_type_var ctx)), ctx)
+  | Exp.Nothing ->
+     let (ctx, typ) = fresh_type_var ctx in
+     ("None", Type.Option typ, ctx)
   | Exp.Something e ->
      let (e', typ, _) = compile ctx e in
      let e' = Printf.sprintf "Some (%s)" e' in

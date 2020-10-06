@@ -60,16 +60,16 @@ set_rules(rules >>! gamma |- (op es) : t >> (
       let p = self in
       let ps = premises(r) >> gamma |- e : (c ts) >> (
         match assoc(c, hint("variance")) with
-        | none -> p
+        | none -> none
         | some(variance) ->
           let vmap = zip(ts, variance) in
           match assoc(t1, vmap) with
-          | some("contra") -> t2 <: t1
+          | some("contra") -> some(t2 <: t1)
           | some("inv") ->
-            (match get(assoc(t2, vmap)) with
-            | "inv" -> &(t1 = t2)
-            | _ -> t2 <: t1)
-          | _ -> p)
+            (match assoc(t2, vmap) with
+             | some("inv") -> some(&(t1 = t2))
+             | _ -> some(t2 <: t1))
+          | _ -> none)
       in if empty?(ps) then p else head(ps))
     ---------------------------------------
     conclusion(r)

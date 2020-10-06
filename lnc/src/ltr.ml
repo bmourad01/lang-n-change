@@ -1416,7 +1416,10 @@ let rec compile ctx e = match e with
               let c = C.{c with meta_var = "%s"; terms} |> C.deuniquify_terms in
               Map.set lan.grammar "%s" c)}
               |} name name new_cat terms' meta_var name
-         else Printf.sprintf "(Map.set lan.grammar \"%s\" %s)" name new_cat
+         else
+           Printf.sprintf
+             "{lan with grammar = (Map.set lan.grammar \"%s\" %s)}"
+             name new_cat
        in (e', Type.Lan, ctx)
      else incompat "New_syntax" term_typs []
   | Exp.Remove_syntax s ->
@@ -1824,16 +1827,18 @@ and compile_term ctx t = match t with
   | Exp.Term_constructor (name, args) ->
      let (name', name_typ, _) = compile ctx name in
      let (args', args_typ, _) = compile ctx args in
-     begin match (name_typ, args_typ) with  
-     | (Type.String, Type.(List Term)) ->
-        let e' =
-          Printf.sprintf
-            "(T.(Constructor {name = %s; args = %s}))"
-            name' args'
-        in (e', Type.Term, ctx)
-     | _ ->
-        incompat "Term_constructor"
-          [name_typ; args_typ] [Type.String; Type.(List Term)]
+     begin match Type_unify.run Type.[List Term; args_typ] with
+     | Some Type.(List Term) ->
+        begin match name_typ with
+        | Type.String ->
+           let e' =
+             Printf.sprintf
+               "(T.(Constructor {name = %s; args = %s}))"
+               name' args'
+           in (e', Type.Term, ctx)
+        | _ -> incompat "Term_constructor (name)" [name_typ] Type.[String]
+        end
+     | _ -> incompat "Term_constructor (args)" [args_typ] Type.[List Term]
      end
   | Exp.Term_binding (var, body) ->
      let (var', var_typ, _) = compile ctx var in

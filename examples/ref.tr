@@ -1,4 +1,3 @@
-Address A ::= $a.;
 Expression e ::= ... | ("address" [$a.]) | ("unit" []) | ("ref" [$e.]) | ("deref" [$e.]) | ("assign" [$e, $e]) | ("seq" [$e, $e]).;
 Value v ::= ... | ("address" [$a.]) | ("unit" []).;
 Type T ::= ... | ("unitT" []) | ("refT" [$T.]).;
@@ -87,7 +86,7 @@ add_rule(["T-SEQ"] {
 });
 
 add_rule(["R-REFV"] {
-  &($a = $fresh($mu))
+  &($a = $fresh($dom($mu)))
   ---------------------------------------------------------------
   <[("ref" [$v.]), $mu]> --> <[("address" [$a.]), [$a => $v]$mu]>
 });

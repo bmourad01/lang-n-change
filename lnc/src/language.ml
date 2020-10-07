@@ -956,7 +956,7 @@ let to_string lan =
     if Map.is_empty lan.hints then "" else
       Map.data lan.hints
       |> List.map ~f:Hint.to_string
-      |> String.concat ~sep:"\n"
+      |> String.concat ~sep:".\n"
       |> (fun s -> Printf.sprintf "\n\n%%\n\n%s." s)
   in Printf.sprintf "%s%s\n\n%%\n\n%s%s"
        (Grammar.to_string lan.grammar)

@@ -346,16 +346,17 @@ module Sigs = struct
                let rec aux t = match t with
                  | T.Var v ->
                     begin match L.kind_of_var lan v with
-                    | None ->
-                       invalid_arg
-                         (Printf.sprintf "bad var %s in category %s"
-                            v name)
+                    | None -> Syntax.[v "string"]
                     | Some kind ->
                        if L.is_meta_var_of lan v kind then
-                         let kind = kind_name kind in
-                         if Map.mem kinds kind
-                         then Syntax.[v kind]
-                         else Syntax.[v "string"]
+                         let kind' = kind_name kind in
+                         if Map.mem kinds kind' then
+                           Syntax.[v kind']
+                         else
+                           begin match Map.find subsets kind with
+                           | None -> Syntax.[v "string"]
+                           | Some kind -> Syntax.[v (kind_name kind)]
+                           end
                        else Syntax.[v "string"]
                     end
                  | T.Str _ -> Syntax.[v "string"]
@@ -388,10 +389,7 @@ module Sigs = struct
                          (T.to_string t) name)
                and aux_map key value =
                  let key = match L.kind_of_var lan key with
-                   | None ->
-                      invalid_arg
-                        (Printf.sprintf "bad map key %s in category %s"
-                           key name)
+                   | None -> Syntax.v "string"
                    | Some kind ->
                       if L.is_meta_var_of lan key kind then
                         let kind = kind_name kind in
@@ -414,15 +412,16 @@ module Sigs = struct
                     let term = Syntax.(name & (args, v name')) in
                     Map.set terms' name term
                  | T.Map {key; value} ->
-                    if not (Map.is_empty terms') then
-                      invalid_arg
-                        (Printf.sprintf
-                           "bad term %s in category %s"
-                           (T.to_string t) name)
-                    else
-                      let typ =
-                        Syntax.("list" @ ["lnc_pair" @ (aux_map key value)])
-                      in Hashtbl.set aliases (Syntax.v name') typ; terms'
+                    (* fixme: this doesn't make sense *)
+                    (* if not (Map.is_empty terms') then
+                     *   invalid_arg
+                     *     (Printf.sprintf
+                     *        "bad map term %s in category %s"
+                     *        (T.to_string t) name)
+                     * else *)
+                    let typ =
+                      Syntax.("list" @ ["lnc_pair" @ (aux_map key value)])
+                    in Hashtbl.set aliases (Syntax.v name') typ; terms'
                  | T.List t' ->
                     if not (Map.is_empty terms') then
                       invalid_arg

@@ -1,0 +1,110 @@
+Address A ::= $a.;
+Expression e ::= ... | ("address" [$a.]) | ("unit" []) | ("ref" [$e.]) | ("deref" [$e.]) | ("assign" [$e, $e]) | ("seq" [$e, $e]).;
+Value v ::= ... | ("address" [$a.]) | ("unit" []).;
+Type T ::= ... | ("unitT" []) | ("refT" [$T.]).;
+Context E ::= ... | ("ref" [$E.]) | ("deref" [$E.]) | ("assign" [$E, $e]) | ("assign" [$v, $E]) | ("seq" [$E, $e]).;
+Memory mu ::= {a => $v}.;
+Store Sigma ::= {a => $T}.;
+
+# variance: ... | refT => inv;
+
+add_relation(<[$Gamma, $Sigma]> |- $e : $T);
+add_relation(<[$e, $mu]> --> <[$e, $mu]>);
+
+set_rules(rules >>! gamma |- e : t >>
+  let do_gamma (g: term) : term = match g with
+    | <ts> -> <ts @ [$Sigma.]>
+    | _ -> <[g, $Sigma]>
+  in
+
+  [rule_name(self)] {
+    premises(self) >>! gamma |- e : t >>
+      do_gamma(gamma) |- e : t
+    ---------------------------
+    do_gamma(gamma) |- e : t
+  }
+);
+
+set_rules(rules >>! e1 --> e2 >>
+  let do_config (c: term) (mu: term) : term = match c with
+    | <ts> -> <ts @ [mu.]>
+    | _ -> <[c, mu]>
+  in
+  let step_prems = premises(self) >> e1 --> e2 >> self in
+  let concl = conclusion(self) in
+  let steps = step_prems @ [concl.] in
+  let stores = steps >> _ >> fresh_var(mu) in
+  let smap1 = zip(steps, stores) in
+  let smap2 = zip(step_prems, tail(stores)) in 
+
+  [rule_name(self)] {
+    premises(self) >>! e1 --> e2 >>
+      (let c1 = do_config(e1, get(assoc(self, smap1))) in
+       let c2 = do_config(e2, get(assoc(self, smap2))) in
+       c1 --> c2)
+    ---------------------------------------------------
+    let c1 = do_config(e1, head(stores)) in
+    let c2 = do_config(e2, get(assoc(concl, smap1))) in
+    c1 --> c2
+  }
+);
+
+add_rule(["T-ADDRESS"] {
+  &member <[$a, $T]> $Sigma
+  --------------------------------------------------------
+  <[$Gamma, $Sigma]> |- ("address" [$a.]) : ("refT" [$T.])
+});
+
+add_rule(["T-UNIT"] {
+  ------------------------------------------------
+  <[$Gamma, $Sigma]> |- ("unit" []) : ("unitT" [])
+});
+
+add_rule(["T-REF"] {
+  <[$Gamma, $Sigma]> |- $e : $T
+  ----------------------------------------------------
+  <[$Gamma, $Sigma]> |- ("ref" [$e.]) : ("refT" [$T.])
+});
+
+add_rule(["T-DEREF"] {
+  <[$Gamma, $Sigma]> |- $e : ("refT" [$T.])
+  -------------------------------------------
+  <[$Gamma, $Sigma]> |- ("deref" [$e.]) : $T
+});
+
+add_rule(["T-ASSIGN"] {
+  <[$Gamma, $Sigma]> |- $e1 : ("refT" [$T.]),
+  <[$Gamma, $Sigma]> |- $e2 : $T
+  ----------------------------------------------------------
+  <[$Gamma, $Sigma]> |- ("assign" [$e1, $e2]) : ("unitT" [])
+});
+
+add_rule(["T-SEQ"] {
+  <[$Gamma, $Sigma]> |- $e1 : ("unitT" []),
+  <[$Gamma, $Sigma]> |- $e2 : $T
+  ---------------------------------------------
+  <[$Gamma, $Sigma]> |- ("seq" [$e1, $e2]) : $T
+});
+
+add_rule(["R-REFV"] {
+  &($a = $fresh($mu))
+  ---------------------------------------------------------------
+  <[("ref" [$v.]), $mu]> --> <[("address" [$a.]), [$a => $v]$mu]>
+});
+
+add_rule(["R-DEREF"] {
+  &member <[$a, $v]> $mu
+  ----------------------------------------------------
+  <[("deref" [("address" [$a.]).]), $mu]> --> <[$v, $mu]>
+});
+
+add_rule(["R-ASSIGN"] {
+  &member $a $dom($mu)
+  ------------------------------------------------------------------------------
+  <[("assign" [("address" [$a.]), $v]), $mu]> --> <[("unit" []), [$a => $v]$mu]>
+});
+
+add_rule(["R-SEQ"] {
+  --------------------------------------------------
+  <[("seq" [("unit" []), $e]), $mu]> --> <[$e, $mu]>
+})

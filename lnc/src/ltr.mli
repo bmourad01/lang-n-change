@@ -33,10 +33,27 @@ module Exp: sig
       | Nothing
       | Something of t
     and term =
+      | Term_nil
       | Term_var of string
       | Term_var_pat of t
       | Term_str of string
       | Term_constructor of t * t
+      | Term_binding of t * t
+      | Term_subst of t * subst list
+      | Term_map_update of t * t * t
+      | Term_map_domain of t
+      | Term_map_range of t
+      | Term_cons of t * t
+      | Term_list of t
+      | Term_map of string * t
+      | Term_tuple of t list
+      | Term_union of t list
+      | Term_map_union of t list
+      | Term_zip of t * t
+      | Term_fresh of t
+    and subst =
+      | Subst_pair of t * string
+      | Subst_var of string
     and formula =
       | Formula_not of t
       | Formula_eq of t * t

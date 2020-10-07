@@ -504,7 +504,15 @@ pattern:
   | SOMETHING LPAREN pattern RPAREN
     { Exp.Pattern.Something $3 }
 
+pattern_subst:
+  | pattern FSLASH NAME
+    { Exp.Pattern.Subst_pair ($1, $3) }
+  | NAME
+    { Exp.Pattern.Subst_var $1 }
+
 pattern_term:
+  | DOLLAR NIL
+    { Exp.Pattern.Term_nil }
   | DOLLAR meta_var
     { Exp.Pattern.Term_var $2 }
   | DOLLAR EXCL pattern
@@ -513,6 +521,34 @@ pattern_term:
     { Exp.Pattern.Term_str $2 }
   | LPAREN pattern pattern RPAREN
     { Exp.Pattern.Term_constructor ($2, $3) }
+  | DOLLAR LPAREN pattern RPAREN pattern
+    { Exp.Pattern.Term_binding ($3, $5) }
+  | pattern LSQUARE separated_nonempty_list(COMMA, pattern_subst) RSQUARE
+    { Exp.Pattern.Term_subst ($1, $3) }
+  | LSQUARE pattern MAPSTO pattern RSQUARE pattern
+    { Exp.Pattern.Term_map_update ($2, $4, $6) }
+  | DOLLAR DOM LPAREN pattern RPAREN
+    { Exp.Pattern.Term_map_domain $4 }
+  | DOLLAR RANGE LPAREN pattern RPAREN
+    { Exp.Pattern.Term_map_range $4 }
+  | DOLLAR LPAREN pattern CONS pattern RPAREN
+    { Exp.Pattern.Term_cons ($3, $5) }
+  | LSQUARE pattern DOT DOT DOT RSQUARE
+    { Exp.Pattern.Term_list $2 }
+  | LBRACE NAME MAPSTO pattern RBRACE
+    { Exp.Pattern.Term_map ($2, $4) }
+  | LANGLE pattern COMMA pattern RANGLE
+    { Exp.Pattern.Term_tuple [$2; $4] }
+  | LANGLE pattern COMMA pattern COMMA separated_nonempty_list(COMMA, pattern) RANGLE
+    { Exp.Pattern.Term_tuple ($2 :: $4 :: $6) }
+  | DOLLAR UNION LPAREN separated_nonempty_list(COMMA, pattern) RPAREN
+    { Exp.Pattern.Term_union $4 }
+  | DOLLAR MAPUNION LPAREN separated_nonempty_list(COMMA, pattern) RPAREN
+    { Exp.Pattern.Term_map_union $4 }
+  | DOLLAR ZIP LPAREN pattern COMMA pattern RPAREN
+    { Exp.Pattern.Term_zip ($4, $4) }
+  | DOLLAR FRESH LPAREN pattern RPAREN
+    { Exp.Pattern.Term_fresh $4 }
 
 sugared_pattern_formula:
   | pattern TURNSTILE pattern COLON pattern

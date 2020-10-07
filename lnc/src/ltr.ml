@@ -182,10 +182,27 @@ module Exp = struct
       | Nothing
       | Something of t
     and term =
+      | Term_nil
       | Term_var of string
       | Term_var_pat of t
       | Term_str of string
       | Term_constructor of t * t
+      | Term_binding of t * t
+      | Term_subst of t * subst list
+      | Term_map_update of t * t * t
+      | Term_map_domain of t
+      | Term_map_range of t
+      | Term_cons of t * t
+      | Term_list of t
+      | Term_map of string * t
+      | Term_tuple of t list
+      | Term_union of t list
+      | Term_map_union of t list
+      | Term_zip of t * t
+      | Term_fresh of t
+    and subst =
+      | Subst_pair of t * string
+      | Subst_var of string
     and formula =
       | Formula_not of t
       | Formula_eq of t * t
@@ -212,11 +229,45 @@ module Exp = struct
       | Nothing -> "none"
       | Something p -> Printf.sprintf "some(%s)" (to_string p)
     and string_of_term = function
+      | Term_nil -> "nil"
       | Term_var v -> "$" ^ v
       | Term_var_pat p -> "$!" ^ (to_string p)
       | Term_str s -> "$" ^ (Printf.sprintf "\"%s\"" s)
       | Term_constructor (p1, p2) ->
          Printf.sprintf "(%s %s)" (to_string p1) (to_string p2)
+      | Term_binding (p1, p2) ->
+         Printf.sprintf "(%s)%s" (to_string p1) (to_string p2)
+      | Term_subst (p, substs) ->
+         Printf.sprintf "%s[%s]" (to_string p)
+           (List.map substs ~f:string_of_subst
+            |> String.concat ~sep:", ")
+      | Term_map_update (key, value, map) ->
+         Printf.sprintf "[%s => %s]%s"
+           (to_string key) (to_string value) (to_string map)
+      | Term_map_domain p -> Printf.sprintf "$dom(%s)" (to_string p)
+      | Term_map_range p -> Printf.sprintf "$range(%s)" (to_string p)
+      | Term_cons (p1, p2) ->
+         Printf.sprintf "$(%s :: %s)" (to_string p1) (to_string p2)
+      | Term_list p -> Printf.sprintf "[%s...]" (to_string p)
+      | Term_map (var, p) -> Printf.sprintf "{%s => %s}" var (to_string p)
+      | Term_tuple ps ->
+         Printf.sprintf "<%s>"
+           (List.map ps ~f:to_string
+            |> String.concat ~sep:", ")
+      | Term_union ps ->
+         Printf.sprintf "$union(%s)"
+           (List.map ps ~f:to_string
+            |> String.concat ~sep:", ")
+      | Term_map_union ps ->
+         Printf.sprintf "$map_union(%s)"
+           (List.map ps ~f:to_string
+            |> String.concat ~sep:", ")
+      | Term_zip (p1, p2) ->
+         Printf.sprintf "$zip(%s, %s)" (to_string p1) (to_string p2)
+      | Term_fresh p -> Printf.sprintf "$fresh(%s)" (to_string p)
+    and string_of_subst = function
+      | Subst_pair (p, var) -> Printf.sprintf "%s/%s" (to_string p) var
+      | Subst_var var -> Printf.sprintf "%s" var
     and string_of_formula = function
       | Formula_not p -> Printf.sprintf "&not(%s)" (to_string p)
       | Formula_eq (p1, p2) ->
@@ -625,7 +676,7 @@ module Exp = struct
     | Term_map_domain e -> Printf.sprintf "$dom(%s)" (to_string e)
     | Term_map_range e -> Printf.sprintf "$range(%s)" (to_string e)
     | Term_cons (e1, e2) ->
-       Printf.sprintf "(%s :: %s)"
+       Printf.sprintf "$(%s :: %s)"
          (to_string e1) (to_string e2)
     | Term_list e -> Printf.sprintf "[%s...]" (to_string e)
     | Term_map (key, value) ->
@@ -890,6 +941,7 @@ let rec compile_pattern ctx expected_typ p = match p with
              (Type.to_string expected_typ))
      end
 and compile_pattern_term ctx t = match t with
+  | Exp.Pattern.Term_nil -> ("T.Nil", Type.Term, ctx)
   | Exp.Pattern.Term_var v ->
      let p' = Printf.sprintf "(T.Var \"%s\")" v in
      (p', Type.Term, ctx)
@@ -916,8 +968,174 @@ and compile_pattern_term ctx t = match t with
         in (p', Type.Term, merge_ctx ctx1 ctx2)
      | _ ->
         incompat "Term_constructor pattern"
-          [typ1; typ2] [Type.String; Type.(List Term)]
+          [typ1; typ2] Type.[String; List Term]
      end
+  | Exp.Pattern.Term_binding (p1, p2) ->
+     let (p1', typ1, ctx1) = compile_pattern ctx Type.String p1 in
+     let (p2', typ2, ctx2) = compile_pattern ctx Type.Term p2 in
+     begin match (typ1, typ2) with
+     | (Type.String, Type.Term) ->
+        let ctx = merge_ctx ctx1 ctx2 in
+        let p' = Printf.sprintf "(T.Binding {var = %s; body = %s})" p1' p2' in
+        (p', Type.Term, ctx)
+     | _ ->
+        incompat "Term_binding pattern"
+           [typ1; typ2] Type.[String; Term]
+     end     
+  | Exp.Pattern.Term_subst (p, substs) ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     begin match typ with
+     | Type.Term ->
+        let (substs', substs_ctx) =
+          List.map substs ~f:(compile_pattern_subst ctx)
+          |> List.unzip
+        in
+        let ctx =
+          let init = List.hd_exn substs_ctx in
+          List.fold (List.tl_exn substs_ctx) ~init ~f:(fun ctx ctx' ->
+              merge_ctx ctx ctx')
+        in
+        let p' =
+          Printf.sprintf
+            "(T.Subst {body = %s; substs = [%s]})"
+            p' (String.concat substs' ~sep:"; ")
+        in (p', Type.Term, ctx)
+     | _ -> incompat "Term_subst pattern (body)" [typ] Type.[Term]
+     end
+  | Exp.Pattern.Term_map_update (key, value, map) ->
+     let (key', key_typ, key_ctx) = compile_pattern ctx Type.Term key in
+     let (value', value_typ, value_ctx) = compile_pattern ctx Type.Term value in
+     let (map', map_typ, map_ctx) = compile_pattern ctx Type.Term map in
+     begin match (key_typ, value_typ, map_typ) with
+     | (Type.Term, Type.Term, Type.Term) ->
+        let ctx = merge_ctx (merge_ctx key_ctx value_ctx) map_ctx in
+        let p' =
+          Printf.sprintf "(T.Map_update {key = %s; value = %s; map = %s})"
+            key' value' map'
+        in (p', Type.Term, ctx)
+     | _ ->
+        incompat "Term_map_update pattern"
+          [key_typ; value_typ; map_typ] Type.[Term; Term; Term]
+     end
+  | Exp.Pattern.Term_map_domain p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     begin match typ with
+     | Type.Term ->
+        let p' = Printf.sprintf "(T.Map_domain (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_map_domain pattern" [typ] Type.[Term]
+     end
+  | Exp.Pattern.Term_map_range p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     begin match typ with
+     | Type.Term ->
+        let p' = Printf.sprintf "(T.Map_range (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_map_range pattern" [typ] Type.[Term]
+     end
+  | Exp.Pattern.Term_cons (p1, p2) ->
+     let (p1', typ1, ctx1) = compile_pattern ctx Type.Term p1 in
+     let (p2', typ2, ctx2) = compile_pattern ctx Type.Term p2 in
+     begin match (typ1, typ2) with
+     | (Type.Term, Type.Term) ->
+        let ctx = merge_ctx ctx1 ctx2 in
+        let p' = Printf.sprintf "(T.Cons (%s, %s))" p1' p2' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_cons pattern" [typ1; typ2] Type.[Term; Term]
+     end
+  | Exp.Pattern.Term_list p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     begin match typ with
+     | Type.Term ->
+        let p' = Printf.sprintf "(T.List (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_list pattern" [typ] Type.[Term]
+     end
+  | Exp.Pattern.Term_map (var, p) ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     begin match typ with
+     | Type.Term ->
+        let ctx = bind_var_pat ctx var Type.String in
+        let p' = Printf.sprintf "(T.Map {key = %s; value = %s})" var p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_map pattern (value)" [typ] Type.[Term]
+     end
+  | Exp.Pattern.Term_tuple ps ->
+     let (ps', typs, ctxs) =
+       List.map ps ~f:(compile_pattern ctx Type.Term)
+       |> List.unzip3
+     in
+     if List.for_all typs ~f:Type.(equal Term) then
+        let ctx =
+          let init = List.hd_exn ctxs in
+          List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
+              merge_ctx ctx ctx')
+        in
+        let p' =
+          Printf.sprintf "(T.Tuple [%s])"
+            (String.concat ps' ~sep:"; ")
+        in (p', Type.Term, ctx)
+     else incompat "Term_tuple pattern" typs []
+  | Exp.Pattern.Term_union ps ->
+     let (ps', typs, ctxs) =
+       List.map ps ~f:(compile_pattern ctx Type.Term)
+       |> List.unzip3
+     in
+     if List.for_all typs ~f:Type.(equal Term) then
+        let ctx =
+          let init = List.hd_exn ctxs in
+          List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
+              merge_ctx ctx ctx')
+        in
+        let p' =
+          Printf.sprintf "(T.Union [%s])"
+            (String.concat ps' ~sep:"; ")
+        in (p', Type.Term, ctx)
+     else incompat "Term_union pattern" typs []
+  | Exp.Pattern.Term_map_union ps ->
+     let (ps', typs, ctxs) =
+       List.map ps ~f:(compile_pattern ctx Type.Term)
+       |> List.unzip3
+     in
+     if List.for_all typs ~f:Type.(equal Term) then
+        let ctx =
+          let init = List.hd_exn ctxs in
+          List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
+              merge_ctx ctx ctx')
+        in
+        let p' =
+          Printf.sprintf "(T.Map_union [%s])"
+            (String.concat ps' ~sep:"; ")
+        in (p', Type.Term, ctx)
+     else incompat "Term_map_union pattern" typs []
+  | Exp.Pattern.Term_zip (p1, p2) ->
+     let (p1', typ1, ctx1) = compile_pattern ctx Type.Term p1 in
+     let (p2', typ2, ctx2) = compile_pattern ctx Type.Term p2 in
+     begin match (typ1, typ2) with
+     | (Type.Term, Type.Term) ->
+        let ctx = merge_ctx ctx1 ctx2 in
+        let p' = Printf.sprintf "(T.Zip (%s, %s))" p1' p2' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_zip pattern" [typ1; typ2] Type.[Term; Term]
+     end
+  | Exp.Pattern.Term_fresh p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     begin match typ with
+     | Type.Term ->
+        let p' = Printf.sprintf "(T.Fresh (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_fresh pattern" [typ] Type.[Term]
+     end
+and compile_pattern_subst ctx s = match s with
+  | Exp.Pattern.Subst_pair (p, var) ->
+     let (p', typ, ctx) = compile_pattern ctx Type.Term p in
+     let ctx = bind_var_pat ctx var Type.Term in
+     let p' = Printf.sprintf "(T.Subst_pair (%s, %s))" p' var in
+     (p', ctx)
+  | Exp.Pattern.Subst_var var ->
+     let p' = Printf.sprintf "(T.Subst_var (%s, _))" var in
+     let ctx = bind_var_pat ctx var Type.(List (Tuple [Term; Term])) in
+     (p', ctx)
 and compile_pattern_formula ctx f = match f with
   | Exp.Pattern.Formula_not p ->
      let (p', typ, ctx) = compile_pattern ctx Type.Formula p in

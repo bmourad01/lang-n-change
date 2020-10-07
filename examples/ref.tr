@@ -57,7 +57,7 @@ set_rules(rules >>! e1 --> e2 >>
   }
 );
 
-let assume = head(relations >> ("typeof", [a, _, _]) >> a) in
+let assume = head(relations >> ("typeof", a :: _) >> a) in
 
 add_rule(["T-ADDRESS"] {
   &member <[$a, $T]> $Sigma

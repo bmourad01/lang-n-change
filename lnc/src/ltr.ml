@@ -229,7 +229,7 @@ module Exp = struct
       | Nothing -> "none"
       | Something p -> Printf.sprintf "some(%s)" (to_string p)
     and string_of_term = function
-      | Term_nil -> "nil"
+      | Term_nil -> "$nil"
       | Term_var v -> "$" ^ v
       | Term_var_pat p -> "$!" ^ (to_string p)
       | Term_str s -> "$" ^ (Printf.sprintf "\"%s\"" s)

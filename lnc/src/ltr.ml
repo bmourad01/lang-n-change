@@ -306,6 +306,10 @@ module Exp = struct
         meta_var: string;
         terms: t list;
       }
+    | Set_syntax_terms of {
+        name: string;
+        terms: t;
+      }
     | Remove_syntax of string
     | Meta_var_of of string
     | Syntax_terms_of of string
@@ -360,6 +364,8 @@ module Exp = struct
     | Is_var_kind of t * string
     | Is_op_kind of t * string
     | Has_syntax of string
+    | Starts_with of t * t
+    | Ends_with of t * t
   and term = 
     | Term_nil
     | Term_var of string
@@ -501,10 +507,12 @@ module Exp = struct
          (to_string e1) (to_string e2)
     | New_syntax {extend; name; meta_var; terms} ->
        let extend_str = if extend then " ... | " else " " in
-       Printf.sprintf "%s %s ::=%s%s"
+       Printf.sprintf "%s %s ::=%s%s."
          name meta_var extend_str
          (List.map terms ~f:to_string
           |> String.concat ~sep:" | ")
+    | Set_syntax_terms {name; terms} ->
+       Printf.sprintf "set_syntax(%s, %s)" name (to_string terms)
     | Remove_syntax name -> Printf.sprintf "remove_syntax(%s)" name
     | Meta_var_of name -> Printf.sprintf "meta_var(%s)" name
     | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
@@ -591,6 +599,10 @@ module Exp = struct
        Printf.sprintf "op_kind?(%s, %s)"
          (to_string e) kind
     | Has_syntax name -> Printf.sprintf "syntax?(%s)" name
+    | Starts_with (e1, e2) ->
+       Printf.sprintf "starts_with?(%s, %s)" (to_string e1) (to_string e2)
+    | Ends_with (e1, e2) ->
+       Printf.sprintf "ends_with?(%s, %s)" (to_string e1) (to_string e2)
   and string_of_term = function
     | Term_nil -> "$nil"
     | Term_var v -> "$" ^ v
@@ -1462,6 +1474,27 @@ let rec compile ctx e = match e with
              name new_cat
        in (e', Type.Lan, ctx)
      else incompat "New_syntax" term_typs []
+  | Exp.Set_syntax_terms {name; terms} ->
+     let (e', typ, _) = compile ctx terms in
+     begin match Type_unify.run Type.[List Term; typ] with
+     | Some Type.(List Term) ->
+        let e' =
+          Printf.sprintf
+            {|
+             {lan with grammar =
+             (match Map.find lan.grammar "%s" with
+             | None -> failwith "Set_syntax_terms: grammar %s doesn't exist"
+             | Some c ->
+             let terms = match %s with
+             | [] -> failwith "Set_syntax_terms: list cannot be empty"
+             | terms -> L.Term_set.of_list terms
+             in
+             let c = {c with terms} |> C.deuniquify_terms in
+             Map.set lan.grammar "%s" c)}
+             |} name name e' name
+        in (e', Type.Lan, ctx)
+     | _ -> incompat "Set_syntax_terms" [typ] Type.[List Term]
+     end
   | Exp.Remove_syntax s ->
      let e' =
        Printf.sprintf
@@ -1544,18 +1577,21 @@ let rec compile ctx e = match e with
        | Type.String ->
           begin match conclusion_typ with
           | Type.Formula ->
-             let premises' =
-               List.zip_exn premises' premise_typs
-               |> List.map ~f:(fun (p, typ) ->
-                      match typ with
-                      | Type.Formula ->
-                         Printf.sprintf "[%s]" p
-                      | Type.(List Formula) -> p
-                      | Type.(Option Formula) ->
-                         Printf.sprintf "(List.filter_map [%s] ~f:(fun x -> x))" p
-                      | _ -> failwith "unreachable")
-               |> String.concat ~sep:" @ "
-               |> Printf.sprintf "(%s)"
+             let premises' = match premises with
+               | [] -> "[]"
+               | _ -> 
+                  List.zip_exn premises' premise_typs
+                  |> List.map ~f:(fun (p, typ) ->
+                         match typ with
+                         | Type.Formula ->
+                            Printf.sprintf "[%s]" p
+                         | Type.(List Formula) -> p
+                         | Type.(Option Formula) ->
+                            Printf.sprintf
+                              "(List.filter_map [%s] ~f:(fun x -> x))" p
+                         | _ -> failwith "unreachable")
+                  |> String.concat ~sep:" @ "
+                  |> Printf.sprintf "(%s)"
              in
              let e' =
                Printf.sprintf
@@ -1848,6 +1884,28 @@ and compile_bool ctx b = match b with
   | Exp.Has_syntax s ->
      let e' = Printf.sprintf "(Map.mem lan.grammar \"%s\")" s in
      (e', Type.Bool, ctx)
+  | Exp.Starts_with (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.String, Type.String) ->
+        let e' =
+          Printf.sprintf
+            "(String.is_prefix (%s) ~prefix:(%s))" e1' e2'
+        in (e', Type.Bool, ctx)
+     | _ -> incompat "Starts_with" [typ1; typ2] Type.[String; String]
+     end
+  | Exp.Ends_with (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.String, Type.String) ->
+        let e' =
+          Printf.sprintf
+            "(String.is_suffix (%s) ~suffix:(%s))" e1' e2'
+        in (e', Type.Bool, ctx)
+     | _ -> incompat "Ends_with" [typ1; typ2] Type.[String; String]
+     end
 and compile_term ctx t = match t with
   | Exp.Term_nil -> ("T.Nil", Type.Term, ctx)
   | Exp.Term_var v ->     

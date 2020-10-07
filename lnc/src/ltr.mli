@@ -124,6 +124,10 @@ module Exp: sig
         meta_var: string;
         terms: t list;
       }
+    | Set_syntax_terms of {
+        name: string;
+        terms: t;
+      }
     | Remove_syntax of string
     | Meta_var_of of string
     | Syntax_terms_of of string
@@ -178,6 +182,8 @@ module Exp: sig
     | Is_var_kind of t * string
     | Is_op_kind of t * string
     | Has_syntax of string
+    | Starts_with of t * t
+    | Ends_with of t * t
   and term = 
     | Term_nil
     | Term_var of string

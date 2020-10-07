@@ -75,6 +75,8 @@ rule token = parse
   | "var_kind?" {QVARKIND}
   | "op_kind?" {QOPKIND}
   | "syntax?" {QSYNTAX}
+  | "starts_with?" {QSTARTSWITH}
+  | "ends_with?" {QENDSWITH}
   | "nil" {NIL}
   | "dom" {DOM}
   | "range" {RANGE}
@@ -115,6 +117,7 @@ rule token = parse
   | "int_str" {INTSTR}
   | "self" {SELF}
   | "uniquify" {UNIQUIFY}
+  | "set_syntax" {SETSYNTAX}
   | "remove_syntax" {REMOVESYNTAX}
   | "meta_var" {METAVAR}
   | "syntax" {SYNTAX}

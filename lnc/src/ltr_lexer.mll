@@ -65,6 +65,7 @@ rule token = parse
   | "some?" {QSOMETHING}
   | "empty?" {QEMPTY}
   | "var?" {QVAR}
+  | "const_var?" {QCONSTVAR}
   | "str?" {QSTR}
   | "constructor?" {QCONSTRUCTOR}
   | "binding?" {QBINDING}
@@ -122,6 +123,8 @@ rule token = parse
   | "meta_var" {METAVAR}
   | "syntax" {SYNTAX}
   | "add_relation" {ADDRELATION}
+  | "relations" {RELATIONS}
+  | "set_relations" {SETRELATIONS}
   | "remove_relation" {REMOVERELATION}
   | "rule_name" {RULENAME}
   | "premises" {PREMISES}

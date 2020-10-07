@@ -195,9 +195,9 @@ module Exp = struct
       | Term_cons of t * t
       | Term_list of t
       | Term_map of string * t
-      | Term_tuple of t list
-      | Term_union of t list
-      | Term_map_union of t list
+      | Term_tuple of t
+      | Term_union of t
+      | Term_map_union of t
       | Term_zip of t * t
       | Term_fresh of t
     and subst =
@@ -250,18 +250,9 @@ module Exp = struct
          Printf.sprintf "$(%s :: %s)" (to_string p1) (to_string p2)
       | Term_list p -> Printf.sprintf "[%s...]" (to_string p)
       | Term_map (var, p) -> Printf.sprintf "{%s => %s}" var (to_string p)
-      | Term_tuple ps ->
-         Printf.sprintf "<%s>"
-           (List.map ps ~f:to_string
-            |> String.concat ~sep:", ")
-      | Term_union ps ->
-         Printf.sprintf "$union(%s)"
-           (List.map ps ~f:to_string
-            |> String.concat ~sep:", ")
-      | Term_map_union ps ->
-         Printf.sprintf "$map_union(%s)"
-           (List.map ps ~f:to_string
-            |> String.concat ~sep:", ")
+      | Term_tuple p -> Printf.sprintf "<%s>" (to_string p)
+      | Term_union p -> Printf.sprintf "$union(%s)" (to_string p)
+      | Term_map_union p -> Printf.sprintf "$map_union(%s)" (to_string p)
       | Term_zip (p1, p2) ->
          Printf.sprintf "$zip(%s, %s)" (to_string p1) (to_string p2)
       | Term_fresh p -> Printf.sprintf "$fresh(%s)" (to_string p)
@@ -366,6 +357,8 @@ module Exp = struct
     | Syntax_terms_of of string
     (* relation operations *)
     | New_relation of string * t
+    | Relations_of
+    | Set_relations of t
     | Remove_relation of string
     (* formula operations *)
     | New_formula of formula
@@ -405,6 +398,7 @@ module Exp = struct
     | Is_something of t
     | Is_empty of t
     | Is_var of t
+    | Is_const_var of t
     | Is_str of t
     | Is_constructor of t
     | Is_binding of t
@@ -431,9 +425,9 @@ module Exp = struct
     | Term_cons of t * t
     | Term_list of t
     | Term_map of string * t
-    | Term_tuple of t list
-    | Term_union of t list
-    | Term_map_union of t list
+    | Term_tuple of t
+    | Term_union of t
+    | Term_map_union of t
     | Term_zip of t * t
     | Term_fresh of t
   and subst =
@@ -569,6 +563,9 @@ module Exp = struct
     | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
     | New_relation (predicate, e) ->
        Printf.sprintf "add_relation(\"%s\" %s)" predicate (to_string e)
+    | Relations_of -> "relations"
+    | Set_relations e ->
+       Printf.sprintf "set_relations(%s)" (to_string e)
     | Remove_relation predicate ->
        Printf.sprintf "remove_relation(\"%s\")" predicate
     | New_formula f -> string_of_formula f
@@ -621,6 +618,9 @@ module Exp = struct
          (to_string e)
     | Is_var e ->
        Printf.sprintf "var?(%s)"
+         (to_string e)
+    | Is_const_var e ->
+       Printf.sprintf "const_var?(%s)"
          (to_string e)
     | Is_str e ->
        Printf.sprintf "str?(%s)"
@@ -682,18 +682,9 @@ module Exp = struct
     | Term_map (key, value) ->
        Printf.sprintf "{%s => %s}"
          key (to_string value)
-    | Term_tuple es ->
-       Printf.sprintf "<%s>"
-         (List.map es ~f:to_string
-          |> String.concat ~sep:", ")
-    | Term_union es ->
-       Printf.sprintf "$union(%s)"
-         (List.map es ~f:to_string
-          |> String.concat ~sep:", ")
-    | Term_map_union es ->
-       Printf.sprintf "$map_union(%s)"
-         (List.map es ~f:to_string
-          |> String.concat ~sep:", ")
+    | Term_tuple e -> Printf.sprintf "<%s>" (to_string e)
+    | Term_union e -> Printf.sprintf "$union(%s)" (to_string e)
+    | Term_map_union e -> Printf.sprintf "$map_union(%s)" (to_string e)
     | Term_zip (e1, e2) ->
        Printf.sprintf "$zip(%s, %s)"
          (to_string e1) (to_string e2)
@@ -721,6 +712,11 @@ type ctx = {
     type_env: Type.t String.Map.t;
     type_vars: String.Set.t;
   }
+
+let ctx_singleton v typ =
+  let type_env = String.Map.singleton v typ in
+  let type_vars = String.Set.empty in
+  {type_env; type_vars}
 
 let fresh_type_var ctx =
   let rec aux i =
@@ -812,15 +808,8 @@ let type_compare pref t =
 
 let bind_var_pat ctx v typ =
   reserved_name v;
-  let type_env = match Map.find ctx.type_env v with
-    | None -> Map.set ctx.type_env v typ
-    | Some typ' when Type.equal typ typ' -> ctx.type_env
-    | Some typ' ->
-       failwith
-         (Printf.sprintf
-            "incompatible types (%s, %s) for pattern var %s"
-            (Type.to_string typ) (Type.to_string typ') v)
-  in {ctx with type_env}
+  let type_env = Map.set ctx.type_env v typ in
+  {ctx with type_env}
 
 let merge_ctx ctx1 ctx2 =
   let type_env =
@@ -1055,59 +1044,35 @@ and compile_pattern_term ctx t = match t with
      let (p', typ, ctx) = compile_pattern ctx Type.Term p in
      begin match typ with
      | Type.Term ->
-        let ctx = bind_var_pat ctx var Type.String in
+        let ctx = merge_ctx ctx (ctx_singleton var Type.String) in
         let p' = Printf.sprintf "(T.Map {key = %s; value = %s})" var p' in
         (p', Type.Term, ctx)
      | _ -> incompat "Term_map pattern (value)" [typ] Type.[Term]
      end
-  | Exp.Pattern.Term_tuple ps ->
-     let (ps', typs, ctxs) =
-       List.map ps ~f:(compile_pattern ctx Type.Term)
-       |> List.unzip3
-     in
-     if List.for_all typs ~f:Type.(equal Term) then
-        let ctx =
-          let init = List.hd_exn ctxs in
-          List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
-              merge_ctx ctx ctx')
-        in
-        let p' =
-          Printf.sprintf "(T.Tuple [%s])"
-            (String.concat ps' ~sep:"; ")
-        in (p', Type.Term, ctx)
-     else incompat "Term_tuple pattern" typs []
-  | Exp.Pattern.Term_union ps ->
-     let (ps', typs, ctxs) =
-       List.map ps ~f:(compile_pattern ctx Type.Term)
-       |> List.unzip3
-     in
-     if List.for_all typs ~f:Type.(equal Term) then
-        let ctx =
-          let init = List.hd_exn ctxs in
-          List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
-              merge_ctx ctx ctx')
-        in
-        let p' =
-          Printf.sprintf "(T.Union [%s])"
-            (String.concat ps' ~sep:"; ")
-        in (p', Type.Term, ctx)
-     else incompat "Term_union pattern" typs []
-  | Exp.Pattern.Term_map_union ps ->
-     let (ps', typs, ctxs) =
-       List.map ps ~f:(compile_pattern ctx Type.Term)
-       |> List.unzip3
-     in
-     if List.for_all typs ~f:Type.(equal Term) then
-        let ctx =
-          let init = List.hd_exn ctxs in
-          List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
-              merge_ctx ctx ctx')
-        in
-        let p' =
-          Printf.sprintf "(T.Map_union [%s])"
-            (String.concat ps' ~sep:"; ")
-        in (p', Type.Term, ctx)
-     else incompat "Term_map_union pattern" typs []
+  | Exp.Pattern.Term_tuple p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.(List Term) p in
+     begin match typ with
+     | Type.(List Term) ->
+        let p' = Printf.sprintf "(T.Tuple (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_tuple pattern" [typ] Type.[List Term]
+     end
+  | Exp.Pattern.Term_union p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.(List Term) p in
+     begin match typ with
+     | Type.(List Term) ->
+        let p' = Printf.sprintf "(T.Union (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_union pattern" [typ] Type.[List Term]
+     end
+  | Exp.Pattern.Term_map_union p ->
+     let (p', typ, ctx) = compile_pattern ctx Type.(List Term) p in
+     begin match typ with
+     | Type.(List Term) ->
+        let p' = Printf.sprintf "(T.Map_union (%s))" p' in
+        (p', Type.Term, ctx)
+     | _ -> incompat "Term_map_union pattern" [typ] Type.[List Term]
+     end
   | Exp.Pattern.Term_zip (p1, p2) ->
      let (p1', typ1, ctx1) = compile_pattern ctx Type.Term p1 in
      let (p2', typ2, ctx2) = compile_pattern ctx Type.Term p2 in
@@ -1129,13 +1094,15 @@ and compile_pattern_term ctx t = match t with
 and compile_pattern_subst ctx s = match s with
   | Exp.Pattern.Subst_pair (p, var) ->
      let (p', typ, ctx) = compile_pattern ctx Type.Term p in
-     let ctx = bind_var_pat ctx var Type.Term in
+     let ctx = merge_ctx ctx (ctx_singleton var Type.Term) in
      let p' = Printf.sprintf "(T.Subst_pair (%s, %s))" p' var in
      (p', ctx)
   | Exp.Pattern.Subst_var var ->
      let p' = Printf.sprintf "(T.Subst_var (%s, _))" var in
-     let ctx = bind_var_pat ctx var Type.(List (Tuple [Term; Term])) in
-     (p', ctx)
+     let ctx =
+       merge_ctx ctx
+         (ctx_singleton var Type.(List (Tuple [Term; Term])))
+     in (p', ctx)
 and compile_pattern_formula ctx f = match f with
   | Exp.Pattern.Formula_not p ->
      let (p', typ, ctx) = compile_pattern ctx Type.Formula p in
@@ -1740,14 +1707,28 @@ let rec compile ctx e = match e with
      in (e', Type.(List Term), ctx)
   | Exp.New_relation (name, e) ->
      let (e', typ, _) = compile ctx e in
-     begin match typ with
-     | Type.(List Term) ->
+     begin match Type_unify.run Type.[List Term; typ] with
+     | Some Type.(List Term) ->
         let e' =
           Printf.sprintf
             "{lan with relations = Map.set lan.relations \"%s\" %s}"
             name e'
         in (e', Type.Lan, ctx)
      | _ -> incompat "New_relation" [typ] Type.[List Term]
+     end
+  | Exp.Relations_of ->
+     let e' = Printf.sprintf "(Map.to_alist lan.relations)" in
+     (e', Type.(List (Tuple [String; List Term])), ctx)
+  | Exp.Set_relations e ->
+     let (e', typ, _) = compile ctx e in
+     let typ' = Type.(List (Tuple [String; List Term])) in
+     begin match Type_unify.run Type.[typ'; typ] with
+     | Some Type.(List (Tuple [String; List Term])) ->
+        let e' =
+          Printf.sprintf
+            "{lan with relations = String.Map.of_alist_exn (%s)}" e'
+        in (e', Type.Lan, ctx)           
+     | _ -> incompat "Set_relations" [typ] [typ']
      end
   | Exp.Remove_relation name ->
      let e' =
@@ -2019,6 +2000,16 @@ and compile_bool ctx b = match b with
         (e', Type.Bool, ctx)
      | _ -> incompat "Is_var" [typ] [Type.Term]
      end
+  | Exp.Is_const_var e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.Term ->
+        let e' =
+          Printf.sprintf
+            "(match %s with T.Var v -> L.is_const_var lan v | _ -> false)" e'
+        in (e', Type.Bool, ctx)
+     | _ -> incompat "Is_const_var" [typ] [Type.Term]
+     end
   | Exp.Is_str e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with
@@ -2243,30 +2234,30 @@ and compile_term ctx t = match t with
         in (e', Type.Term, ctx)
      | _ -> incompat "Term_list" [typ] [Type.Term]
      end
-  | Exp.Term_tuple es ->
-     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     if List.for_all typs ~f:(Type.(equal Term)) then     
-       let e' =
-         Printf.sprintf "(T.Tuple [%s])"
-           (String.concat es' ~sep:"; ")
-       in (e', Type.Term, ctx)
-     else incompat "Term_tuple" typs []
-  | Exp.Term_union es ->
-     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     if List.for_all typs ~f:(Type.(equal Term)) then     
-       let e' =
-         Printf.sprintf "(T.Union [%s])"
-           (String.concat es' ~sep:"; ")
-       in (e', Type.Term, ctx)
-     else incompat "Term_union" typs []
-  | Exp.Term_map_union es ->
-     let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     if List.for_all typs ~f:(Type.(equal Term)) then     
-       let e' =
-         Printf.sprintf "(T.Map_nion [%s])"
-           (String.concat es' ~sep:"; ")
-       in (e', Type.Term, ctx)
-     else incompat "Term_map_union" typs []
+  | Exp.Term_tuple e ->
+     let (e', typ, _) = compile ctx e in
+     begin match Type_unify.run Type.[List Term; typ] with
+     | Some (Type.(List Term)) ->
+        let e' = Printf.sprintf "(T.Tuple (%s))" e' in
+        (e', Type.Term, ctx)
+     | _ -> incompat "Term_tuple" [typ] Type.[List Term]
+     end
+  | Exp.Term_union e ->
+     let (e', typ, _) = compile ctx e in
+     begin match Type_unify.run Type.[List Term; typ] with
+     | Some (Type.(List Term)) ->
+        let e' = Printf.sprintf "(T.Union (%s))" e' in
+        (e', Type.Term, ctx)
+     | _ -> incompat "Term_union" [typ] Type.[List Term]
+     end
+  | Exp.Term_map_union e ->
+     let (e', typ, _) = compile ctx e in
+     begin match Type_unify.run Type.[List Term; typ] with
+     | Some (Type.(List Term)) ->
+        let e' = Printf.sprintf "(T.Map_union (%s))" e' in
+        (e', Type.Term, ctx)
+     | _ -> incompat "Term_map_union" [typ] Type.[List Term]
+     end
   | Exp.Term_zip (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in

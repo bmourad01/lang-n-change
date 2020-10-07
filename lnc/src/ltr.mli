@@ -46,9 +46,9 @@ module Exp: sig
       | Term_cons of t * t
       | Term_list of t
       | Term_map of string * t
-      | Term_tuple of t list
-      | Term_union of t list
-      | Term_map_union of t list
+      | Term_tuple of t 
+      | Term_union of t
+      | Term_map_union of t
       | Term_zip of t * t
       | Term_fresh of t
     and subst =
@@ -150,6 +150,8 @@ module Exp: sig
     | Syntax_terms_of of string
     (* relation operations *)
     | New_relation of string * t
+    | Relations_of
+    | Set_relations of t
     | Remove_relation of string
     (* formula operations *)
     | New_formula of formula
@@ -189,6 +191,7 @@ module Exp: sig
     | Is_something of t
     | Is_empty of t
     | Is_var of t
+    | Is_const_var of t
     | Is_str of t
     | Is_constructor of t
     | Is_binding of t
@@ -215,9 +218,9 @@ module Exp: sig
     | Term_cons of t * t
     | Term_list of t
     | Term_map of string * t
-    | Term_tuple of t list
-    | Term_union of t list
-    | Term_map_union of t list
+    | Term_tuple of t
+    | Term_union of t
+    | Term_map_union of t
     | Term_zip of t * t
     | Term_fresh of t
   and subst =

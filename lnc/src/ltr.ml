@@ -2229,10 +2229,10 @@ and compile_term ctx t = match t with
      | Type.Term ->
         let e' =
           Printf.sprintf
-            "(T.(Map {key = %s; value = %s}))"
+            "(T.(Map {key = \"%s\"; value = %s}))"
             key e'
         in (e', Type.Term, ctx)
-     | _ -> incompat "Term_list" [typ] [Type.Term]
+     | _ -> incompat "Term_map" [typ] [Type.Term]
      end
   | Exp.Term_tuple e ->
      let (e', typ, _) = compile ctx e in

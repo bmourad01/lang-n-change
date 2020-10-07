@@ -859,7 +859,7 @@ let rec compile_pattern ctx expected_typ p = match p with
      begin match expected_typ with
      | Type.List typ ->
         let (p1', typ1, ctx1) = compile_pattern ctx typ p1 in
-        let (p2', typ2, ctx2) = compile_pattern ctx Type.(List typ) p2 in
+        let (p2', typ2, ctx2) = compile_pattern ctx expected_typ p2 in
         begin match typ2 with
         | Type.List typ'
               when Option.is_some (Type_unify.run [typ; typ']) ->

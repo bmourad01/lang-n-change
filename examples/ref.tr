@@ -57,41 +57,43 @@ set_rules(rules >>! e1 --> e2 >>
   }
 );
 
+let assume = head(relations >> ("typeof", [a, _, _]) >> a) in
+
 add_rule(["T-ADDRESS"] {
   &member <[$a, $T]> $Sigma
-  --------------------------------------------------------
-  <[$Gamma, $Sigma]> |- ("address" [$a.]) : ("refT" [$T.])
+  --------------------------------------------
+  assume |- ("address" [$a.]) : ("refT" [$T.])
 });
 
 add_rule(["T-UNIT"] {
-  ------------------------------------------------
-  <[$Gamma, $Sigma]> |- ("unit" []) : ("unitT" [])
+  ------------------------------------
+  assume |- ("unit" []) : ("unitT" [])
 });
 
 add_rule(["T-REF"] {
-  <[$Gamma, $Sigma]> |- $e : $T
-  ----------------------------------------------------
-  <[$Gamma, $Sigma]> |- ("ref" [$e.]) : ("refT" [$T.])
+  assume |- $e : $T
+  ----------------------------------------
+  assume |- ("ref" [$e.]) : ("refT" [$T.])
 });
 
 add_rule(["T-DEREF"] {
-  <[$Gamma, $Sigma]> |- $e : ("refT" [$T.])
-  -------------------------------------------
-  <[$Gamma, $Sigma]> |- ("deref" [$e.]) : $T
+  assume |- $e : ("refT" [$T.])
+  ------------------------------
+  assume |- ("deref" [$e.]) : $T
 });
 
 add_rule(["T-ASSIGN"] {
-  <[$Gamma, $Sigma]> |- $e1 : ("refT" [$T.]),
-  <[$Gamma, $Sigma]> |- $e2 : $T
-  ----------------------------------------------------------
-  <[$Gamma, $Sigma]> |- ("assign" [$e1, $e2]) : ("unitT" [])
+  assume |- $e1 : ("refT" [$T.]),
+  assume |- $e2 : $T
+  ----------------------------------------------
+  assume |- ("assign" [$e1, $e2]) : ("unitT" [])
 });
 
 add_rule(["T-SEQ"] {
-  <[$Gamma, $Sigma]> |- $e1 : ("unitT" []),
-  <[$Gamma, $Sigma]> |- $e2 : $T
-  ---------------------------------------------
-  <[$Gamma, $Sigma]> |- ("seq" [$e1, $e2]) : $T
+  assume |- $e1 : ("unitT" []),
+  assume |- $e2 : $T
+  ---------------------------------
+  assume |- ("seq" [$e1, $e2]) : $T
 });
 
 add_rule(["R-REFV"] {

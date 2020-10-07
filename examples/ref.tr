@@ -7,8 +7,17 @@ Store Sigma ::= {a => $T}.;
 
 # variance: ... | refT => inv;
 
-add_relation(<[$Gamma, $Sigma]> |- $e : $T);
-add_relation(<[$e, $m]> --> <[$e, $m]>);
+set_relations(relations >>! ("typeof", [a, e, t]) >>
+  match a with
+  | <ts> -> ("typeof", [<ts @ [$Sigma.]>, e, t])
+  | _ -> ("typeof", [<[a, $Sigma]>, e, t])
+);
+
+set_relations(relations >>! ("step", [t1, t2]) >>
+  match (t1, t2) with
+  | (<ts1>, <ts2>) -> ("step", [<ts1 @ [$m.]>, <ts2 @ [$m.]>])
+  | _ -> ("step", [<[t1, $m]>, <[t2, $m]>])
+);
 
 set_rules(rules >>! gamma |- e : t >>
   let do_gamma (g: term) : term = match g with

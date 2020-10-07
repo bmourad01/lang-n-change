@@ -2,13 +2,13 @@ Expression e ::= ... | ("address" [$a.]) | ("unit" []) | ("ref" [$e.]) | ("deref
 Value v ::= ... | ("address" [$a.]) | ("unit" []).;
 Type T ::= ... | ("unitT" []) | ("refT" [$T.]).;
 Context E ::= ... | ("ref" [$E.]) | ("deref" [$E.]) | ("assign" [$E, $e]) | ("assign" [$v, $E]) | ("seq" [$E, $e]).;
-Memory mu ::= {a => $v}.;
+Memory m ::= {a => $v}.;
 Store Sigma ::= {a => $T}.;
 
 # variance: ... | refT => inv;
 
 add_relation(<[$Gamma, $Sigma]> |- $e : $T);
-add_relation(<[$e, $mu]> --> <[$e, $mu]>);
+add_relation(<[$e, $m]> --> <[$e, $m]>);
 
 set_rules(rules >>! gamma |- e : t >>
   let do_gamma (g: term) : term = match g with
@@ -25,14 +25,14 @@ set_rules(rules >>! gamma |- e : t >>
 );
 
 set_rules(rules >>! e1 --> e2 >>
-  let do_config (c: term) (mu: term) : term = match c with
-    | <ts> -> <ts @ [mu.]>
-    | _ -> <[c, mu]>
+  let do_config (c: term) (m: term) : term = match c with
+    | <ts> -> <ts @ [m.]>
+    | _ -> <[c, m]>
   in
   let step_prems = premises(self) >> e1 --> e2 >> self in
   let concl = conclusion(self) in
   let steps = step_prems @ [concl.] in
-  let stores = steps >> _ >> fresh_var(mu) in
+  let stores = steps >> _ >> fresh_var(m) in
   let smap1 = zip(steps, stores) in
   let smap2 = zip(step_prems, tail(stores)) in 
 
@@ -86,24 +86,24 @@ add_rule(["T-SEQ"] {
 });
 
 add_rule(["R-REFV"] {
-  &($a = $fresh($dom($mu)))
+  &($a = $fresh($dom($m)))
   ---------------------------------------------------------------
-  <[("ref" [$v.]), $mu]> --> <[("address" [$a.]), [$a => $v]$mu]>
+  <[("ref" [$v.]), $m]> --> <[("address" [$a.]), [$a => $v]$m]>
 });
 
 add_rule(["R-DEREF"] {
-  &member <[$a, $v]> $mu
+  &member <[$a, $v]> $m
   ----------------------------------------------------
-  <[("deref" [("address" [$a.]).]), $mu]> --> <[$v, $mu]>
+  <[("deref" [("address" [$a.]).]), $m]> --> <[$v, $m]>
 });
 
 add_rule(["R-ASSIGN"] {
-  &member $a $dom($mu)
+  &member $a $dom($m)
   ------------------------------------------------------------------------------
-  <[("assign" [("address" [$a.]), $v]), $mu]> --> <[("unit" []), [$a => $v]$mu]>
+  <[("assign" [("address" [$a.]), $v]), $m]> --> <[("unit" []), [$a => $v]$m]>
 });
 
 add_rule(["R-SEQ"] {
   --------------------------------------------------
-  <[("seq" [("unit" []), $e]), $mu]> --> <[$e, $mu]>
+  <[("seq" [("unit" []), $e]), $m]> --> <[$e, $m]>
 })

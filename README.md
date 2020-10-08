@@ -10,6 +10,8 @@ L-Tr is based on a calculus described in [1]. A prototype of lang-n-change is pr
 
 Algorithms expressed in L-Tr are compiled to an OCaml program (`transform.ml`) which is then run with the language definition as the sole argument.
 
+Additionally, language definitions can be compiled to executable λProlog logic programs.
+
 ## Requirements
 
 - OCaml (>= 4.08)

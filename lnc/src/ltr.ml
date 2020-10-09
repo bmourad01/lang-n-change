@@ -829,8 +829,9 @@ let merge_ctx ctx1 ctx2 =
             (Printf.sprintf "incompatible types (%s, %s) for pattern var %s"
                (Type.to_string typ1) (Type.to_string typ2) key))
   in
-  let type_vars = Set.union ctx1.type_vars ctx2.type_vars in
-  {type_env; type_vars}
+  let ctx = {ctx1 with type_env} in
+  ctx.type_vars <- Set.union ctx.type_vars ctx2.type_vars;
+  ctx
 
 let rec compile_pattern ctx expected_typ p = match p with
   | Exp.Pattern.Wildcard -> ("_", expected_typ, ctx)

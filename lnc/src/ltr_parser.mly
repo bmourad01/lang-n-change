@@ -40,7 +40,8 @@
 %token TRUE FALSE
 
 %left AND OR
-%left CARET CONS
+%left CARET
+%right CONS
 
 %start ltr
 %type <Ltr.Exp.t> ltr

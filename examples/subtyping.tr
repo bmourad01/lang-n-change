@@ -1,14 +1,21 @@
+(* modify all typing rules *)
 set_rules(rules >>! gamma |- (op es) : t >> (
+  (* uniquify all type variables in the outputs;
+   * this will return a list of modified premises
+   * and a map from the original types to a list of
+   * their uniquified counterparts *)
   let (new_premises, tmap) =
     uniquify(premises(self), hint("mode"), "out")
   in
 
+  (* replace the premises with the uniquified ones *)
   let r = [rule_name(self)] {
     new_premises
     ------------------
     conclusion(self)
   } in
   
+  (* grab all types in contravariant positions *)
   let contra_types = concat(
     premises(r) >> gamma |- e : (c ts) >>
       match assoc(c, hint("variance")) with
@@ -18,6 +25,7 @@ set_rules(rules >>! gamma |- (op es) : t >> (
         (vmap >> (t, v) >> if v = "contra" then some(t) else none))
   in
  
+  (* grab all types in invariant positions *)
   let inv_types = concat(
     premises(r) >> gamma |- e : (c ts) >>
       match assoc(c, hint("variance")) with
@@ -27,6 +35,8 @@ set_rules(rules >>! gamma |- (op es) : t >> (
         (vmap >> (t, v) >> if v = "inv" then some(t) else none))
   in
   
+  (* create a map from the original types (before uniquify)
+   * to the "final type" that should appear in the conclusion *)
   let final_type = concat(
     tmap >> (tk, tv) >> (
       match conclusion(r) with
@@ -46,7 +56,10 @@ set_rules(rules >>! gamma |- (op es) : t >> (
                else zip([tk.], ov)
             | some(_) -> zip([tk.], [v.])))))
   in
-  
+ 
+  (* for each type we uniquified, get their uniquified
+   * counterparts and interleave them in a list of pairs,
+   * then use these pairs to append new subtyping premises *) 
   let tpairs = concat(tmap >> (_, ts) >> interleave_pairs(ts)) in
   let r = [rule_name(r)] {
     premises(r),
@@ -54,7 +67,10 @@ set_rules(rules >>! gamma |- (op es) : t >> (
     ------------------------------
     conclusion(r) 
   } in 
-  
+ 
+  (* reorder the generated subtyping premises according
+   * to their variance (i.e. did they appear in a
+   * contravariant/invariant position in the premises?) *) 
   let r = [rule_name(r)] {
     premises(r) >>! t1 <: t2 >> (
       let p = self in
@@ -74,7 +90,8 @@ set_rules(rules >>! gamma |- (op es) : t >> (
     ---------------------------------------
     conclusion(r)
   } in
-    
+  
+  (* check for types that are peers, and if so, add a join for them *) 
   let r = [rule_name(r)] {
     premises(r),
     tmap >> (tk, tv) >> (
@@ -96,7 +113,10 @@ set_rules(rules >>! gamma |- (op es) : t >> (
     conclusion(r)
   } in
   
+  (* substitute the final type in the rule *)
   let r = substitute(r, final_type) in
+  
+  (* eliminate subtyping premises that are subsumed by a join *)
   let r = [rule_name(r)] {
     premises(r) >>! t1 <: t2 >> (
       let joins = premises(r) >> &("join" ts) >> (
@@ -112,6 +132,7 @@ set_rules(rules >>! gamma |- (op es) : t >> (
   r
 ));
 
+(* add the relation for the join of types *)
 add_rules(syntax(Type) >> (c ts) >>
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
@@ -129,6 +150,7 @@ add_rules(syntax(Type) >> (c ts) >>
   }
 );
 
+(* add the relation for the meet of types *)
 add_rules(syntax(Type) >> (c ts) >>
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
@@ -146,6 +168,7 @@ add_rules(syntax(Type) >> (c ts) >>
   }
 );
 
+(* add the relation for subtyping *)
 add_rules(syntax(Type) >> (c ts) >>
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []

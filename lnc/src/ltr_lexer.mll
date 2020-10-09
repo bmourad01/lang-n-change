@@ -22,6 +22,7 @@ let name = ['a'-'z'] alnum
 rule token = parse
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
+  | "(*" {comment 0 lexbuf}
   | integer as n {NUM (int_of_string n)}
   | "\"" (alnum' as s) "\"" {STR s}
   | "&&" {AND}
@@ -154,3 +155,17 @@ rule token = parse
         (Printf.sprintf "At offset %d: unexpected token %s.\n"
           (Lexing.lexeme_start lexbuf)
           (Lexing.lexeme lexbuf)))}
+and comment depth = parse
+  | '\n' {next_line lexbuf; comment depth lexbuf}
+  | "(*" {comment (succ depth) lexbuf}
+  | "*)"
+    {
+      match depth with
+      | 0 -> token lexbuf
+      | _ -> comment (pred depth) lexbuf
+    }
+  | eof {raise (Error
+          (Printf.sprintf "At offset %d: unexpected EOF in comment %s.\n"
+            (Lexing.lexeme_start lexbuf)
+            (Lexing.lexeme lexbuf)))}
+  | _ {comment depth lexbuf}

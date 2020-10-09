@@ -141,7 +141,6 @@ module Type_unify = struct
                let state' = add_soln state' t1 in
                zip_and_loop state' [t1'] [t2']
             | (Var v1, Var v2) when String.equal v1 v2 -> loop state'
-            | (Var _, Var _) -> None
             | (_, Var _) -> add_sub state' (t2, t1) |> loop
             | (Var _, _) ->
                let tvars = vars t2 in

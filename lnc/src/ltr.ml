@@ -89,14 +89,23 @@ module Type_unify = struct
 
   module Solution_set = Set.Make(Solution_comparable)
 
-  let run typs = match typs with
-    | [] -> None
-    | t :: [] -> Some t
+  let run ?(init_state = []) typs = match typs with
+    | [] when List.is_empty init_state -> None
+    | t :: [] when List.is_empty init_state -> Some t
     | _ ->
-       let state =
-         Aux.interleave_pairs_of_list typs
-         |> List.map ~f:(fun (t1, t2) -> Solution.Sub (t1, t2))
-         |> Solution_set.of_list
+       let state = match typs with
+         | t :: _ -> Solution_set.singleton (Solution.Soln t)
+         | _ ->
+            Aux.interleave_pairs_of_list typs
+            |> List.map ~f:(fun (t1, t2) -> Solution.Sub (t1, t2))
+            |> Solution_set.of_list
+       in
+       let state = match init_state with
+         | [] -> state
+         | pairs ->
+            List.map pairs ~f:(fun (t1, t2) -> Solution.Sub (t1, t2))
+            |> Solution_set.of_list
+            |> Solution_set.union state
        in
        let add_sub state (t1, t2) = Set.add state (Solution.Sub (t1, t2)) in
        (* this is ugly, but should work in practice *)
@@ -710,7 +719,7 @@ end
 
 type ctx = {
     type_env: Type.t String.Map.t;
-    type_vars: String.Set.t;
+    mutable type_vars: String.Set.t;
   }
 
 let ctx_singleton v typ =
@@ -723,7 +732,7 @@ let fresh_type_var ctx =
     let v = "T" ^ Int.to_string i in
     if Set.mem ctx.type_vars v
     then aux (succ i)
-    else ({ctx with type_vars = Set.add ctx.type_vars v}, Type.Var v)
+    else (ctx.type_vars <- Set.add ctx.type_vars v; Type.Var v)
   in aux 1
 
 let typeof_var ctx v = match Map.find ctx.type_env v with
@@ -1282,12 +1291,16 @@ let rec compile ctx e = match e with
      begin match typ with
      | Type.Arrow typs' ->
         let len = List.length typs' in
-        if List.(equal Type.equal (take typs' (len - 1)) typs) then
-          let e' =
-            Printf.sprintf "(%s %s)" e'
-              (String.concat es' ~sep:" ")
-          in (e', List.last_exn typs', ctx)
-        else incompat "Apply (args)" typs typs'
+        let typs'' = List.take typs' (len - 1) in
+        let init_state = List.zip_exn typs'' typs in
+        begin match Type_unify.run [] ~init_state with
+        | None -> incompat "Apply (args)" typs typs''
+        | Some _ ->
+           let e' =
+             Printf.sprintf "(%s %s)" e'
+               (String.concat es' ~sep:" ")
+           in (e', List.last_exn typs', ctx)
+        end
      | _ -> incompat "Apply (function)" [typ] []
      end
   | Exp.Ite (b, e1, e2) ->
@@ -1392,9 +1405,9 @@ let rec compile ctx e = match e with
      (e', Type.Tuple typs, ctx)
   | Exp.List es ->
      let (es', typs, _) = List.map es ~f:(compile ctx) |> List.unzip3 in
-     let (ctx, typ) = match List.hd typs with
+     let typ = match List.hd typs with
        | None -> fresh_type_var ctx
-       | Some typ -> (ctx, typ)
+       | Some typ -> typ
      in
      if List.for_all typs ~f:(Type.equal typ) then
        let e' = Printf.sprintf "[%s]" (String.concat es' ~sep:"; ") in
@@ -1530,7 +1543,7 @@ let rec compile ctx e = match e with
      | _ -> incompat "Interleave_pairs" [typ] []
      end
   | Exp.Nothing ->
-     let (ctx, typ) = fresh_type_var ctx in
+     let typ = fresh_type_var ctx in
      ("None", Type.Option typ, ctx)
   | Exp.Something e ->
      let (e', typ, _) = compile ctx e in
@@ -1774,6 +1787,7 @@ let rec compile ctx e = match e with
      let check_prems = function
        | Type.Formula
          | Type.(List Formula)
+         | Type.(List (Var _)) (* fixme: this is a hack *)
          | Type.(Option Formula) -> true
        | _ -> false
      in
@@ -1790,7 +1804,8 @@ let rec compile ctx e = match e with
                          match typ with
                          | Type.Formula ->
                             Printf.sprintf "[%s]" p
-                         | Type.(List Formula) -> p
+                         | Type.(List Formula)
+                           | Type.(List (Var _)) -> p
                          | Type.(Option Formula) ->
                             Printf.sprintf
                               "(List.filter_map [%s] ~f:(fun x -> x))" p

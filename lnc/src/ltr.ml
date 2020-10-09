@@ -461,7 +461,7 @@ module Exp = struct
             |> String.concat ~sep:" "
             |> Printf.sprintf " %s"
        in
-       let let_str = if recursive then "let" else "let rec" in
+       let let_str = if recursive then "let rec" else "let" in
        let ret_typ = match ret with
          | None -> " "
          | Some typ -> Printf.sprintf " : %s " (Type.to_string typ)
@@ -836,17 +836,23 @@ let rec compile_pattern ctx expected_typ p = match p with
           List.map ps ~f:(compile_pattern ctx typ)
           |> List.unzip3
         in
-        begin match Type_unify.run typs with
+        let typ' = match typs with
+          | [] -> Some expected_typ
+          | _ -> Type_unify.run typs
+        in
+        begin match typ' with
         | None -> incompat "List pattern" typs []
         | Some _ ->
            let p' =
              Printf.sprintf "[%s]"
                (String.concat ps' ~sep:"; ")
            in
-           let ctx =
-             let init = List.hd_exn ctxs in
-             List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
-                 merge_ctx ctx ctx')
+           let ctx = match ctxs with
+             | [] -> ctx
+             | _ ->
+                let init = List.hd_exn ctxs in
+                List.fold (List.tl_exn ctxs) ~init ~f:(fun ctx ctx' ->
+                    merge_ctx ctx ctx')
            in (p', expected_typ, ctx)
         end
      | _ ->

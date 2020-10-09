@@ -1309,7 +1309,6 @@ let rec compile ctx e = match e with
      | Type.Bool ->
         let (e1', typ1, _) = compile ctx e1 in
         let (e2', typ2, _) = compile ctx e2 in
-        (* fixme: this is a hack *)
         begin match Type_unify.run [typ1; typ2] with
         | None -> incompat "Ite" [typ1; typ2] []
         | Some typ ->

@@ -3,7 +3,7 @@ Expression e ::= x
                  | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (map e e) | (append e e)
                  | (pair e e) | (fst e) | (snd e)
                  | (err.)
-                 | (tt.) | (ff.) | (ite e e e) | (nott e)
+                 | (tt.) | (ff.) | (ite e e e) | (nott e) | (andd e e) | (orr e e)
                  | (zero.) | (succ e) | (pred e) | (is_zero e) | (is_succ e) | (add e e) | (sub e e)
                  | (let e (x)e)
                  | (fix e) | (letrec T (x)e (x)e)
@@ -40,7 +40,7 @@ Context E ::= (hole.)
               | (cons E e) | (cons v E) | (head E) | (tail E) | (is_nil E) | (is_cons E)
               | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (map E e) | (map v E) | (append E e) | (append v E)
               | (pair E e) | (pair v E) | (fst E) | (snd E)
-              | (ite E e e) | (nott E)
+              | (ite E e e) | (nott E) | (andd E e) | (andd v E) | (orr E e) | (orr v E)
               | (succ E) | (pred E) | (is_zero E) | (is_succ E) | (add E e) | (add v E) | (sub E e) | (sub v E)
               | (let E (x)e)
               | (appT E T)
@@ -163,6 +163,18 @@ Gamma |- (ite e1 e2 e3) : T.
 Gamma |- e : (bool.)
 --------------------------------
 Gamma |- (nott e) : (bool.).
+
+[T-AND]
+Gamma |- e1 : (bool.),
+Gamma |- e2 : (bool.)
+--------------------------------
+Gamma |- (andd e e) : (bool.).
+
+[T-OR]
+Gamma |- e1 : (bool.),
+Gamma |- e2 : (bool.)
+--------------------------------
+Gamma |- (orr e e) : (bool.).
 
 [T-ZERO]
 --------------------------------
@@ -373,6 +385,30 @@ Gamma |- (err.) : T.
 [R-NOT-FALSE]
 --------------------------------
 (nott (ff.)) --> (tt.).
+
+[R-AND-TRUE-TRUE]
+--------------------------------
+(andd (tt.) (tt.)) --> (tt.).
+
+[R-AND-FALSE-1]
+--------------------------------
+(andd (ff.) v) --> (ff.).
+
+[R-AND-FALSE-2]
+--------------------------------
+(andd v (ff.)) --> (ff.).
+
+[R-OR-TRUE-1]
+--------------------------------
+(orr (tt.) v) --> (tt.).
+
+[R-OR-TRUE-2]
+--------------------------------
+(orr v (tt.)) --> (tt.).
+
+[R-OR-FALSE]
+--------------------------------
+(orr (ff.) (ff.)) --> (ff.).
 
 [R-PRED-ZERO]
 --------------------------------

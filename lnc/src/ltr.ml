@@ -94,7 +94,7 @@ module Type_unify = struct
     | t :: [] when List.is_empty init_state -> Some t
     | _ ->
        let state = match typs with
-         | t :: _ -> Solution_set.singleton (Solution.Soln t)
+         | t :: [] -> Solution_set.singleton (Solution.Soln t)
          | _ ->
             Aux.interleave_pairs_of_list typs
             |> List.map ~f:(fun (t1, t2) -> Solution.Sub (t1, t2))

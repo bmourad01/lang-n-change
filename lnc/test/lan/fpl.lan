@@ -3,7 +3,7 @@ Expression e ::= x
                  | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (map e e) | (append e e)
                  | (pair e e) | (fst e) | (snd e)
                  | (err.)
-                 | (tt.) | (ff.) | (ite e e e)
+                 | (tt.) | (ff.) | (ite e e e) | (nott e)
                  | (zero.) | (succ e) | (pred e) | (is_zero e) | (is_succ e) | (add e e) | (sub e e)
                  | (let e (x)e)
                  | (fix e) | (letrec T (x)e (x)e)
@@ -40,7 +40,7 @@ Context E ::= (hole.)
               | (cons E e) | (cons v E) | (head E) | (tail E) | (is_nil E) | (is_cons E)
               | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (map E e) | (map v E) | (append E e) | (append v E)
               | (pair E e) | (pair v E) | (fst E) | (snd E)
-              | (ite E e e)
+              | (ite E e e) | (nott E)
               | (succ E) | (pred E) | (is_zero E) | (is_succ E) | (add E e) | (add v E) | (sub E e) | (sub v E)
               | (let E (x)e)
               | (appT E T)
@@ -158,6 +158,11 @@ Gamma |- e2 : T,
 Gamma |- e3 : T
 --------------------------------
 Gamma |- (ite e1 e2 e3) : T.
+
+[T-NOT]
+Gamma |- e : (bool.)
+--------------------------------
+Gamma |- (nott e) : (bool.).
 
 [T-ZERO]
 --------------------------------
@@ -360,6 +365,14 @@ Gamma |- (err.) : T.
 [R-IF-FALSE]
 --------------------------------
 (ite (ff.) e1 e2) --> e2.
+
+[R-NOT-TRUE]
+--------------------------------
+(nott (tt.)) --> (ff.).
+
+[R-NOT-FALSE]
+--------------------------------
+(nott (ff.)) --> (tt.).
 
 [R-PRED-ZERO]
 --------------------------------

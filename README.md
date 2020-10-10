@@ -10,7 +10,7 @@ L-Tr is based on a calculus described in [1]. A prototype of lang-n-change is pr
 
 Algorithms expressed in L-Tr are compiled to an OCaml program (`transform.ml`) which is then run with the language definition as the sole argument.
 
-Additionally, language definitions can be compiled to executable λProlog logic programs.
+Additionally, language definitions can be compiled to executable λProlog logic programs. Users can use this to run queries in order to test the behavior of their generated languages.
 
 ## Requirements
 
@@ -42,6 +42,10 @@ Run `./transform <.lan> <.tr>`. The transformed language definition is printed t
 ## Compiling to λProlog
 
 Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively).
+
+## Documentation
+
+*Coming soon.*
 
 ## References
 

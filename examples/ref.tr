@@ -130,4 +130,23 @@ add_rule(["R-ASSIGN"] {
 add_rule(["R-SEQ"] {
   --------------------------------------------------
   <[("seq" [("unit" []), $e]), $m]> --> <[$e, $m]>
+});
+
+(* add the relation to check the memory for well-formedness *)
+
+add_relation("memory_ok" [$Sigma, $m]);
+
+add_rule(["MEMORY-OK-NIL"] {
+  ---------------------------
+  &("memory_ok" [$Sigma, $nil])
+});
+
+let mem_assume = match assume with <_ :: ts> -> <$nil :: ts> in
+
+add_rule(["MEMORY-OK"] {
+  mem_assume |- $v : $T,
+  &member <[$a, $T]> $Sigma,
+  &("memory_ok" [$Sigma, $m])
+  ------------------------------------------
+  &("memory_ok" [$Sigma, $(<[$a, $v]> :: $m)])
 })

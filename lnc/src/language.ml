@@ -715,6 +715,8 @@ let hint_vars_of_formulae fs hint_map hint_var =
                     let%bind var = List.nth hints i in
                     Option.some_if (equal var hint_var) t)
              end
+          | Formula.Member {element; collection} -> [element; collection]
+          | Formula.Subset {sub; super} -> [sub; super]
           | _ -> []
         in terms f)
     |> List.concat

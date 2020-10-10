@@ -1,135 +1,143 @@
 (* modify all typing rules *)
-set_rules(rules >>! gamma |- (op es) : t >> (
-  (* uniquify all type variables in the outputs;
-   * this will return a list of modified premises
-   * and a map from the original types to a list of
-   * their uniquified counterparts *)
-  let (new_premises, tmap) =
-    uniquify(premises(self), hint("mode"), "out")
-  in
+set_rules(rules >>! &(pred _) >> (
+  let typ_prems = premises(self) >> _ |- _ : _ >> self in
+  if empty?(typ_prems) then self else
+    (* uniquify all type variables in the outputs;
+     * this will return a list of modified premises
+     * and a map from the original types to a list of
+     * their uniquified counterparts *)
+    let (new_premises, tmap) =
+      uniquify(premises(self), hint("mode"), "out")
+    in
 
-  (* replace the premises with the uniquified ones *)
-  let r = [rule_name(self)] {
-    new_premises
-    ------------------
-    conclusion(self)
-  } in
-  
-  (* grab all types in contravariant positions *)
-  let contra_types = concat(
-    premises(r) >> gamma |- e : (c ts) >>
-      match assoc(c, hint("variance")) with
-      | none -> []
-      | some(variance) ->
-        let vmap = zip(ts, variance) in
-        (vmap >> (t, v) >> if v = "contra" then some(t) else none))
-  in
- 
-  (* grab all types in invariant positions *)
-  let inv_types = concat(
-    premises(r) >> gamma |- e : (c ts) >>
-      match assoc(c, hint("variance")) with
-      | none -> []
-      | some(variance) ->
-        let vmap = zip(ts, variance) in
-        (vmap >> (t, v) >> if v = "inv" then some(t) else none))
-  in
-  
-  (* create a map from the original types (before uniquify)
-   * to the "final type" that should appear in the conclusion *)
-  let final_type = concat(
-    tmap >> (tk, tv) >> (
-      match conclusion(r) with
-      | gamma |- e : t ->
-        let t_types = vars(t) >> v >>
-          (if var_kind?(v, Type) then some(v) else none)
-        in
-        if empty?(t_types) then none else
-          some(concat(vars(e) >> v >>
-            match assoc(v, tmap) with
-            | none ->
-               let ov = dedup(concat(concat(
-                 tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
-               in
-               if empty?(ov)
-               then zip([tk.], [tk.])
-               else zip([tk.], ov)
-            | some(_) -> zip([tk.], [v.])))))
-  in
- 
-  (* for each type we uniquified, get their uniquified
-   * counterparts and interleave them in a list of pairs,
-   * then use these pairs to append new subtyping premises *) 
-  let tpairs = concat(tmap >> (_, ts) >> interleave_pairs(ts)) in
-  let r = [rule_name(r)] {
-    premises(r),
-    tpairs >> (t1, t2) >> t1 <: t2
-    ------------------------------
-    conclusion(r) 
-  } in 
- 
-  (* reorder the generated subtyping premises according
-   * to their variance (i.e. did they appear in a
-   * contravariant/invariant position in the premises?) *) 
-  let r = [rule_name(r)] {
-    premises(r) >>! t1 <: t2 >> (
-      let p = self in
-      let ps = premises(r) >> gamma |- e : (c ts) >> (
+    (* replace the premises with the uniquified ones *)
+    let r = [rule_name(self)] {
+      new_premises
+      ------------------
+      conclusion(self)
+    } in
+    
+    (* grab all types in contravariant positions *)
+    let contra_types = concat(
+      premises(r) >> gamma |- e : (c ts) >>
         match assoc(c, hint("variance")) with
-        | none -> none
+        | none -> []
         | some(variance) ->
           let vmap = zip(ts, variance) in
-          match assoc(t1, vmap) with
-          | some("contra") -> some(t2 <: t1)
-          | some("inv") ->
-            (match assoc(t2, vmap) with
-             | some("inv") -> some(&(t1 = t2))
-             | _ -> some(t2 <: t1))
-          | _ -> none)
-      in if empty?(ps) then p else head(ps))
-    ---------------------------------------
-    conclusion(r)
-  } in
-  
-  (* check for types that are peers, and if so, add a join for them *) 
-  let r = [rule_name(r)] {
-    premises(r),
-    tmap >> (tk, tv) >> (
-      let ov = dedup(concat(concat(
-        tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
-      in
-      if not(empty?(ov)) then none else
+          (vmap >> (t, v) >> if v = "contra" then some(t) else none))
+    in
+   
+    (* grab all types in invariant positions *)
+    let inv_types = concat(
+      premises(r) >> p >> match p with
+      | gamma |- e : (c ts) ->
+        (match assoc(c, hint("variance")) with
+         | none -> []
+         | some(variance) ->
+           let vmap = zip(ts, variance) in
+           (vmap >> (t, v) >> if v = "inv" then some(t) else none))
+      | &member t _ ->
+        (* is this correct? *)
+        (vars(t) >> t >> if var_kind?(t, Type) then some(t) else none)
+      | _ -> [])
+    in
+    
+    (* create a map from the original types (before uniquify)
+     * to the "final type" that should appear in the conclusion *)
+    let final_type = concat(
+      tmap >> (tk, tv) >> (
+        match conclusion(r) with
+        | gamma |- e : t ->
+          let t_types = vars(t) >> v >>
+            (if var_kind?(v, Type) then some(v) else none)
+          in
+          if empty?(t_types) then none else
+            some(concat(vars(e) >> v >>
+              match assoc(v, tmap) with
+              | none ->
+                 let ov = dedup(concat(concat(
+                   tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
+                 in
+                 if empty?(ov)
+                 then zip([tk.], [tk.])
+                 else zip([tk.], ov)
+              | some(_) -> zip([tk.], [v.])))
+        | _ -> none))
+    in
+   
+    (* for each type we uniquified, get their uniquified
+     * counterparts and interleave them in a list of pairs,
+     * then use these pairs to append new subtyping premises *) 
+    let tpairs = concat(tmap >> (_, ts) >> interleave_pairs(ts)) in
+    let r = [rule_name(r)] {
+      premises(r),
+      tpairs >> (t1, t2) >> t1 <: t2
+      ------------------------------
+      conclusion(r) 
+    } in 
+   
+    (* reorder the generated subtyping premises according
+     * to their variance (i.e. did they appear in a
+     * contravariant/invariant position in the premises?) *) 
+    let r = [rule_name(r)] {
+      premises(r) >>! t1 <: t2 >> (
+        let p = self in
+        let ps = premises(r) >> gamma |- e : (c ts) >> (
+          match assoc(c, hint("variance")) with
+          | none -> none
+          | some(variance) ->
+            let vmap = zip(ts, variance) in
+            match assoc(t1, vmap) with
+            | some("contra") -> some(t2 <: t1)
+            | some("inv") ->
+              (match assoc(t2, vmap) with
+               | some("inv") -> some(&(t1 = t2))
+               | _ -> some(t2 <: t1))
+            | _ -> none)
+        in if empty?(ps) then p else head(ps))
+      ---------------------------------------
+      conclusion(r)
+    } in
+    
+    (* check for types that are peers, and if so, add a join for them *) 
+    let r = [rule_name(r)] {
+      premises(r),
+      tmap >> (tk, tv) >> (
         let ov = dedup(concat(concat(
-          tv >> t >> (inv_types >> c >> var_overlap(t, c)))))
+          tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
         in
-        if empty?(ov)
-        then some(&("join" (tv @ [tk.])))
-        else
-          let final_type_range = final_type >> (_, v) >> v in
-          if member?(tk, final_type_range)
+        if not(empty?(ov)) then none else
+          let ov = dedup(concat(concat(
+            tv >> t >> (inv_types >> c >> var_overlap(t, c)))))
+          in
+          if empty?(ov)
           then some(&("join" (tv @ [tk.])))
-          else none)
-    -----------------------
-    conclusion(r)
-  } in
-  
-  (* substitute the final type in the rule *)
-  let r = substitute(r, final_type) in
-  
-  (* eliminate subtyping premises that are subsumed by a join *)
-  let r = [rule_name(r)] {
-    premises(r) >>! t1 <: t2 >> (
-      let joins = premises(r) >> &("join" ts) >> (
-        let ov1 = dedup(concat(ts >> t >> var_overlap(t1, t))) in
-        let ov2 = dedup(concat(ts >> t >> var_overlap(t2, t))) in
-        if empty?(ov1) || empty?(ov2) then none else some(self))
-      in
-      if empty?(joins) then some(self) else none)
-    --------------------------------------------
-    conclusion(r)
-  } in
-  
-  r
+          else
+            let final_type_range = final_type >> (_, v) >> v in
+            if member?(tk, final_type_range)
+            then some(&("join" (tv @ [tk.])))
+            else none)
+      -----------------------
+      conclusion(r)
+    } in
+    
+    (* substitute the final type in the rule *)
+    let r = substitute(r, final_type) in
+    
+    (* eliminate subtyping premises that are subsumed by a join *)
+    let r = [rule_name(r)] {
+      premises(r) >>! t1 <: t2 >> (
+        let joins = premises(r) >> &("join" ts) >> (
+          let ov1 = dedup(concat(ts >> t >> var_overlap(t1, t))) in
+          let ov2 = dedup(concat(ts >> t >> var_overlap(t2, t))) in
+          if empty?(ov1) || empty?(ov2) then none else some(self))
+        in
+        if empty?(joins) then some(self) else none)
+      --------------------------------------------
+      conclusion(r)
+    } in
+    
+    r
 ));
 
 (* add the relation for the join of types *)

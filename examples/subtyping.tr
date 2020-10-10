@@ -1,6 +1,6 @@
 (* modify all typing rules *)
-set_rules(rules >>! &(pred _) >> (
-  let typ_prems = premises(self) >> _ |- _ : _ >> self in
+set_rules(rules >> _ >> (
+  let typ_prems = premises(self) >> &("typeof" _) >> self in
   if empty?(typ_prems) then self else
     (* uniquify all type variables in the outputs;
      * this will return a list of modified premises

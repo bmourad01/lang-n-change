@@ -332,6 +332,7 @@ module Exp = struct
     | Dedup of t
     | Append of t * t
     | Diff of t * t
+    | Intersect of t * t
     | Zip of t * t
     | Assoc of t * t
     | Interleave_pairs of t
@@ -531,6 +532,9 @@ module Exp = struct
          (to_string e1) (to_string e2)
     | Diff (e1, e2) ->
        Printf.sprintf "diff(%s, %s)"
+         (to_string e1) (to_string e2)
+    | Intersect (e1, e2) ->
+       Printf.sprintf "intersect(%s, %s)"
          (to_string e1) (to_string e2)
     | Zip (e1, e2) ->
        Printf.sprintf "zip(%s, %s)"
@@ -1510,6 +1514,22 @@ let rec compile ctx e = match e with
            in (e', Type.List typ', ctx)
         end
      | _ -> incompat "Diff" [typ1; typ2] []
+     end
+  | Exp.Intersect (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.List typ1', Type.List typ2') ->
+        begin match Type_unify.run [typ1'; typ2'] with
+        | None -> incompat "Intersect" [typ1; typ2] []
+        | Some typ' ->
+           let eq = type_equal "Intersect" typ1' in
+           let e' =
+             Printf.sprintf "(Aux.intersect_list_stable %s %s ~equal:%s)"
+               e1' e2' eq
+           in (e', Type.List typ', ctx)
+        end
+     | _ -> incompat "Intersect" [typ1; typ2] []
      end
   | Exp.Zip (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in

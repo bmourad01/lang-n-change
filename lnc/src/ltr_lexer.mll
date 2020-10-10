@@ -97,6 +97,7 @@ rule token = parse
   | "tail" {TAIL}
   | "last" {LAST}
   | "diff" {DIFF}
+  | "intersect" {INTERSECT}
   | "assoc" {ASSOC}
   | "interleave_pairs" {INTERLEAVEPAIRS}
   | "append" {APPEND}

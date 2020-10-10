@@ -436,11 +436,11 @@ Gamma |- (err.) : T.
 
 [R-ADD-ZERO]
 --------------------------------
-(add v (zero.)) --> v.
+(add (zero.) v) --> v.
 
 [R-ADD-SUCC]
 --------------------------------
-(add v1 (succ v2)) --> (add (succ v1) v2).
+(add (succ v1) v2) --> (add v1 (succ v2)).
 
 [R-SUB-ZERO-SUCC]
 --------------------------------
@@ -457,10 +457,6 @@ Gamma |- (err.) : T.
 [R-SUB-SUCC-ZERO]
 --------------------------------
 (sub (succ v) (zero.)) --> (succ v).
-
-[R-ADD-SUCC]
---------------------------------
-(add v1 (succ v2)) --> (add (succ v1) v2).
 
 [R-LET]
 --------------------------------

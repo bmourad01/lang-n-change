@@ -117,6 +117,7 @@ module Exp: sig
     | Dedup of t
     | Append of t * t
     | Diff of t * t
+    | Intersect of t * t
     | Zip of t * t
     | Assoc of t * t
     | Interleave_pairs of t

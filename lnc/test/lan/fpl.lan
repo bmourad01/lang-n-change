@@ -168,13 +168,13 @@ Gamma |- (nott e) : (bool.).
 Gamma |- e1 : (bool.),
 Gamma |- e2 : (bool.)
 --------------------------------
-Gamma |- (andd e e) : (bool.).
+Gamma |- (andd e1 e2) : (bool.).
 
 [T-OR]
 Gamma |- e1 : (bool.),
 Gamma |- e2 : (bool.)
 --------------------------------
-Gamma |- (orr e e) : (bool.).
+Gamma |- (orr e1 e2) : (bool.).
 
 [T-ZERO]
 --------------------------------

@@ -136,6 +136,9 @@ add_rule(["R-SEQ"] {
 
 add_relation("memory_ok" [$Sigma, $m]);
 
+# mode: ... | memory_ok => inp inp;
+# principal: ... | memory_ok => no yes;
+
 add_rule(["MEMORY-OK-NIL"] {
   ---------------------------
   &("memory_ok" [$Sigma, $nil])

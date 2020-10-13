@@ -269,34 +269,35 @@ let () =
          let state = Set.union state state' in
          let state = U.run state lan in
          let state = U.run state lan ~normalize:true in
+         state
          (* remove the backticks from vars we uniquified *)
-         let sub =
-           Set.to_list state
-           |> List.map ~f:(function
-                  | S.Term_sub (t1, t2) ->
-                     T.vars t1 @ T.vars t2
-                  | S.Formula_sub (f1, f2) ->
-                     F.vars f1 @ F.vars f2
-                  | S.Candidate f
-                    | S.Proven f -> F.vars f)
-           |> List.concat
-           |> List.dedup_and_sort ~compare:T.compare
-           |> List.filter_map ~f:(fun t ->
-                  match t with
-                  | T.Var v ->
-                     let open Option.Let_syntax in
-                     let%map i = String.index v '`' in
-                     let t' = T.Var (String.subo v ~len:i) in
-                     (t, t')
-                  | _ -> None)
-         in
-         U.Solution_set.map state ~f:(function
-             | S.Term_sub (t1, t2) ->
-                S.Term_sub (T.substitute t1 sub, T.substitute t2 sub)
-             | S.Formula_sub (f1, f2) ->
-                S.Formula_sub (F.substitute f1 sub, F.substitute f2 sub)
-             | S.Candidate f -> S.Candidate (F.substitute f sub)
-             | S.Proven f -> S.Proven (F.substitute f sub))
+         (* let sub =
+          *   Set.to_list state
+          *   |> List.map ~f:(function
+          *          | S.Term_sub (t1, t2) ->
+          *             T.vars t1 @ T.vars t2
+          *          | S.Formula_sub (f1, f2) ->
+          *             F.vars f1 @ F.vars f2
+          *          | S.Candidate f
+          *            | S.Proven f -> F.vars f)
+          *   |> List.concat
+          *   |> List.dedup_and_sort ~compare:T.compare
+          *   |> List.filter_map ~f:(fun t ->
+          *          match t with
+          *          | T.Var v ->
+          *             let open Option.Let_syntax in
+          *             let%map i = String.index v '`' in
+          *             let t' = T.Var (String.subo v ~len:i) in
+          *             (t, t')
+          *          | _ -> None)
+          * in
+          * U.Solution_set.map state ~f:(function
+          *     | S.Term_sub (t1, t2) ->
+          *        S.Term_sub (T.substitute t1 sub, T.substitute t2 sub)
+          *     | S.Formula_sub (f1, f2) ->
+          *        S.Formula_sub (F.substitute f1 sub, F.substitute f2 sub)
+          *     | S.Candidate f -> S.Candidate (F.substitute f sub)
+          *     | S.Proven f -> S.Proven (F.substitute f sub)) *)
     in
     Printf.printf "===========================================\n\n%s\n\nSOLUTION:\n\n" (R.to_string r);
     Set.iter state ~f:(fun s ->

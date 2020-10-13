@@ -199,4 +199,5 @@ add_relation("join" [$T, $T, $T]);
 add_relation("meet" [$T, $T, $T]);
 add_relation($T <: $T);
 
-# mode: ... | join => inp inp out | meet => inp inp out | subtype => inp inp
+# mode: ... | join => inp inp out | meet => inp inp out | subtype => inp inp;
+# principal: ... | join => yes yes no | meet => yes yes no | subtype => yes yes

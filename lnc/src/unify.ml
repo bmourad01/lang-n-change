@@ -72,11 +72,25 @@ let run ?(normalize = false) state (lan: L.t) =
       else (vars := Set.add !vars var; var)
     | _ -> failwith "unreachable"
   in
+  let principal = match Map.find lan.hints "principal" with
+    | None -> invalid_arg "'principal' hint is required"
+    | Some principal -> principal
+  in
   let mode = match Map.find lan.hints "mode" with
     | None -> invalid_arg "'mode' hint is required"
     | Some mode -> mode
   in
   let subsets = L.subset_categories lan in
+  let principals predicate args =
+    match Map.find principal.elements predicate with
+    | None -> []
+    | Some desc ->
+       match List.zip desc args with
+       | Unequal_lengths -> []
+       | Ok l ->
+          List.filter_map l ~f:(fun (m, t) ->
+              Option.some_if (String.equal m "yes") t)
+  in
   let inputs predicate args =
     match Map.find mode.elements predicate with
     | None -> []
@@ -98,7 +112,7 @@ let run ?(normalize = false) state (lan: L.t) =
                | T.Cons _ -> true
              | T.Tuple ts -> matches_pattern ts
              | _ -> false)
-       in inputs predicate args |> matches_pattern
+       in principals predicate args |> matches_pattern
     | _ -> false
   in
   let rec loop state =
@@ -193,7 +207,10 @@ let run ?(normalize = false) state (lan: L.t) =
                      let t1 = T.substitute t1 sub in
                      let t2 = T.substitute t2 sub in
                      Solution.Term_sub (t1, t2)
-                  | (Solution.Formula_sub _) as f -> f
+                  | Solution.Formula_sub (f1, f2) ->
+                     let f1 = F.substitute f1 sub in
+                     let f2 = F.substitute f2 sub in
+                     Solution.Formula_sub (f1, f2)
                   | Solution.Candidate f ->
                        Solution.Candidate (F.substitute f sub)
                   | Solution.Proven f ->

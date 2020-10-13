@@ -513,4 +513,5 @@ Gamma |- (err.) : T.
 %
 
 mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
 variance: arrow => contra cov | list => cov | times => cov cov | option => cov | sum => cov cov.

@@ -34,7 +34,30 @@ let () =
           List.filter_map l ~f:(fun (m, t) ->
               Option.some_if (String.equal m "out") t)
   in
+  let typeof_assume = match Map.find lan.relations P.Builtin.typeof with
+    | None -> failwith "unreachable"
+    | Some rel -> List.hd_exn rel
+  in
+  let step_rel = Map.find_exn lan.relations P.Builtin.step in
   List.iter (L.reduction_rules_of lan) ~f:(fun r ->
+      let lhs_assume = match r.conclusion with
+        | F.Prop p ->
+           let lhs = List.hd_exn p.args in
+           begin match (lhs, List.hd_exn step_rel, typeof_assume) with
+           | (T.Tuple (_ :: rest), T.Tuple (_ :: rest'), T.Tuple ts) ->
+              let m = List.zip_exn rest' rest in
+              let ts =
+                List.map ts ~f:(fun t ->
+                    Option.value ~default:t
+                      (List.Assoc.find m t ~equal:T.equal))
+              in T.Tuple ts
+           | _ -> typeof_assume
+           end
+        | _ ->
+           invalid_arg
+             (Printf.sprintf "bad conclusion of step %s"
+                (F.to_string r.conclusion))
+      in
       let lhs = match r.conclusion with
         | F.Prop p ->
            let lhs = List.hd_exn p.args in
@@ -45,6 +68,24 @@ let () =
               invalid_arg
                 (Printf.sprintf "bad lhs of step %s"
                    (T.to_string lhs))
+           end
+        | _ ->
+           invalid_arg
+             (Printf.sprintf "bad conclusion of step %s"
+                (F.to_string r.conclusion))
+      in
+      let rhs_assume = match r.conclusion with
+        | F.Prop p ->
+           let rhs = List.last_exn p.args in
+           begin match (rhs, List.last_exn step_rel, typeof_assume) with
+           | (T.Tuple (_ :: rest), T.Tuple (_ :: rest'), T.Tuple ts) ->
+              let m = List.zip_exn rest' rest in
+              let ts =
+                List.map ts ~f:(fun t ->
+                    Option.value ~default:t
+                      (List.Assoc.find m t ~equal:T.equal))
+              in T.Tuple ts
+           | _ -> typeof_assume
            end
         | _ ->
            invalid_arg
@@ -94,7 +135,8 @@ let () =
            typeof_for_op c.name
            |> (function
                | Some (F.Prop p, _) ->
-                  let args = typeof_for_op_substituted c.args p.args lhs in
+                  let p_args = lhs_assume :: List.tl_exn p.args in
+                  let args = typeof_for_op_substituted c.args p_args lhs in
                   F.Prop {p with args}
                | _ ->
                   invalid_arg
@@ -191,6 +233,10 @@ let () =
                 in aux t assumptions
               in
               let assume = List.hd_exn p1.args in
+              let assume = match (assume, rhs_assume) with
+                | (T.Tuple (a :: _), T.Tuple (_ :: rest)) -> T.Tuple (a :: rest)
+                | _ -> assume
+              in
               let%bind assume' = match assume with
                 | T.Var _ -> return (make_assume assume)
                 | T.Map_update m -> return (make_assume m.map)
@@ -220,7 +266,8 @@ let () =
         | Some (T.Constructor c as rhs) ->
            begin match typeof_for_op c.name with
            | Some (F.Prop p, r) ->
-              let args = typeof_for_op_substituted c.args p.args rhs in
+              let p_args = rhs_assume :: List.tl_exn p.args in
+              let args = typeof_for_op_substituted c.args p_args rhs in
               let args =
                 (* handle the case where the RHS
                  * output type is a free variable,

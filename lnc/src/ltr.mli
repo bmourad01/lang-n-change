@@ -121,6 +121,7 @@ module Exp: sig
     | Zip of t * t
     | Assoc of t * t
     | Interleave_pairs of t
+    | Length of t
     (* option operations *)
     | Nothing
     | Something of t

@@ -336,6 +336,7 @@ module Exp = struct
     | Zip of t * t
     | Assoc of t * t
     | Interleave_pairs of t
+    | Length of t
     (* option operations *)
     | Nothing
     | Something of t
@@ -544,6 +545,7 @@ module Exp = struct
          (to_string e1) (to_string e2)
     | Interleave_pairs e ->
        Printf.sprintf "interleave_pairs(%s)" (to_string e)
+    | Length e -> Printf.sprintf "length(%s)" (to_string e)       
     | Nothing -> "none"
     | Something e -> Printf.sprintf "some(%s)" (to_string e)
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
@@ -1560,6 +1562,14 @@ let rec compile ctx e = match e with
         let e' = Printf.sprintf "(Aux.interleave_pairs_of_list (%s))" e' in
         (e', Type.(List (Tuple [typ'; typ'])), ctx)
      | _ -> incompat "Interleave_pairs" [typ] []
+     end
+  | Exp.Length e ->
+     let (e', typ, _) = compile ctx e in
+     begin match typ with
+     | Type.List typ' ->
+        let e' = Printf.sprintf "(List.length (%s))" e' in
+        (e', Type.Int, ctx)
+     | _ -> incompat "Length" [typ] []
      end
   | Exp.Nothing ->
      let typ = fresh_type_var ctx in

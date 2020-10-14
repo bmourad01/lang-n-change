@@ -100,6 +100,7 @@ rule token = parse
   | "intersect" {INTERSECT}
   | "assoc" {ASSOC}
   | "interleave_pairs" {INTERLEAVEPAIRS}
+  | "length" {LENGTH}
   | "append" {APPEND}
   | "rev" {REV}
   | "dedup" {DEDUP}

@@ -233,6 +233,7 @@ module Sigs = struct
     let tuple_sizes = ref Int.Set.(singleton 2) in
     (* generate needed kinds and proposition types
      * from the relations of the language *)
+    let subsets = L.subset_categories lan in
     let (kinds, props) =
       let kind_of_var_rel pred v = match L.kind_of_var lan v with
         | Some kind ->
@@ -252,7 +253,10 @@ module Sigs = struct
                    let rec aux kinds t =  match t with
                      | T.Var v ->
                         let k = kind_of_var_rel pred v in
-                        (k :: kinds, Syntax.v k)
+                        let k = match Map.find subsets (cat_name lan k) with
+                          | None -> k
+                          | Some k -> kind_name k
+                        in (k :: kinds, Syntax.v k)
                      | T.List t ->
                         let (kinds, arg) = aux kinds t in
                         (kinds, Syntax.("list" @ [arg]))
@@ -322,7 +326,6 @@ module Sigs = struct
     in
     (* infer additional propositions based on
      * whether one category is a proper subset of another *)
-    let subsets = L.subset_categories lan in
     let props =
       Map.fold subsets ~init:props ~f:(fun ~key ~data props ->
           let key' = kind_name key in

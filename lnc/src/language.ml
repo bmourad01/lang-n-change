@@ -840,6 +840,48 @@ module Rule = struct
     in
     let conclusion = Formula.substitute r.conclusion sub in
     {r with premises; conclusion}
+
+  (* this could be improved *)
+  let normalize_vars r =
+    let vars_with_num =
+      List.filter (vars r) ~f:(function
+          | Term.Var v -> String.exists v ~f:Char.is_digit
+          | _ -> false)
+    in
+    let info =
+      List.fold vars_with_num ~init:[] ~f:(fun acc t ->
+          match t with
+          | Term.Var v
+               when not (String.exists v ~f:(fun c -> Char.equal c '\''))->
+             let c = String.find v ~f:Char.is_digit in
+             let c = Option.value_exn c in
+             let pos = String.index_exn v c in
+             let pos' = String.rfindi v ~f:(fun _ c -> Char.is_digit c) in
+             let pos' = Option.value_exn pos' in
+             let len = succ (pos' - pos) in
+             let num_str = String.sub v ~pos ~len in
+             let num = Int.of_string num_str in
+             (t, num) :: acc
+          | _ -> acc)
+      |> List.rev
+    in
+    List.fold info ~init:([], (0, 0)) ~f:(fun (acc, (n, prev_num)) (t, num) ->
+        match t with
+        | Term.Var v ->
+           let n' =
+             if num < prev_num
+                || (num - prev_num) > 1
+             then 1
+             else succ n
+           in
+           let with_ = Int.to_string n' in
+           let pattern = Int.to_string num in
+           let v' = String.substr_replace_first v ~pattern ~with_ in
+           ((t, Term.Var v') :: acc, (n', num))
+        | _ -> (acc, (n, num)))
+    |> fst
+    |> List.rev
+    |> substitute r
 end
 
 module Grammar = struct

@@ -146,6 +146,7 @@ module Rule: sig
   val has_typing_premises: t -> bool
   val vars: t -> Term.t list
   val substitute: t -> Term.subs -> t
+  val normalize_vars: t -> t
 end
 
 module Grammar: sig

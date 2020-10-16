@@ -2431,6 +2431,8 @@ let generate_caml e =
         else (lan_vars := Set.add !lan_vars var; var)
         in aux 1
         in
-        %s
+        let lan = %s in
+        let rules = Map.map lan.rules ~f:R.normalize_vars in
+        {lan with rules}
         |} s
   | _ -> incompat "Toplevel" [typ] [Type.Lan]

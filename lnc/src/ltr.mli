@@ -69,6 +69,13 @@ module Exp: sig
   type t =
     (* builtin *)
     | Self
+    | Unify of {
+        normalize: bool;
+        term_subs: t;
+        formula_subs: t;
+        candidates: t;
+        proven: t;
+      }
     (* variable operations *)
     | Var of string
     (* string operations *)

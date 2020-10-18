@@ -120,6 +120,8 @@ rule token = parse
   | "lowercase" {LOWERCASE}
   | "int_str" {INTSTR}
   | "self" {SELF}
+  | "unify_normalize" {UNIFYNORMALIZE}
+  | "unify" {UNIFY}
   | "uniquify" {UNIQUIFY}
   | "set_syntax" {SETSYNTAX}
   | "remove_syntax" {REMOVESYNTAX}

@@ -66,7 +66,7 @@ exception Unprovable_formula of F.t
 let run ?(normalize = false) state (lan: L.t) =
   let rec fresh vars = function
     | T.Var v ->
-      let var = T.Var (v ^ "`") in 
+      let var = T.Var (v ^ "'") in 
       if Set.mem !vars var
       then fresh vars var
       else (vars := Set.add !vars var; var)

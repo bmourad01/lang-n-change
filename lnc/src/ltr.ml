@@ -844,8 +844,6 @@ let merge_ctx ctx1 ctx2 =
   let type_env =
     Map.merge_skewed ctx1.type_env ctx2.type_env
       ~combine:(fun ~key typ1 typ2 ->
-        (* fixme: we need to distinguish between vars that were bound
-         * in the pattern and vars that we captured from outside *)
         if Type.equal typ1 typ2 then typ1 else
           failwith
             (Printf.sprintf "incompatible types (%s, %s) for pattern var %s"
@@ -1431,7 +1429,16 @@ let rec compile ctx e = match e with
      let (field', field_typ, _) = compile ctx field in
      begin match field_typ with
      | Type.List typ' ->
-        let (pat', pat_typ, pat_ctx) = compile_pattern ctx typ' pattern in
+        (* any variables that are mentioned in a
+         * pattern will shadow existing variables *)
+        let pat_ctx = {ctx with type_env = String.Map.empty} in
+        let (pat', pat_typ, pat_ctx) = compile_pattern pat_ctx typ' pattern in
+        let pat_ctx =
+          let type_env =
+            Map.merge_skewed pat_ctx.type_env ctx.type_env
+              ~combine:(fun ~key t _ -> t)
+          in {pat_ctx with type_env}
+        in
         let matching_concl = match (typ', pat_typ) with
           | (Type.Rule, Type.Formula) -> true
           | _ -> false
@@ -1472,8 +1479,17 @@ let rec compile ctx e = match e with
   | Exp.Match {exp; cases} ->
      let (exp', exp_typ, _) = compile ctx exp in
      let (ps', es', typs) =
+       let pat_ctx = {ctx with type_env = String.Map.empty} in
        List.map cases ~f:(fun (p, e) ->
-           let (p', _, pat_ctx) = compile_pattern ctx exp_typ p in
+           (* any variables that are mentioned in a
+            * pattern will shadow existing variables *)
+           let (p', _, pat_ctx) = compile_pattern pat_ctx exp_typ p in
+           let pat_ctx =
+             let type_env =
+               Map.merge_skewed pat_ctx.type_env ctx.type_env
+                 ~combine:(fun ~key t _ -> t)
+             in {pat_ctx with type_env}
+           in
            let (e', typ, _) = compile pat_ctx e in
            (p', e', typ))
        |> List.unzip3

@@ -1,6 +1,6 @@
 Expression e ::= x
                  | (abs T (x)e) | (app e e)
-                 | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (map e e) | (append e e)
+                 | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (map e e) | (mapi e e e) | (append e e)
                  | (pair e e) | (fst e) | (snd e)
                  | (err.)
                  | (tt.) | (ff.) | (ite e e e) | (nott e) | (andd e e) | (orr e e)
@@ -38,7 +38,7 @@ Type T ::= Z
 Context E ::= (hole.)
               | (app E e) | (app v E)
               | (cons E e) | (cons v E) | (head E) | (tail E) | (is_nil E) | (is_cons E)
-              | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (map E e) | (map v E) | (append E e) | (append v E)
+              | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (map E e) | (map v E) | (mapi E e e) | (mapi v E e) | (mapi v v E) | (append E e) | (append v E)
               | (pair E e) | (pair v E) | (fst E) | (snd E)
               | (ite E e e) | (nott E) | (andd E e) | (andd v E) | (orr E e) | (orr v E)
               | (succ E) | (pred E) | (is_zero E) | (is_succ E) | (add E e) | (add v E) | (sub E e) | (sub v E)
@@ -110,6 +110,13 @@ Gamma |- e1 : (list T1),
 Gamma |- e2 : (arrow T1 T2)
 --------------------------------
 Gamma |- (map e1 e2) : (list T2).
+
+[T-MAPI]
+Gamma |- e1 : (list T1),
+Gamma |- e2 : (arrow T1 (arrow (nat.) T2)),
+Gamma |- e3 : (nat.)
+--------------------------------
+Gamma |- (mapi e1 e2 e3) : (list T2).
 
 [T-APPEND]
 Gamma |- e1 : (list T),
@@ -353,6 +360,14 @@ Gamma |- (err.) : T.
 [R-MAP-CONS]
 --------------------------------
 (map (cons v1 v2) v3) --> (cons (app v3 v1) (map v2 v3)).
+
+[R-MAPI-NIL]
+--------------------------------
+(mapi (nill.) v1 v2) --> (nill.).
+
+[R-MAPI-CONS]
+--------------------------------
+(mapi (cons v1 v2) v3 v4) --> (cons (app (app v3 v1) v4) (map v2 v3 (succ v4))).
 
 [R-APPEND-NIL]
 --------------------------------

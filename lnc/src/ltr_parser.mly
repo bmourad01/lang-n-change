@@ -494,6 +494,8 @@ formula:
     { Exp.Formula_subset ($3, $4) }
 
 pattern:
+  | LPAREN pattern RPAREN
+    { $2 }
   | WILDCARD
     { Exp.Pattern.Wildcard }
   | NAME

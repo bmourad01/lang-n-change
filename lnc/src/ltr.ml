@@ -844,6 +844,8 @@ let merge_ctx ctx1 ctx2 =
   let type_env =
     Map.merge_skewed ctx1.type_env ctx2.type_env
       ~combine:(fun ~key typ1 typ2 ->
+        (* fixme: we need to distinguish between vars that were bound
+         * in the pattern and vars that we captured from outside *)
         if Type.equal typ1 typ2 then typ1 else
           failwith
             (Printf.sprintf "incompatible types (%s, %s) for pattern var %s"

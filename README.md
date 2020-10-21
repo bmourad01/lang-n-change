@@ -2,15 +2,19 @@
 
 ## What is it?
 
-lang-n-change is a tool for transforming languages. It provides a domain-specific language, L-Tr (pronounced "Elter"), for expressing algorithms that perform language transformations.
+lang-n-change is a tool for transforming languages.
+It provides a domain-specific language, L-Tr (pronounced "Elter"), for expressing algorithms that perform language transformations.
 
 Given a language definition (`.lan` file) and an algorithm (`.tr` file), the algorithm is applied to the language definition, producing a new language definition.
 
-L-Tr is based on a calculus described in [1]. A prototype of lang-n-change is presented in [2]. The current tool is a new and improved version of the prototype.
+L-Tr is based on a calculus described in [1].
+A prototype of lang-n-change is presented in [2].
+The current tool is a new and improved version of the prototype.
 
 Algorithms expressed in L-Tr are compiled to an OCaml program (`support/transform.ml`) which is then run with the language definition as the sole argument.
 
-Additionally, language definitions can be compiled to executable λProlog logic programs. This feature can be used to run queries in order to test the behavior of the generated languages.
+Additionally, language definitions can be compiled to executable λProlog logic programs.
+This feature can be used to run queries on the generated languages in order to test the behavior of the generated languages.
 
 ## Requirements
 

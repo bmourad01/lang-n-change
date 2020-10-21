@@ -14,7 +14,7 @@ The current tool is a new and improved version of the prototype.
 Algorithms expressed in L-Tr are compiled to an OCaml program (`support/transform.ml`) which is then run with the language definition as the sole argument.
 
 Additionally, language definitions can be compiled to executable λProlog logic programs.
-This feature can be used to run queries on the generated languages in order to test the behavior of the generated languages.
+This feature can be used to run queries on the generated languages in order to test their behavior.
 
 ## Requirements
 

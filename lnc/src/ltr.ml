@@ -1387,7 +1387,14 @@ let rec compile ctx e = match e with
      | Type.Arrow typs' ->
         let len = List.length typs' in
         let typs'' = List.take typs' (len - 1) in
-        let init_state = List.zip_exn typs'' typs in
+        let init_state = match List.zip typs'' typs with
+          | Unequal_lengths ->
+             failwith
+               (Printf.sprintf "Apply: invalid arity (expected %d args, got %d)"
+                  (List.length typs'')
+                  (List.length typs))
+          | Ok init_state -> init_state
+        in
         begin match Type_unify.run [] ~init_state with
         | None -> incompat "Apply (args)" typs typs''
         | Some _ ->

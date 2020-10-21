@@ -320,7 +320,7 @@ let run ?(normalize = false) state (lan: L.t) =
                         when P.equal p.predicate p'.predicate ->
                       let ins' = inputs p'.predicate p'.args in
                       if List.equal T.equal ins ins' then
-                        Some (Solution.Formula_sub (F.Prop p, F.Prop p'))
+                        Some (Solution.Formula_sub (F.Prop p', F.Prop p))
                       else find' fs'
                    | _ -> find' fs'
               in begin match find' Set.(to_list (remove state f)) with

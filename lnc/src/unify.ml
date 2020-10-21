@@ -303,6 +303,14 @@ let run ?(normalize = false) state (lan: L.t) =
           | _ -> state
   in
   if normalize then
+    (* find pairs of formula with the same predicate names
+     * and equal inputs, then perform a substitution on the
+     * outputs for the set of solutions (using unification).
+     
+     * the algorithm terminates when such pairs no 
+     * longer exist within the set of solutions,
+     * but if inconsistent variable namings are
+     * present then the algorithm may diverge *)
     let rec loop' state =
       let rec find = function
         | [] -> None

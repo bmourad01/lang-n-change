@@ -19,12 +19,17 @@ set_rules(rules >> _ >> (
     
     (* grab all types in contravariant positions *)
     let contra_types = concat(
-      premises(r) >> gamma |- e : (c ts) >>
-        match assoc(c, hint("variance")) with
-        | none -> []
-        | some(variance) ->
-          let vmap = zip(ts, variance) in
-          (vmap >> (t, v) >> if v = "contra" then some(t) else none))
+      premises(r) >> gamma |- e : t >>
+        let rec aux (t: term) : term list = match t with
+          | (c ts) ->
+            (match assoc(c, hint("variance")) with
+             | none -> []
+             | some(variance) ->
+               let vmap = zip(ts, variance) in
+               (vmap >> (t, v) >> if v = "contra" then some(t) else none))
+             @ concat(ts >> t >> aux(t))
+          | _ -> []
+        in dedup(aux(t)))
     in
    
     (* grab all types in invariant positions *)

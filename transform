@@ -5,6 +5,9 @@ LTR=$2
 
 TARGET="./support/transform.ml"
 
+# exit on error
+set -e
+
 # remove existing file to force recompilation
 rm -f $TARGET
 # compile the transformation

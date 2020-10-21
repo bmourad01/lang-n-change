@@ -7,6 +7,9 @@ BASENAME="$(basename ${FILE})"
 MODNAME="${BASENAME%%.lan}"
 DIR="${BASEDIR}${MODNAME}/"
 
+# exit on error
+set -e
+
 # create the directories
 mkdir -p $BASEDIR
 mkdir -p $DIR

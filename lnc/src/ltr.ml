@@ -837,11 +837,17 @@ let type_compare pref t =
 
 let bind_var_pat ctx v typ =
   reserved_name v;
-  let type_env = Map.set ctx.type_env v typ in
-  {ctx with type_env}
+  (* we don't allow duplicate bindings
+   * of a variable within a pattern *)
+  match Map.add ctx.type_env v typ with
+  | `Ok type_env -> {ctx with type_env}
+  | `Duplicate ->
+     failwith (Printf.sprintf "duplicate pattern var %s\n" v)
 
 let merge_ctx ctx1 ctx2 =
   let type_env =
+    (* get the union of the type environments
+     * but make sure the types are consistent *)
     Map.merge_skewed ctx1.type_env ctx2.type_env
       ~combine:(fun ~key typ1 typ2 ->
         if Type.equal typ1 typ2 then typ1 else

@@ -367,7 +367,7 @@ Gamma |- (err.) : T.
 
 [R-MAPI-CONS]
 --------------------------------
-(mapi (cons v1 v2) v3 v4) --> (cons (app (app v3 v1) v4) (map v2 v3 (succ v4))).
+(mapi (cons v1 v2) v3 v4) --> (cons (app (app v3 v1) v4) (mapi v2 v3 (succ v4))).
 
 [R-APPEND-NIL]
 --------------------------------

@@ -113,7 +113,7 @@ Gamma |- (map e1 e2) : (list T2).
 
 [T-MAPI]
 Gamma |- e1 : (list T1),
-Gamma |- e2 : (arrow T1 (arrow (nat.) T2)),
+Gamma |- e2 : (arrow (nat.) (arrow T1 T2)),
 Gamma |- e3 : (nat.)
 --------------------------------
 Gamma |- (mapi e1 e2 e3) : (list T2).
@@ -367,7 +367,7 @@ Gamma |- (err.) : T.
 
 [R-MAPI-CONS]
 --------------------------------
-(mapi (cons v1 v2) v3 v4) --> (cons (app (app v3 v1) v4) (mapi v2 v3 (succ v4))).
+(mapi (cons v1 v2) v3 v4) --> (cons (app (app v3 v4) v1) (mapi v2 v3 (succ v4))).
 
 [R-APPEND-NIL]
 --------------------------------

@@ -8,7 +8,7 @@ Given a language definition (`.lan` file) and an algorithm (`.tr` file), the alg
 
 L-Tr is based on a calculus described in [1]. A prototype of lang-n-change is presented in [2]. The current tool is a new and improved version of the prototype.
 
-Algorithms expressed in L-Tr are compiled to an OCaml program (`transform.ml`) which is then run with the language definition as the sole argument.
+Algorithms expressed in L-Tr are compiled to an OCaml program (`support/transform.ml`) which is then run with the language definition as the sole argument.
 
 Additionally, language definitions can be compiled to executable λProlog logic programs. This feature can be used to run queries in order to test the behavior of the generated languages.
 
@@ -33,7 +33,7 @@ For compiling to λProlog, the most recent version of Teyjus (https://github.com
 
 Run `dune build lnc` to build the project.
 
-**DO NOT** run `dune build`, as the program `support/transformer.ml` requires the generated `transform.ml` file, which is obviously not there by default.
+**DO NOT** run `dune build`, as the program `support/transformer.ml` requires the generated `support/transform.ml` file, which is obviously not there by default.
 
 ## Transforming languages
 

@@ -309,7 +309,7 @@ let run ?(normalize = false) state (lan: L.t) =
      
      * the algorithm terminates when such pairs no 
      * longer exist within the set of solutions,
-     * but if inconsistent variable namings are
+     * but if cycles for input/output variables are
      * present then the algorithm may diverge *)
     let rec loop' state =
       let rec find = function

@@ -115,6 +115,17 @@ exp:
           body;
         }
     }
+  | LET name = NAME EQ exp = exp COLON ret = typ IN body = exp
+    {
+      Exp.Let {
+          recursive = false;
+          names = [name];
+          args = [];
+          ret = Some ret;
+          exp;
+          body;
+        }
+    }
   | LET name = NAME EQ exp = exp IN body = exp
     {
       Exp.Let {

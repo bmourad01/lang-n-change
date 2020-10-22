@@ -1460,14 +1460,16 @@ let rec compile ctx e = match e with
           | (Type.Rule, Type.Formula) -> true
           | _ -> false
         in          
-        if matching_concl || Type.equal typ' pat_typ then
+        if matching_concl
+           || Option.is_some (Type_unify.run [typ'; pat_typ]) then
           let pat_ctx = bind_var pat_ctx "self" typ' in
           let (body', body_typ, body_ctx) = compile pat_ctx body in
           let (body', body_typ) = match body_typ with
             | Type.Option typ -> (body', typ)
             | typ -> (Printf.sprintf "Some (%s)" body', typ)
           in
-          if keep && not (Type.equal typ' body_typ) then
+          if keep
+             && Option.is_none (Type_unify.run [typ'; body_typ]) then
             incompat "Select (body)" [body_typ] [typ']
           else
             let p' =

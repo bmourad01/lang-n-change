@@ -1,6 +1,6 @@
 Expression e ::= x
                  | (abs T (x)e) | (app e e)
-                 | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (map e e) | (mapi e e e) | (append e e)
+                 | (cons e e) | (nill.) | (head e) | (tail e) | (is_nil e) | (is_cons e) | (filter e e) | (filter_map e e) | (filter_to_options e e) | (map e e) | (mapi e e e) | (append e e)
                  | (pair e e) | (fst e) | (snd e)
                  | (err.)
                  | (tt.) | (ff.) | (ite e e e) | (nott e) | (andd e e) | (orr e e)
@@ -38,7 +38,7 @@ Type T ::= Z
 Context E ::= (hole.)
               | (app E e) | (app v E)
               | (cons E e) | (cons v E) | (head E) | (tail E) | (is_nil E) | (is_cons E)
-              | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (map E e) | (map v E) | (mapi E e e) | (mapi v E e) | (mapi v v E) | (append E e) | (append v E)
+              | (filter E e) | (filter v E) | (filter_map E e) | (filter_map v E) | (filter_to_options E e) | (filter_to_options v E) | (map E e) | (map v E) | (mapi E e e) | (mapi v E e) | (mapi v v E) | (append E e) | (append v E)
               | (pair E e) | (pair v E) | (fst E) | (snd E)
               | (ite E e e) | (nott E) | (andd E e) | (andd v E) | (orr E e) | (orr v E)
               | (succ E) | (pred E) | (is_zero E) | (is_succ E) | (add E e) | (add v E) | (sub E e) | (sub v E)
@@ -104,6 +104,12 @@ Gamma |- e1 : (list T1),
 Gamma |- e2 : (arrow T1 (option T2))
 --------------------------------
 Gamma |- (filter_map e1 e2) : (list T2).
+
+[T-FILTER-TO-OPTIONS]
+Gamma |- e1 : (list T),
+Gamma |- e2 : (arrow T (bool.))
+--------------------------------
+Gamma |- (filter_to_options e1 e2) : (list (option T)).
 
 [T-MAP]
 Gamma |- e1 : (list T1),
@@ -352,6 +358,14 @@ Gamma |- (err.) : T.
 [R-FILTER-MAP-CONS]
 --------------------------------
 (filter_map (cons v1 v2) v3) --> (ite (is_some (app v3 v1)) (cons v1 (filter_map v2 v3)) (filter_map v2 v3)).
+
+[R-FILTER-TO-OPTIONS-NIL]
+--------------------------------
+(filter_to_options (nill.) v) --> (nill.).
+
+[R-FILTER-TO-OPTIONS-CONS]
+--------------------------------
+(filter_to_options (cons v1 v2) v3) --> (cons (ite (app v3 v1) (some v1) (none.)) (filter_to_options v2 v3)).
 
 [R-MAP-NIL]
 --------------------------------

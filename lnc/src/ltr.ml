@@ -867,8 +867,18 @@ let rec compile_pattern ctx expected_typ p = match p with
   | Exp.Pattern.Wildcard -> ("_", expected_typ, ctx)
   | Exp.Pattern.Var v -> (v, expected_typ, bind_var_pat ctx v expected_typ)
   | Exp.Pattern.Str s -> (Printf.sprintf "\"%s\"" s, Type.String, ctx)
-  | Exp.Pattern.Term t -> compile_pattern_term ctx t
-  | Exp.Pattern.Formula f -> compile_pattern_formula ctx f
+  | Exp.Pattern.Term t ->
+     let (p', typ, ctx) = compile_pattern_term ctx t in
+     begin match Type_unify.run [expected_typ; typ] with
+     | None -> incompat "Term (pattern)" [typ] [expected_typ]
+     | Some typ -> (p', typ, ctx)
+     end
+  | Exp.Pattern.Formula f ->
+     let (p', typ, ctx) = compile_pattern_formula ctx f in
+     begin match Type_unify.run [expected_typ; typ] with
+     | None -> incompat "Formula (pattern)" [typ] [expected_typ]
+     | Some typ -> (p', typ, ctx)
+     end
   | Exp.Pattern.List ps ->
      begin match expected_typ with
      | Type.List typ ->
@@ -1449,7 +1459,13 @@ let rec compile ctx e = match e with
         (* any variables that are mentioned in a
          * pattern will shadow existing variables *)
         let pat_ctx = {ctx with type_env = String.Map.empty} in
-        let (pat', pat_typ, pat_ctx) = compile_pattern pat_ctx typ' pattern in
+        let expected_typ = match typ' with
+          | Type.Rule -> Type.Formula
+          | _ -> typ'
+        in
+        let (pat', pat_typ, pat_ctx) =
+          compile_pattern pat_ctx expected_typ pattern
+        in
         let pat_ctx =
           let type_env =
             Map.merge_skewed pat_ctx.type_env ctx.type_env
@@ -1502,7 +1518,7 @@ let rec compile ctx e = match e with
        List.map cases ~f:(fun (p, e) ->
            (* any variables that are mentioned in a
             * pattern will shadow existing variables *)
-           let (p', _, pat_ctx) = compile_pattern pat_ctx exp_typ p in
+           let (p', pt, pat_ctx) = compile_pattern pat_ctx exp_typ p in
            let pat_ctx =
              let type_env =
                Map.merge_skewed pat_ctx.type_env ctx.type_env

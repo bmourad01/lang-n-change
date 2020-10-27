@@ -866,7 +866,13 @@ let merge_ctx ctx1 ctx2 =
 let rec compile_pattern ctx expected_typ p = match p with
   | Exp.Pattern.Wildcard -> ("_", expected_typ, ctx)
   | Exp.Pattern.Var v -> (v, expected_typ, bind_var_pat ctx v expected_typ)
-  | Exp.Pattern.Str s -> (Printf.sprintf "\"%s\"" s, Type.String, ctx)
+  | Exp.Pattern.Str s ->
+     let typ = Type.String in
+     begin match Type_unify.run [expected_typ; typ] with
+     | None -> incompat "Str (pattern)" [typ] [expected_typ]
+     | Some typ ->
+        (Printf.sprintf "\"%s\"" s, typ, ctx)
+     end
   | Exp.Pattern.Term t ->
      let (p', typ, ctx) = compile_pattern_term ctx t in
      begin match Type_unify.run [expected_typ; typ] with

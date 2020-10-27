@@ -1518,7 +1518,7 @@ let rec compile ctx e = match e with
        List.map cases ~f:(fun (p, e) ->
            (* any variables that are mentioned in a
             * pattern will shadow existing variables *)
-           let (p', pt, pat_ctx) = compile_pattern pat_ctx exp_typ p in
+           let (p', _, pat_ctx) = compile_pattern pat_ctx exp_typ p in
            let pat_ctx =
              let type_env =
                Map.merge_skewed pat_ctx.type_env ctx.type_env

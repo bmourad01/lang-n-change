@@ -737,7 +737,7 @@ let hint_vars_of_formulae fs hint_map hint_var =
     (List.map formula_terms ~f:Term.vars_dup |> List.concat)
     (List.map constructor_terms ~f:Term.vars_dup |> List.concat)
 
-let uniquify_map_of_formulae fs hint_map hint_var =
+let uniquify_map_of_formulae ?(underscore = true) fs hint_map hint_var =
   let vars = hint_vars_of_formulae fs hint_map hint_var in
   let vars' =
     List.fold vars ~init:[] ~f:(fun vars t ->
@@ -748,14 +748,18 @@ let uniquify_map_of_formulae fs hint_map hint_var =
   let rec aux t n = function
     | [] -> []
     | ((Term.Var v) as x) :: xs when Term.equal x t ->
-       Term.Var (v ^ Int.to_string n) :: aux t (succ n) xs
+       let v' =
+         if underscore
+         then Printf.sprintf "%s_%d" v n
+         else Printf.sprintf "%s%d" v n
+       in Term.Var v' :: aux t (succ n) xs
     | _ :: xs -> aux t n xs
   in
   List.filter_map vars' ~f:(fun t ->
       let l = aux t 1 vars in
       Option.some_if (List.length l > 1) (t, l))
 
-let uniquify_formulae fs ~hint_map ~hint_var =
+let uniquify_formulae ?(underscore = true) fs ~hint_map ~hint_var =
   let m = uniquify_map_of_formulae fs hint_map hint_var in
   let rec aux_ts ts m = function
     | [] -> (List.rev ts, m)

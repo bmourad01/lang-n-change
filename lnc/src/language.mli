@@ -128,7 +128,8 @@ end
 
 module Formula_set: module type of Set.Make(Formula_comparable)
 
-val uniquify_formulae: Formula.t list
+val uniquify_formulae: ?underscore:bool
+                       -> Formula.t list
                        -> hint_map:((string, string list) List.Assoc.t)
                        -> hint_var:string
                        -> (Formula.t list * Term.uniquify_map)

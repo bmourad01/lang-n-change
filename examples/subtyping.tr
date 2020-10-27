@@ -205,4 +205,33 @@ add_relation("meet" [$T, $T, $T]);
 add_relation($T <: $T);
 
 # mode: ... | join => inp inp out | meet => inp inp out | subtype => inp inp;
-# principal: ... | join => yes yes no | meet => yes yes no | subtype => yes yes
+# principal: ... | join => yes yes no | meet => yes yes no | subtype => yes yes;
+
+(* add the cast operator to the grammar for expressions, contexts *)
+Expression e ::= ... | ("cast" [$e, $T]).;
+Context E ::= ... | ("cast" [$E, $T]).;
+
+(* add the typing rule for casts *)
+add_rule(
+  let assume = head(relations >> ("typeof", a :: _) >> a) in
+  ["T-CAST"] {
+    assume |- $e : $T',
+    $T' <: $T
+    ---------------------------------
+    assume |- ("cast" [$e, $T]) : $T
+  }
+);
+
+(* add the reduction rule for casts *)
+add_rule(
+  let config = head(relations >> ("step", a :: _) >> a) in
+  let do_config (t: term) = match config with
+    | <_ :: ts> -> <t :: ts>
+    | $!_ -> t
+  in
+  
+  ["R-CAST"] {
+    ----------------------------------------------
+    do_config(("cast" [$v, $T])) --> do_config($v)
+  }
+)

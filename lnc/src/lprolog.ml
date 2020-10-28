@@ -1244,6 +1244,22 @@ let of_language (lan: L.t) =
              Aux.dedup_list_stable ~compare:Prop.compare
                (premises @ premises')
            in
+           (* reorder premises where the predicates indicating
+            * a subset kind are moved to the end *)
+           let premises =
+             let subset_prems =
+               List.filter premises ~f:(function
+                   | Prop.Prop {name; args} ->
+                      let name' = cat_name lan name in
+                      Map.mem subsets name'
+                   | _ -> false)
+             in
+             let premises =
+               Aux.diff_list_stable ~equal:Prop.equal
+                 premises subset_prems
+             in
+             premises @ subset_prems
+           in
            let rule = Rule.{name; premises; conclusion} in
            Map.set rules name rule)
   in

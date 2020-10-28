@@ -273,8 +273,8 @@ exp:
     { Exp.Remove_relation $3 }
   | formula
     { Exp.New_formula $1 }
-  | UNIQUIFY LPAREN formulae = exp COMMA hint_map = exp COMMA hint_var = STR RPAREN
-    { Exp.Uniquify_formulae {formulae; hint_map; hint_var} }
+  | UNIQUIFY LPAREN formulae = exp COMMA ignored_formulae = exp COMMA hint_map = exp COMMA hint_var = STR RPAREN
+    { Exp.Uniquify_formulae {formulae; ignored_formulae; hint_map; hint_var} }
   | LSQUARE name = exp RSQUARE LBRACE premises = separated_list(COMMA, exp) nonempty_list(DASH) conclusion = exp RBRACE
     { Exp.New_rule {name; premises; conclusion} }
   | RULENAME LPAREN exp RPAREN

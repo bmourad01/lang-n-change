@@ -7,7 +7,12 @@ set_rules(rules >> _ >> (
      * and a map from the original types to a list of
      * their uniquified counterparts *)
     let (new_premises, tmap) =
-      uniquify(premises(self), hint("mode"), "out")
+      let ignored = premises(self) >> _ >>
+        match self with
+        | _ |- _ : _[_/x] -> some(self)
+        | _ -> none
+      in
+      uniquify(premises(self), ignored, hint("mode"), "out")
     in
 
     (* replace the premises with the uniquified ones *)

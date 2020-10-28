@@ -680,45 +680,48 @@ end
 
 module Formula_set = Set.Make(Formula_comparable)
 
-let hint_vars_of_formulae fs hint_map hint_var =
+let hint_vars_of_formulae fs ignored hint_map hint_var =
   let is_hint_constructor = function
     | Term.Constructor {name; _} ->
        List.Assoc.mem hint_map name ~equal:String.equal
     | _ -> false
   in
+  let should_ignore f = List.mem ignored f ~equal:Formula.equal in
   let constructors =
     List.map fs ~f:(fun f ->
-        let rec constructors = function
-          | Formula.Not f -> constructors f
-          | Formula.Eq (t1, t2) ->
-             List.filter [t1; t2] ~f:is_hint_constructor
-          | Formula.Prop {predicate; args} ->
-             List.filter args ~f:is_hint_constructor
-          | Formula.Member {element; collection} ->
-             List.filter [element; collection] ~f:is_hint_constructor
-          | Formula.Subset {sub; super} ->
-             List.filter [sub; super] ~f:is_hint_constructor
-        in constructors f)
+        if should_ignore f then [] else
+          let rec constructors = function
+            | Formula.Not f -> constructors f
+            | Formula.Eq (t1, t2) ->
+               List.filter [t1; t2] ~f:is_hint_constructor
+            | Formula.Prop {predicate; args} ->
+               List.filter args ~f:is_hint_constructor
+            | Formula.Member {element; collection} ->
+               List.filter [element; collection] ~f:is_hint_constructor
+            | Formula.Subset {sub; super} ->
+               List.filter [sub; super] ~f:is_hint_constructor
+          in constructors f)
     |> List.concat
   in
   let formula_terms =
     List.map fs ~f:(fun f ->
-        let rec terms = function
-          | Formula.Not f -> terms f
-          | Formula.Prop {predicate; args} ->
-             let equal = String.equal in
-             begin match List.Assoc.find hint_map predicate ~equal with
-             | None -> []
-             | Some hints ->
-                List.filter_mapi args ~f:(fun i t ->
-                    let open Option.Let_syntax in
-                    let%bind var = List.nth hints i in
-                    Option.some_if (equal var hint_var) t)
-             end
-          | Formula.Member {element; collection} -> [element; collection]
-          | Formula.Subset {sub; super} -> [sub; super]
-          | _ -> []
-        in terms f)
+        if should_ignore f then [] else
+          let rec terms = function
+            | Formula.Not f -> terms f
+            | Formula.Prop {predicate; args} ->
+               let equal = String.equal in
+               begin match List.Assoc.find hint_map predicate ~equal with
+               | None -> []
+               | Some hints ->
+                  List.filter_mapi args ~f:(fun i t ->
+                      let open Option.Let_syntax in
+                      let%bind var = List.nth hints i in
+                      Option.some_if (equal var hint_var) t)
+               end
+            | Formula.Member {element; collection} -> [element; collection]
+            | Formula.Subset {sub; super} -> [sub; super]
+            | _ -> []
+          in terms f)
     |> List.concat
   in
   let constructor_terms =
@@ -737,8 +740,9 @@ let hint_vars_of_formulae fs hint_map hint_var =
     (List.map formula_terms ~f:Term.vars_dup |> List.concat)
     (List.map constructor_terms ~f:Term.vars_dup |> List.concat)
 
-let uniquify_map_of_formulae ?(underscore = true) fs hint_map hint_var =
-  let vars = hint_vars_of_formulae fs hint_map hint_var in
+let uniquify_map_of_formulae ?(underscore = true)
+      fs ignored hint_map hint_var =
+  let vars = hint_vars_of_formulae fs ignored hint_map hint_var in
   let vars' =
     List.fold vars ~init:[] ~f:(fun vars t ->
         if List.mem vars t ~equal:Term.equal
@@ -759,8 +763,9 @@ let uniquify_map_of_formulae ?(underscore = true) fs hint_map hint_var =
       let l = aux t 1 vars in
       Option.some_if (List.length l > 1) (t, l))
 
-let uniquify_formulae ?(underscore = true) fs ~hint_map ~hint_var =
-  let m = uniquify_map_of_formulae fs hint_map hint_var in
+let uniquify_formulae ?(underscore = true) ?(ignored = [])
+      fs ~hint_map ~hint_var =
+  let m = uniquify_map_of_formulae fs ignored hint_map hint_var in
   let rec aux_ts ts m = function
     | [] -> (List.rev ts, m)
     | x :: xs ->

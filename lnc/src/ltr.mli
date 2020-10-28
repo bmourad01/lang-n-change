@@ -166,6 +166,7 @@ module Exp: sig
     | New_formula of formula
     | Uniquify_formulae of {
         formulae: t;
+        ignored_formulae: t;
         hint_map: t;
         hint_var: string;
       }

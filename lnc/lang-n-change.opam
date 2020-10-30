@@ -7,10 +7,11 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.08"}
-  "dune" {>= "2.7.1"}
   "core_kernel" {>= "0.14.0"}
+  "dune" {>= "2.7.1"}
   "menhir"
+  "ocaml" {>= "4.08"}
+  "ocamlformat"
   "ppx_compare"
   "ppx_hash"
   "ppx_let"

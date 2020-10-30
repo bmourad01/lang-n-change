@@ -23,13 +23,13 @@ This feature can be used to run queries on the generated languages in order to t
 
 Additionally, the following OCaml packages are required (available through `opam` via `opam install <pkg>`):
 
-- dune (>= 2.7.1)
 - core_kernel (>= 0.14.0)
+- dune (>= 2.7.1)
+- menhir
 - ppx_compare
 - ppx_hash
 - ppx_let
 - ppx_sexp_conv
-- menhir
 
 For compiling to λProlog, the most recent version of Teyjus (https://github.com/teyjus/teyjus) is needed to execute the generated `.mod` and `.sig` files.
 

@@ -11,6 +11,6 @@ set -e
 # remove existing file to force recompilation
 rm -f $TARGET
 # compile the transformation
-dune exec lnc/bin/compile_ltr.exe $LTR > $TARGET
+dune exec lnc/bin/compile_ltr.exe $LTR | ocamlformat --enable-outside-detected-project --profile=janestreet --margin=100 --name=$TARGET - > $TARGET
 # link with the driver program and execute
 dune exec support/transformer.exe $LAN

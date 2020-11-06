@@ -61,6 +61,8 @@ rule token = parse
   | "=" {EQ}
   | "match" {MATCH}
   | "with" {WITH}
+  | "less?" {QLESS}
+  | "greater?" {QGREATER}
   | "member?" {QMEMBER}
   | "none?" {QNOTHING}
   | "some?" {QSOMETHING}

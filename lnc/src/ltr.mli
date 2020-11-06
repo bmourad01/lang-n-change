@@ -196,6 +196,8 @@ module Exp: sig
     | And of t * t
     | Or of t * t
     | Eq of t * t
+    | Lt of t * t
+    | Gt of t * t
     | Is_member of t * t
     | Is_nothing of t
     | Is_something of t

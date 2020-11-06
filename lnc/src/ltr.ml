@@ -415,6 +415,8 @@ module Exp = struct
     | And of t * t
     | Or of t * t
     | Eq of t * t
+    | Lt of t * t
+    | Gt of t * t
     | Is_member of t * t
     | Is_nothing of t
     | Is_something of t
@@ -640,6 +642,12 @@ module Exp = struct
        Printf.sprintf "(%s || %s)" (to_string e1) (to_string e2)
     | Eq (e1, e2) ->
        Printf.sprintf "%s = %s"
+         (to_string e1) (to_string e2)
+    | Lt (e1, e2) ->
+       Printf.sprintf "less?(%s, %s)"
+         (to_string e1) (to_string e2)
+    | Gt (e1, e2) ->
+       Printf.sprintf "greater?(%s, %s)"
          (to_string e1) (to_string e2)
     | Is_member (e1, e2) ->
        Printf.sprintf "member?(%s, %s)"
@@ -2173,6 +2181,24 @@ and compile_bool ctx b = match b with
        let e' = Printf.sprintf "(%s %s %s)" (type_equal "Eq" typ1) e1' e2' in
        (e', Type.Bool, ctx)
      else incompat "Eq" [typ1; typ2] []
+  | Exp.Lt (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Int, Type.Int) ->
+        let e' = Printf.sprintf "((%s) < (%s))" e1' e2' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Lt" [typ1; typ2] Type.[Int; Int]
+     end
+  | Exp.Gt (e1, e2) ->
+     let (e1', typ1, _) = compile ctx e1 in
+     let (e2', typ2, _) = compile ctx e2 in
+     begin match (typ1, typ2) with
+     | (Type.Int, Type.Int) ->
+        let e' = Printf.sprintf "((%s) > (%s))" e1' e2' in
+        (e', Type.Bool, ctx)
+     | _ -> incompat "Gt" [typ1; typ2] Type.[Int; Int]
+     end
   | Exp.Is_member (e1, e2) ->
      let (e1', typ1, _) = compile ctx e1 in
      let (e2', typ2, _) = compile ctx e2 in

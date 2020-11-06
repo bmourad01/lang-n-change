@@ -2103,7 +2103,7 @@ let rec compile ctx e = match e with
             {|
              {lan with rules =
              String.Map.of_alist_exn
-             (List.map %s ~f:(fun (r: R.t) -> (r.name, r)))}
+             (List.map (%s) ~f:(fun (r: R.t) -> (r.name, r)))}
              |} e'
         in (e', Type.Lan, ctx)
      | _ -> incompat "Set_rules" [typ] [Type.(List Rule)]

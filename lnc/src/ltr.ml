@@ -290,6 +290,7 @@ module Exp = struct
     | Self
     | Unify of {
         normalize: bool;
+        rules: t;
         term_subs: t;
         formula_subs: t;
         candidates: t;
@@ -466,10 +467,11 @@ module Exp = struct
 
   let rec to_string = function
     | Self -> "self"
-    | Unify {normalize; term_subs; formula_subs; candidates; proven} ->
+    | Unify {normalize; rules; term_subs; formula_subs; candidates; proven} ->
        let name_sub = if normalize then "unify_normalize" else "unify" in
-       Printf.sprintf "%s(%s, %s, %s, %s)"
+       Printf.sprintf "%s(%s, %s, %s, %s, %s)"
          name_sub
+         (to_string rules)
          (to_string term_subs)
          (to_string formula_subs)
          (to_string candidates)
@@ -1233,74 +1235,99 @@ and compile_pattern_formula ctx f = match f with
 
 let rec compile ctx e = match e with
   | Exp.Self -> ("self", typeof_var ctx "self", ctx)
-  | Exp.Unify {normalize; term_subs; formula_subs; candidates; proven} ->
-     let (term_subs', term_subs_typ, _) = compile ctx term_subs in
-     let term_subs_typ_exp = Type.(List (Tuple [Term; Term])) in
-     begin match Type_unify.run [term_subs_typ_exp; term_subs_typ] with
-     | Some typ when Type.equal typ term_subs_typ_exp ->
-       let (formula_subs', formula_subs_typ, _) = compile ctx formula_subs in
-       let formula_subs_typ_exp = Type.(List (Tuple [Formula; Formula])) in
-       begin match Type_unify.run [formula_subs_typ_exp; formula_subs_typ] with
-       | Some typ when Type.equal typ formula_subs_typ_exp ->
-          let (candidates', candidates_typ, _) = compile ctx candidates in
-          let candidates_typ_exp = Type.(List Formula) in
-          begin match Type_unify.run [candidates_typ_exp; candidates_typ] with
-          | Some typ when Type.equal typ candidates_typ_exp ->
-             let (proven', proven_typ, _) = compile ctx proven in
-             let proven_typ_exp = Type.(List Formula) in
-             begin match Type_unify.run [proven_typ_exp; proven_typ] with
-             | Some typ when Type.equal typ proven_typ_exp ->
-                let term_sub_soln =
-                  Printf.sprintf
-                    "(List.map (%s) ~f:(fun (a, b) -> S.Term_sub (a, b)))"
-                    term_subs'
-                in
-                let formula_sub_soln =
-                  Printf.sprintf
-                    "(List.map (%s) ~f:(fun (a, b) -> S.Formula_sub (a, b)))"
-                    formula_subs'
-                in
-                let candidates_soln =
-                  Printf.sprintf
-                    "(List.map (%s) ~f:(fun a -> S.Candidate a))"
-                    candidates'
-                in
-                let proven_soln =
-                  Printf.sprintf
-                    "(List.map (%s) ~f:(fun a -> S.Proven a))"
-                    proven'
-                in
-                let set =
-                  Printf.sprintf
-                    "(U.Solution_set.of_list (%s @ %s @ %s @ %s))"
-                   term_sub_soln formula_sub_soln candidates_soln proven_soln
-                in                   
-                let e' =
-                  Printf.sprintf
-                    {|
-                     (List.fold_right (Set.to_list (U.run ~normalize:%s %s lan))
-                     ~init:([], []) ~f:(fun s (c, p) ->
-                     match s with
-                     | S.Candidate f -> (f :: c, p)
-                     | S.Proven f -> (c, f :: p)
-                     | _ -> (c, p)))
-                     |} (Bool.to_string normalize) set
-                in
-                (e', Type.(Tuple [List Formula; List Formula]), ctx)
-             | _ ->
-                incompat "Unify (proven)" [proven_typ] [proven_typ_exp]
-             end             
-          | _ ->
-             incompat "Unify (candidates)"
-               [candidates_typ] [candidates_typ_exp]
-          end
-       | _ ->
-          incompat "Unify (formula_subs)"
-            [formula_subs_typ] [formula_subs_typ_exp]
-          end
-     | _ ->
-        incompat "Unify (term_subs)" [term_subs_typ] [term_subs_typ_exp]
-     end     
+  | Exp.Unify u ->
+     let (rules', rules_typ, _) = compile ctx u.rules in
+     let rules_typ_exp = Type.(List Rule) in
+     begin match Type_unify.run [rules_typ_exp; rules_typ] with
+     | Some typ when Type.equal typ rules_typ_exp ->
+        let (term_subs', term_subs_typ, _) = compile ctx u.term_subs in
+        let term_subs_typ_exp = Type.(List (Tuple [Term; Term])) in
+        begin match Type_unify.run [term_subs_typ_exp; term_subs_typ] with
+        | Some typ when Type.equal typ term_subs_typ_exp ->
+           let (formula_subs', formula_subs_typ, _) =
+             compile ctx u.formula_subs
+           in
+           let formula_subs_typ_exp = Type.(List (Tuple [Formula; Formula])) in
+           begin match Type_unify.run
+                         [formula_subs_typ_exp; formula_subs_typ] with
+           | Some typ when Type.equal typ formula_subs_typ_exp ->
+              let (candidates', candidates_typ, _) =
+                compile ctx u.candidates
+              in
+              let candidates_typ_exp = Type.(List Formula) in
+              begin match Type_unify.run
+                            [candidates_typ_exp; candidates_typ] with
+              | Some typ when Type.equal typ candidates_typ_exp ->
+                 let (proven', proven_typ, _) = compile ctx u.proven in
+                 let proven_typ_exp = Type.(List Formula) in
+                 begin match Type_unify.run [proven_typ_exp; proven_typ] with
+                 | Some typ when Type.equal typ proven_typ_exp ->
+                    let term_sub_soln =
+                      Printf.sprintf
+                        "(List.map (%s) ~f:(fun (a, b) -> S.Term_sub (a, b)))"
+                        term_subs'
+                    in
+                    let formula_sub_soln =
+                      Printf.sprintf
+                        {|
+                         (List.map (%s) ~f:(fun (a, b) ->
+                         S.Formula_sub (a, b)))
+                         |}
+                        formula_subs'
+                    in
+                    let candidates_soln =
+                      Printf.sprintf
+                        "(List.map (%s) ~f:(fun a -> S.Candidate a))"
+                        candidates'
+                    in
+                    let proven_soln =
+                      Printf.sprintf
+                        "(List.map (%s) ~f:(fun a -> S.Proven a))"
+                        proven'
+                    in
+                    let set =
+                      Printf.sprintf
+                        "(U.Solution_set.of_list (%s @ %s @ %s @ %s))"
+                        term_sub_soln formula_sub_soln
+                        candidates_soln proven_soln
+                    in
+                    let lan_str =
+                      Printf.sprintf
+                        {|
+                         {lan with rules =
+                         (String.Map.of_alist_exn
+                         (List.map (%s) ~f:(fun (r: R.t) -> (r.name, r))))}
+                         |} rules'
+                    in
+                    let e' =
+                      Printf.sprintf
+                        {|
+                         (List.fold_right
+                         (Set.to_list (U.run ~normalize:%s (%s) (%s)))
+                         ~init:([], []) ~f:(fun s (c, p) ->
+                         match s with
+                         | S.Candidate f -> (f :: c, p)
+                         | S.Proven f -> (c, f :: p)
+                         | _ -> (c, p)))
+                         |} (Bool.to_string u.normalize) set lan_str
+                    in
+                    (e', Type.(Tuple [List Formula; List Formula]), ctx)
+                 | _ ->
+                    incompat "Unify (proven)" [proven_typ] [proven_typ_exp]
+                 end             
+              | _ ->
+                 incompat "Unify (candidates)"
+                   [candidates_typ] [candidates_typ_exp]
+              end
+           | _ ->
+              incompat "Unify (formula_subs)"
+                [formula_subs_typ] [formula_subs_typ_exp]
+           end
+        | _ ->
+           incompat "Unify (term_subs)" [term_subs_typ] [term_subs_typ_exp]
+        end
+     | _ -> incompat "Unify (rules)" [rules_typ] [rules_typ_exp]
+     end
   | Exp.Var v -> (v, typeof_var ctx v, ctx)
   | Exp.Str s -> (Printf.sprintf "\"%s\"" s, Type.String, ctx)
   | Exp.Str_concat (e1, e2) ->
@@ -2124,7 +2151,7 @@ let rec compile ctx e = match e with
           H.{
           name = "%s";
           elements =
-          List.fold %s ~init:String.Map.empty ~f:(fun m (k, v) ->
+          List.fold (%s) ~init:String.Map.empty ~f:(fun m (k, v) ->
           Map.set m k v)}
           |} name elements'
      in
@@ -2134,10 +2161,10 @@ let rec compile ctx e = match e with
            {|
             {lan with hints =
             (match Map.find lan.hints "%s" with
-            | None -> Map.set lan.hints "%s" %s
+            | None -> Map.set lan.hints "%s" (%s)
             | Some h ->
             let elements =
-            List.fold %s ~init:h.elements ~f:(fun m (k, v) ->
+            List.fold (%s) ~init:h.elements ~f:(fun m (k, v) ->
             Map.set m k v)
             in
             let h = H.{h with elements} in

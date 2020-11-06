@@ -71,6 +71,7 @@ module Exp: sig
     | Self
     | Unify of {
         normalize: bool;
+        rules: t;
         term_subs: t;
         formula_subs: t;
         candidates: t;

@@ -62,10 +62,10 @@ exp:
     { $2 }
   | SELF
     { Exp.Self }
-  | UNIFYNORMALIZE LPAREN term_subs = exp COMMA formula_subs = exp COMMA candidates = exp COMMA proven = exp RPAREN
-    { Exp.Unify {normalize = true; term_subs; formula_subs; candidates; proven} }
-  | UNIFY LPAREN term_subs = exp COMMA formula_subs = exp COMMA candidates = exp COMMA proven = exp RPAREN
-    { Exp.Unify {normalize = false; term_subs; formula_subs; candidates; proven} }
+  | UNIFYNORMALIZE LPAREN rules = exp COMMA term_subs = exp COMMA formula_subs = exp COMMA candidates = exp COMMA proven = exp RPAREN
+    { Exp.Unify {normalize = true; rules; term_subs; formula_subs; candidates; proven} }
+  | UNIFY LPAREN rules = exp COMMA term_subs = exp COMMA formula_subs = exp COMMA candidates = exp COMMA proven = exp RPAREN
+    { Exp.Unify {normalize = false; rules; term_subs; formula_subs; candidates; proven} }
   | NAME
     { Exp.Var $1 }
   | STR

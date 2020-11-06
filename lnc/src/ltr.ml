@@ -1531,6 +1531,10 @@ let rec compile ctx e = match e with
      end
   | Exp.Match {exp; cases} ->
      let (exp', exp_typ, _) = compile ctx exp in
+     let (exp_typ, matching_concl) = match exp_typ with
+       | Type.Rule -> (Type.Formula, true)
+       | _ -> (exp_typ, false)
+     in
      let (ps', es', typs) =
        let pat_ctx = {ctx with type_env = String.Map.empty} in
        List.map cases ~f:(fun (p, e) ->
@@ -1554,6 +1558,11 @@ let rec compile ctx e = match e with
           List.map (List.zip_exn ps' es') ~f:(fun (p', e') ->
               Printf.sprintf "(%s) -> (%s)" p' e')
           |> String.concat ~sep:" | "
+        in
+        let exp' =
+          if matching_concl
+          then Printf.sprintf "((fun (r: R.t) -> r.conclusion) %s)" exp'
+          else exp'
         in
         let e' = Printf.sprintf "(match %s with %s)" exp' cases_str in
         (e', typ, ctx)

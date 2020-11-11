@@ -371,17 +371,19 @@ module Exp = struct
         terms: t list;
       }
     | Set_syntax_terms of {
-        name: string;
+        name: t;
         terms: t;
       }
-    | Remove_syntax of string
-    | Meta_var_of of string
-    | Syntax_terms_of of string
+    | Remove_syntax of t
+    | Meta_var_of of t
+    | Syntax_terms_of of t
+    | Kind_of_op of t
+    | Kind_of_var of t
     (* relation operations *)
     | New_relation of string * t
     | Relations_of
     | Set_relations of t
-    | Remove_relation of string
+    | Remove_relation of t
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of {
@@ -431,8 +433,8 @@ module Exp = struct
     | Is_list of t
     | Is_map of t
     | Is_tuple of t
-    | Is_var_kind of t * string
-    | Is_op_kind of t * string
+    | Is_var_kind of t * t
+    | Is_op_kind of t * t
     | Has_syntax of string
     | Starts_with of t * t
     | Ends_with of t * t
@@ -595,17 +597,21 @@ module Exp = struct
          (List.map terms ~f:to_string
           |> String.concat ~sep:" | ")
     | Set_syntax_terms {name; terms} ->
-       Printf.sprintf "set_syntax(%s, %s)" name (to_string terms)
-    | Remove_syntax name -> Printf.sprintf "remove_syntax(%s)" name
-    | Meta_var_of name -> Printf.sprintf "meta_var(%s)" name
-    | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" name
+       Printf.sprintf "set_syntax(%s, %s)"
+         (to_string name) (to_string terms)
+    | Remove_syntax name ->
+       Printf.sprintf "remove_syntax(%s)" (to_string name)
+    | Meta_var_of name -> Printf.sprintf "meta_var(%s)" (to_string name)
+    | Syntax_terms_of name -> Printf.sprintf "syntax(%s)" (to_string name)
+    | Kind_of_op e -> Printf.sprintf "op_kind(%s)" (to_string e)
+    | Kind_of_var e -> Printf.sprintf "var_kind(%s)" (to_string e)  
     | New_relation (predicate, e) ->
        Printf.sprintf "add_relation(\"%s\" %s)" predicate (to_string e)
     | Relations_of -> "relations"
     | Set_relations e ->
        Printf.sprintf "set_relations(%s)" (to_string e)
     | Remove_relation predicate ->
-       Printf.sprintf "remove_relation(\"%s\")" predicate
+       Printf.sprintf "remove_relation(%s)" (to_string predicate)
     | New_formula f -> string_of_formula f
     | Uniquify_formulae {formulae; ignored_formulae; hint_map; hint_var} ->
        Printf.sprintf "uniquify(%s, %s, %s, \"%s\")"
@@ -692,10 +698,10 @@ module Exp = struct
          (to_string e)
     | Is_var_kind (e, kind) ->
        Printf.sprintf "var_kind?(%s, %s)"
-         (to_string e) kind
+         (to_string e) (to_string kind)
     | Is_op_kind (e, kind) ->
        Printf.sprintf "op_kind?(%s, %s)"
-         (to_string e) kind
+         (to_string e) (to_string kind)
     | Has_syntax name -> Printf.sprintf "syntax?(%s)" name
     | Starts_with (e1, e2) ->
        Printf.sprintf "starts_with?(%s, %s)" (to_string e1) (to_string e2)
@@ -1898,51 +1904,95 @@ let rec compile ctx e = match e with
        in (e', Type.Lan, ctx)
      else incompat "New_syntax" term_typs []
   | Exp.Set_syntax_terms {name; terms} ->
-     let (e', typ, _) = compile ctx terms in
-     begin match Type_unify.run Type.[List Term; typ] with
-     | Some Type.(List Term) ->
+     let (name', name_typ, _) = compile ctx name in
+     begin match name_typ with
+     | Type.String ->
+        let (e', typ, _) = compile ctx terms in
+        begin match Type_unify.run Type.[List Term; typ] with
+        | Some Type.(List Term) ->
+           let e' =
+             Printf.sprintf
+               {|
+                {lan with grammar =
+                (match Map.find lan.grammar (%s) with
+                | None ->
+                failwith ("Set_syntax_terms: grammar " ^ (%s) ^ " doesn't exist")
+                | Some c ->
+                let terms = match %s with
+                | [] -> failwith "Set_syntax_terms: list cannot be empty"
+                | terms -> L.Term_set.of_list terms
+                in
+                let c = {c with terms} |> C.deuniquify_terms in
+                Map.set lan.grammar (%s) c)}
+                |} name' name' e' name'
+           in (e', Type.Lan, ctx)
+        | _ -> incompat "Set_syntax_terms (terms)" [typ] Type.[List Term]
+        end
+     | _ -> incompat "Set_syntax_terms (name)" [name_typ] Type.[String]
+     end
+  | Exp.Remove_syntax s ->
+     let (e', e_typ, _) = compile ctx s in
+     begin match e_typ with
+     | Type.String ->
         let e' =
           Printf.sprintf
             {|
              {lan with grammar =
-             (match Map.find lan.grammar "%s" with
-             | None -> failwith "Set_syntax_terms: grammar %s doesn't exist"
-             | Some c ->
-             let terms = match %s with
-             | [] -> failwith "Set_syntax_terms: list cannot be empty"
-             | terms -> L.Term_set.of_list terms
-             in
-             let c = {c with terms} |> C.deuniquify_terms in
-             Map.set lan.grammar "%s" c)}
-             |} name name e' name
+             Map.remove lan.grammar (%s)}
+             |} e'
         in (e', Type.Lan, ctx)
-     | _ -> incompat "Set_syntax_terms" [typ] Type.[List Term]
+     | _ -> incompat "Remove_syntax" [e_typ] Type.[String]
      end
-  | Exp.Remove_syntax s ->
-     let e' =
-       Printf.sprintf
-         {|
-          {lan with grammar =
-          Map.remove lan.grammar "%s"}
-          |} s
-     in (e', Type.Lan, ctx)
   | Exp.Meta_var_of s ->
-     let e' =
-       Printf.sprintf
-         {|
-          ((fun (c: C.t) ->  c.meta_var)
-          (Map.find_exn lan.grammar "%s"))
-          |} s
-     in (e', Type.String, ctx)
+     let (e', e_typ, _) = compile ctx s in
+     begin match e_typ with
+     | Type.String ->
+        let e' =
+          Printf.sprintf
+            {|
+             ((fun (c: C.t) ->  c.meta_var)
+             (Map.find_exn lan.grammar (%s)))
+             |} e'
+        in (e', Type.String, ctx)
+     | _ -> incompat "Meta_var_of" [e_typ] Type.[String]
+     end
   | Exp.Syntax_terms_of s ->
-     let e' =
-       Printf.sprintf
-         {|
-          ((fun (c: C.t) ->
-          c.terms |> Set.to_list |> List.map ~f:(T.uniquify ~underscore:false))
-          (Map.find_exn lan.grammar "%s"))
-          |} s
-     in (e', Type.(List Term), ctx)
+     let (e', e_typ, _) = compile ctx s in
+     begin match e_typ with
+     | Type.String ->
+        let e' =
+          Printf.sprintf
+            {|
+             ((fun (c: C.t) ->
+             c.terms |> Set.to_list |> List.map ~f:(T.uniquify ~underscore:false))
+             (Map.find_exn lan.grammar (%s)))
+             |} e'
+        in (e', Type.(List Term), ctx)
+     | _ -> incompat "Syntax_terms_of" [e_typ] Type.[String]
+     end
+  | Exp.Kind_of_op e ->
+     let (e', e_typ, _) = compile ctx e in
+     begin match e_typ with
+     | Type.String ->
+        let e' = Printf.sprintf "(L.kind_of_op lan (%s))" e' in
+        (e', Type.(Option String), ctx)
+     | _ -> incompat "Kind_of_op" [e_typ] Type.[String]
+     end
+  | Exp.Kind_of_var e ->
+     let (e', e_typ, _) = compile ctx e in
+     begin match e_typ with
+     | Type.Term ->
+        let e' =
+          Printf.sprintf
+           {|
+            (match %s with
+            | T.Var v -> L.kind_of_var lan v
+            | _ -> None)
+            |} e'
+        in
+        (e', Type.(Option String), ctx)
+     | _ -> incompat "Kind_of_op" [e_typ] Type.[String]
+     end
   | Exp.New_relation (name, e) ->
      let (e', typ, _) = compile ctx e in
      begin match Type_unify.run Type.[List Term; typ] with
@@ -1969,11 +2019,15 @@ let rec compile ctx e = match e with
      | _ -> incompat "Set_relations" [typ] [typ']
      end
   | Exp.Remove_relation name ->
-     let e' =
-       Printf.sprintf
-         "{lan with relations = Map.remove lan.relations \"%s\"}"
-         name
-     in (e', Type.Lan, ctx)
+     let (e', e_typ, _) = compile ctx name in
+     begin match e_typ with
+     | Type.String ->
+        let e' =
+          Printf.sprintf
+            "{lan with relations = Map.remove lan.relations (%s)}" e'
+        in (e', Type.Lan, ctx)
+     | _ -> incompat "Remove_relation" [e_typ] Type.[String]
+     end
   | Exp.New_formula f -> compile_formula ctx f
   | Exp.Uniquify_formulae {formulae; ignored_formulae; hint_map; hint_var} ->
      let (formulae', formulae_typ, _) = compile ctx formulae in
@@ -2344,28 +2398,38 @@ and compile_bool ctx b = match b with
      | _ -> incompat "Is_tuple" [typ] [Type.Term]
      end
   | Exp.Is_var_kind (e, k) ->
-     let (e', typ, _) = compile ctx e in
-     begin match typ with
-     | Type.Term ->
-        let e' =
-          Printf.sprintf
-            {|
-             begin match %s with
-             | T.Var v -> L.is_var_kind lan v "%s"
-             | _ -> failwith "Is_var_kind: expected var"
-             end
-             |}
-            e' k
-        in (e', Type.Bool, ctx)
-     | _ -> incompat "Is_var_kind" [typ] [Type.Term]
+     let (k', k_typ, _) = compile ctx k in
+     begin match k_typ with
+     | Type.String ->
+        let (e', typ, _) = compile ctx e in
+        begin match typ with
+        | Type.Term ->
+           let e' =
+             Printf.sprintf
+               {|
+                begin match %s with
+                | T.Var v -> L.is_var_kind lan v (%s)
+                | _ -> failwith "Is_var_kind: expected var"
+                end
+                |}
+               e' k'
+           in (e', Type.Bool, ctx)
+        | _ -> incompat "Is_var_kind (var)" [typ] [Type.Term]
+        end
+     | _ -> incompat "Is_var_kind (kind)" [k_typ] Type.[String]
      end
   | Exp.Is_op_kind (e, k) ->
-     let (e', typ, _) = compile ctx e in
-     begin match typ with
+     let (k', k_typ, _) = compile ctx k in
+     begin match k_typ with
      | Type.String ->
-        let e' = Printf.sprintf "(L.is_op_kind lan %s \"%s\")" e' k in
-        (e', Type.Bool, ctx)
-     | _ -> incompat "Is_var_kind" [typ] [Type.String]
+        let (e', typ, _) = compile ctx e in
+        begin match typ with
+        | Type.String ->
+           let e' = Printf.sprintf "(L.is_op_kind lan (%s) (%s))" e' k' in
+           (e', Type.Bool, ctx)
+        | _ -> incompat "Is_op_kind (op)" [typ] [Type.String]
+        end
+     | _ -> incompat "Is_var_kind (kind)" [k_typ] Type.[String]
      end
   | Exp.Has_syntax s ->
      let e' = Printf.sprintf "(Map.mem lan.grammar \"%s\")" s in

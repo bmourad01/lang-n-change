@@ -152,17 +152,19 @@ module Exp: sig
         terms: t list;
       }
     | Set_syntax_terms of {
-        name: string;
+        name: t;
         terms: t;
       }
-    | Remove_syntax of string
-    | Meta_var_of of string
-    | Syntax_terms_of of string
+    | Remove_syntax of t
+    | Meta_var_of of t
+    | Syntax_terms_of of t
+    | Kind_of_op of t
+    | Kind_of_var of t
     (* relation operations *)
     | New_relation of string * t
     | Relations_of
     | Set_relations of t
-    | Remove_relation of string
+    | Remove_relation of t
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of {
@@ -212,8 +214,8 @@ module Exp: sig
     | Is_list of t
     | Is_map of t
     | Is_tuple of t
-    | Is_var_kind of t * string
-    | Is_op_kind of t * string
+    | Is_var_kind of t * t
+    | Is_op_kind of t * t
     | Has_syntax of string
     | Starts_with of t * t
     | Ends_with of t * t

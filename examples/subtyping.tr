@@ -48,7 +48,7 @@ set_rules(rules >> _ >> (
            (vmap >> (t, v) >> if v = "inv" then some(t) else none))
       | &member t _ ->
         (* is this correct? *)
-        (vars(t) >> t >> if var_kind?(t, Type) then some(t) else none)
+        (vars(t) >> t >> if var_kind?(t, "Type") then some(t) else none)
       | _ -> [])
     in
     
@@ -59,7 +59,7 @@ set_rules(rules >> _ >> (
         match conclusion(r) with
         | gamma |- e : t ->
           let t_types = vars(t) >> v >>
-            (if var_kind?(v, Type) then some(v) else none)
+            (if var_kind?(v, "Type") then some(v) else none)
           in
           if empty?(t_types) then none else
             some(concat(vars(e) >> v >>
@@ -151,7 +151,7 @@ set_rules(rules >> _ >> (
 ));
 
 (* add the relation for the join of types *)
-add_rules(syntax(Type) >> (c ts) >>
+add_rules(syntax("Type") >> (c ts) >>
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)
@@ -169,7 +169,7 @@ add_rules(syntax(Type) >> (c ts) >>
 );
 
 (* add the relation for the meet of types *)
-add_rules(syntax(Type) >> (c ts) >>
+add_rules(syntax("Type") >> (c ts) >>
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)
@@ -187,7 +187,7 @@ add_rules(syntax(Type) >> (c ts) >>
 );
 
 (* add the relation for subtyping *)
-add_rules(syntax(Type) >> (c ts) >>
+add_rules(syntax("Type") >> (c ts) >>
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)

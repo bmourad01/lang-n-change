@@ -7,13 +7,13 @@ in
 
 let get_vs (es: term list) =
   es >> e >>
-    if var?(e) && var_kind?(e, Value)
+    if var?(e) && var_kind?(e, "Value")
     then some(e)
     else none
 in
 
 set_rules(rules >>! (op args) --> rhs >>
-  let exprs = syntax(Expression) >> (opp exprs) >>
+  let exprs = syntax("Expression") >> (opp exprs) >>
     if opp = op then some(exprs) else none
   in
   if empty?(exprs) then
@@ -45,8 +45,8 @@ set_rules(rules >>! (op args) --> rhs >>
 );
 
 add_rules(concat(
-  syntax(Value) >> (op vs) >>
-    syntax(Expression) >> (opp es) >>
+  syntax("Value") >> (op vs) >>
+    syntax("Expression") >> (opp es) >>
       if op = opp then
         let emap = zip(vs, es) in
         let pm = get_pm(vs) in
@@ -59,8 +59,8 @@ add_rules(concat(
         some(["R-VALUE-" ^ uppercase(op)] {
           pmvs >> e >>
             let ee = get(assoc(e, emap)) in
-            if (var?(e) && var_kind?(e, Type))
-               || (var?(ee) && var_kind?(ee, Type))    
+            if (var?(e) && var_kind?(e, "Type"))
+               || (var?(ee) && var_kind?(ee, "Type"))
             then none
             else some(ee --> e)
           -----------------------
@@ -70,4 +70,4 @@ add_rules(concat(
 ));
 
 add_relation($e --> $v);
-remove_syntax(Context)
+remove_syntax("Context")

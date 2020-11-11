@@ -129,6 +129,8 @@ rule token = parse
   | "remove_syntax" {REMOVESYNTAX}
   | "meta_var" {METAVAR}
   | "syntax" {SYNTAX}
+  | "var_kind" {VARKIND}
+  | "op_kind" {OPKIND}
   | "add_relation" {ADDRELATION}
   | "relations" {RELATIONS}
   | "set_relations" {SETRELATIONS}

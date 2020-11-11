@@ -173,8 +173,19 @@ let run ?(normalize = false) state (lan: L.t) =
           loop (Set.add state' (Solution.Term_sub (b1.body, b2.body)))
        | (T.Subst s1, T.Subst s2) ->
           loop (Set.add state' (Solution.Term_sub (s1.body, s2.body)))
-       | (T.Var v1, T.Var v2) when String.equal v1 v2 ->
-          loop state'
+       | (T.Map_update u1, T.Map_update u2) ->
+          let l1 = [u1.key; u1.value; u1.map] in
+          let l2 = [u2.key; u2.value; u2.map] in
+          zip_and_loop state' incompat l1 l2
+       | (T.(Cons (Tuple [t1; t2], lst)), T.Map_update u) ->
+          let l1 = [t1; t2; lst] in
+          let l2 = [u.key; u.value; u.map] in
+          zip_and_loop state' incompat l1 l2
+       | (T.Map_update u, T.(Cons (Tuple [t1; t2], lst))) ->
+          let l1 = [u.key; u.value; u.map] in
+          let l2 = [t1; t2; lst] in
+          zip_and_loop state' incompat l1 l2
+       | (T.Var v1, T.Var v2) when String.equal v1 v2 -> loop state'
        | (T.Var v1, T.Var v2)
             when not (String.equal v1 v2)
                  && L.is_const_var lan v1

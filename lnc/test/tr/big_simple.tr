@@ -1,5 +1,5 @@
 set_rules(rules >>! (op args) --> rhs >>
-  let exprs = syntax(Expression) >> (opp exprs) >>
+  let exprs = syntax("Expression") >> (opp exprs) >>
     if opp = op then some(exprs) else none
   in
   if empty?(exprs) then

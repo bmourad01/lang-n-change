@@ -280,10 +280,10 @@ module Exp = struct
       | Formula_prop (p1, p2) ->
          Printf.sprintf "&(%s %s)" (to_string p1) (to_string p2)
       | Formula_member (p1, p2) ->
-         Printf.sprintf "&member(%s, %s)"
+         Printf.sprintf "&member %s %s"
            (to_string p1) (to_string p2)
       | Formula_subset (p1, p2) ->
-         Printf.sprintf "&subset(%s, %s)"
+         Printf.sprintf "&subset %s %s"
            (to_string p1) (to_string p2)
   end
   

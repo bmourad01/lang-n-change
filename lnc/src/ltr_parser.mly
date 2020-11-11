@@ -115,7 +115,7 @@ exp:
           body;
         }
     }
-  | LET name = NAME EQ exp = exp COLON ret = typ IN body = exp
+  | LET name = NAME COLON ret = typ EQ exp = exp IN body = exp
     {
       Exp.Let {
           recursive = false;

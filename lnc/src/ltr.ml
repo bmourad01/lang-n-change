@@ -115,6 +115,8 @@ module Type_unify = struct
          then (toplevel := false; Set.add state (Solution.Soln typ))
          else state
        in
+       (* FIXME: there can be var cycles in the set
+        * in which case we have non-termination *)
        let rec loop state = match Set.find state ~f:Solution.is_sub with
          | Some (Solution.Sub (t1, t2) as soln) ->
             let zip_and_loop state ts ts' = match List.zip ts ts' with
@@ -1991,7 +1993,7 @@ let rec compile ctx e = match e with
             |} e'
         in
         (e', Type.(Option String), ctx)
-     | _ -> incompat "Kind_of_op" [e_typ] Type.[String]
+     | _ -> incompat "Kind_of_var" [e_typ] Type.[String]
      end
   | Exp.New_relation (name, e) ->
      let (e', typ, _) = compile ctx e in

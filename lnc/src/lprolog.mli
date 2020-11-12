@@ -43,6 +43,7 @@ end
 module Term: sig
   type t =
     | Var of string
+    | Str of string
     | Constructor of {
         name: string;
         args: t list;

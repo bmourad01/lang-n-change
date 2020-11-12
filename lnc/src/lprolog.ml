@@ -340,18 +340,22 @@ module Sigs = struct
     (* generate term constructor types from the grammar *)
     let aliases = Hashtbl.create (module Type) in
     let (kinds, terms) = 
+      let kinds =
+        Map.data lan.grammar
+        |> List.fold ~init:kinds ~f:(fun kinds C.{name; meta_var; terms} ->
+               let name' = kind_name name in
+               match Map.find kinds name' with
+               | Some _ -> kinds
+               | None ->
+                  match Map.find subsets name with
+                  | None -> Map.set kinds name' 0
+                  | Some _ -> kinds)
+      in               
       let init = (kinds, String.Map.empty) in
       Map.data lan.grammar
       |> List.fold ~init ~f:(fun (kinds, terms') C.{name; meta_var; terms} ->
              let name' = kind_name name in
-             let (kinds, should_skip) = match Map.find kinds name' with
-               | Some _ -> (kinds, false)
-               | None ->
-                  match Map.find subsets name with
-                  | None -> (Map.set kinds name' 0, false)
-                  | _ -> (kinds, true)
-             in
-             if should_skip then (kinds, terms') else
+             if not (Map.mem kinds name') then (kinds, terms') else
                let rec aux t = match t with
                  | T.Var v ->
                     begin match L.kind_of_var lan v with
@@ -364,6 +368,7 @@ module Sigs = struct
                          else
                            begin match Map.find subsets kind with
                            | None ->
+                              Printf.eprintf "%s\n" kind;
                               Syntax.[v "string"]
                            | Some kind -> Syntax.[v (kind_name kind)]
                            end
@@ -534,6 +539,7 @@ end
 module Term = struct
   type t =
     | Var of string
+    | Str of string
     | Constructor of {
         name: string;
         args: t list;
@@ -542,6 +548,7 @@ module Term = struct
 
   let rec to_string = function
     | Var v -> v
+    | Str s -> Printf.sprintf "\"%s\"" s
     | Constructor {name; args} ->
        begin match args with
        | [] -> name
@@ -556,6 +563,7 @@ module Term = struct
 
   let rec vars = function
     | Var v -> String.Set.singleton v
+    | Str _ -> String.Set.empty
     | Constructor {name; args} ->
        List.fold args ~init:String.Set.empty ~f:(fun s t ->
            Set.union s (vars t))
@@ -612,6 +620,7 @@ end
 
 module Syntax = struct
   let v v = Term.Var v [@@inline]
+  let (!$) s = Term.Str s [@@inline]
   let (@) name args = Term.Constructor {name; args} [@@inline]
   let (++) t1 t2 = Term.Cons (t1, t2) [@@inline]
   
@@ -913,6 +922,7 @@ let of_language (lan: L.t) =
               then [Prop.Prop {name = kind; args = t'}]
               else []
          in (t', prop)
+      | T.Str s -> (Syntax.[!$ s], [])
       | T.Constructor {name; args} ->
          let (args, props) =
            List.map args ~f:(aux_term (succ depth))
@@ -1156,10 +1166,6 @@ let of_language (lan: L.t) =
            let prop =
              Syntax.("lnc_fresh" $ [t'; res ++ (new_wildcard wildcard)])
            in ([res], props @ [prop])
-      | _ ->
-         invalid_arg
-           (Printf.sprintf "invalid term %s in rule %s" 
-              (T.to_string t) rule_name)
     in aux_term depth t
   in
   (* generate the propositions *)

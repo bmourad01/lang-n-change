@@ -413,7 +413,7 @@ module Exp = struct
         name: string;
         elements: (string * string list) list;
       }
-    | Lookup_hint of string
+    | Lookup_hint of t
   and boolean =
     | Bool of bool
     | Not of t
@@ -642,7 +642,7 @@ module Exp = struct
                (String.concat v ~sep:" "))
          |> String.concat ~sep:" | "
        in Printf.sprintf "#%s:%s%s" name extend_str elements_str
-    | Lookup_hint hint -> Printf.sprintf "hint(%s)" hint
+    | Lookup_hint hint -> Printf.sprintf "hint(%s)" (to_string hint)
   and string_of_boolean = function
     | Bool b -> Bool.to_string b
     | Not e -> Printf.sprintf "not(%s)" (to_string e)
@@ -2234,15 +2234,20 @@ let rec compile ctx e = match e with
        else Printf.sprintf "(Map.set lan.hints \"%s\" %s)" name new_hint
      in (e', Type.Lan, ctx)
   | Exp.Lookup_hint name ->
-     let e' =
-       Printf.sprintf
-         {|
-          begin match Map.find lan.hints "%s" with
-          | None -> []
-          | Some h -> Map.to_alist h.elements
-          end
-          |} name
-     in (e', Type.(List (Tuple [String; List String])), ctx)
+     let (e', typ, _) = compile ctx name in
+     begin match typ with
+     | Type.String ->
+        let e' =
+          Printf.sprintf
+            {|
+             begin match Map.find lan.hints (%s) with
+             | None -> []
+             | Some h -> Map.to_alist h.elements
+             end
+             |} e'
+        in (e', Type.(List (Tuple [String; List String])), ctx)
+     | _ -> incompat "Lookup_hint" [typ] Type.[String]
+     end
 and compile_bool ctx b = match b with
   | Exp.Bool b -> (Bool.to_string b, Type.Bool, ctx)
   | Exp.Not e ->

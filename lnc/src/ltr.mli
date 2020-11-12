@@ -192,7 +192,7 @@ module Exp: sig
         name: string;
         elements: (string * string list) list;
       }
-    | Lookup_hint of string
+    | Lookup_hint of t
   and boolean =
     | Bool of bool
     | Not of t

@@ -311,7 +311,7 @@ exp:
           elements;
         }
     }
-  | HINT LPAREN STR RPAREN
+  | HINT LPAREN exp RPAREN
     { Exp.Lookup_hint $3 }
 
 match_case:

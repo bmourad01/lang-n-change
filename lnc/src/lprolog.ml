@@ -367,9 +367,7 @@ module Sigs = struct
                            Syntax.[v kind']
                          else
                            begin match Map.find subsets kind with
-                           | None ->
-                              Printf.eprintf "%s\n" kind;
-                              Syntax.[v "string"]
+                           | None -> Syntax.[v "string"]
                            | Some kind -> Syntax.[v (kind_name kind)]
                            end
                        else Syntax.[v "string"]

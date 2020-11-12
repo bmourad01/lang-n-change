@@ -235,14 +235,13 @@ module Sigs = struct
      * from the relations of the language *)
     let subsets = L.subset_categories lan in
     let (kinds, props) =
-      let kind_of_var_rel pred v = match L.kind_of_var lan v with
+      let kind_of_var_rel pred v =
+        match L.kind_of_var lan v with
         | Some kind ->
            if L.is_meta_var_of lan v kind
            then kind_name kind
            else "string"
-        | None ->
-           invalid_arg
-             (Printf.sprintf "bad var %s in relation %s" v pred)
+        | None -> "string"
       in
       let init = (String.Map.empty, builtin_props) in
       Map.to_alist lan.relations
@@ -340,12 +339,19 @@ module Sigs = struct
     in
     (* generate term constructor types from the grammar *)
     let aliases = Hashtbl.create (module Type) in
-    let terms = 
-      let init = String.Map.empty in
+    let (kinds, terms) = 
+      let init = (kinds, String.Map.empty) in
       Map.data lan.grammar
-      |> List.fold ~init ~f:(fun terms' C.{name; meta_var; terms} ->
+      |> List.fold ~init ~f:(fun (kinds, terms') C.{name; meta_var; terms} ->
              let name' = kind_name name in
-             if not (Map.mem kinds name') then terms' else
+             let (kinds, should_skip) = match Map.find kinds name' with
+               | Some _ -> (kinds, false)
+               | None ->
+                  match Map.find subsets name with
+                  | None -> (Map.set kinds name' 0, false)
+                  | _ -> (kinds, true)
+             in
+             if should_skip then (kinds, terms') else
                let rec aux t = match t with
                  | T.Var v ->
                     begin match L.kind_of_var lan v with
@@ -357,7 +363,8 @@ module Sigs = struct
                            Syntax.[v kind']
                          else
                            begin match Map.find subsets kind with
-                           | None -> Syntax.[v "string"]
+                           | None ->
+                              Syntax.[v "string"]
                            | Some kind -> Syntax.[v (kind_name kind)]
                            end
                        else Syntax.[v "string"]
@@ -408,12 +415,12 @@ module Sigs = struct
                         (T.to_string value) name)
                  else key :: value'
                in
-               let f terms' t = match t with
+               let f (kinds, terms') t = match t with
                  | T.Constructor {name; args} ->
                     let name = kind_name name in
                     let args = List.map args ~f:aux |> List.concat in
                     let term = Syntax.(name & (args, v name')) in
-                    Map.set terms' name term
+                    (kinds, Map.set terms' name term)
                  | T.Map {key; value} ->
                     (* fixme: this doesn't make sense *)
                     (* if not (Map.is_empty terms') then
@@ -424,23 +431,27 @@ module Sigs = struct
                      * else *)
                     let typ =
                       Syntax.("list" @ ["lnc_pair" @ (aux_map key value)])
-                    in Hashtbl.set aliases (Syntax.v name') typ; terms'
+                    in
+                    Hashtbl.set aliases (Syntax.v name') typ;
+                    (kinds, terms')
                  | T.List t' ->
-                    if not (Map.is_empty terms') then
+                    (* fixme: this doesn't make sense *)
+                    (* if not (Map.is_empty terms') then
+                     *   invalid_arg
+                     *     (Printf.sprintf
+                     *        "bad term %s in category %s"
+                     *        (T.to_string t) name)
+                     * else *)
+                    let t'' = aux t' in
+                    if List.length t'' > 1 then
                       invalid_arg
                         (Printf.sprintf
-                           "bad term %s in category %s"
-                           (T.to_string t) name)
+                           "bad list term %s in category %s"
+                           (T.to_string t') name)
                     else
-                      let t'' = aux t' in
-                      if List.length t'' > 1 then
-                        invalid_arg
-                          (Printf.sprintf
-                             "bad list term %s in category %s"
-                             (T.to_string t') name)
-                      else
-                        let typ = Syntax.("list" @ t'') in
-                        Hashtbl.set aliases (Syntax.v name') typ; terms'
+                      let typ = Syntax.("list" @ t'') in
+                      Hashtbl.set aliases (Syntax.v name') typ;
+                      (kinds, terms')
                  | T.Tuple ts ->
                     if not (Map.is_empty terms') then
                       invalid_arg
@@ -453,9 +464,10 @@ module Sigs = struct
                       tuple_sizes := Set.add !tuple_sizes len;
                       let ctor = Printf.sprintf "lnc_%dtuple" len in
                       let typ = Syntax.(ctor @ ts') in
-                      Hashtbl.set aliases (Syntax.v name') typ; terms'
-                 | _ -> terms'
-               in List.fold (Set.to_list terms) ~init:terms' ~f)
+                      Hashtbl.set aliases (Syntax.v name') typ;
+                      (kinds, terms')
+                 | _ -> (kinds, terms')
+               in List.fold (Set.to_list terms) ~init:(kinds, terms') ~f)
     in
     (* substitute with aliases *)
     let (kinds, terms, props) =
@@ -482,7 +494,7 @@ module Sigs = struct
                          Type.substitute a sub)
                    in {prop with args})
              in (kinds, terms, props))
-    in           
+    in
     (* generate signatures for builtin
      * tuples since lambda-prolog doesn't
      * support declaring them anonymously *)

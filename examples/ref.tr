@@ -50,7 +50,7 @@ set_rules(rules >>! e1 --> e2 >>
   let step_prems = premises(self) >> e1 --> e2 >> self in
   let concl = conclusion(self) in
   let steps = step_prems @ [concl.] in
-  let stores = steps >> _ >> fresh_var(m) in
+  let stores = steps >> _ >> fresh_var("m") in
   let smap1 = zip(steps, stores) in
   let smap2 = zip(step_prems, tail(stores)) in 
 

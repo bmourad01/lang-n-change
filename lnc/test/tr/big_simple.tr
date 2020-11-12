@@ -5,7 +5,7 @@ set_rules(rules >>! (op args) --> rhs >>
   if empty?(exprs) then
     none
   else
-    let v_res = fresh_var(v) in
+    let v_res = fresh_var("v") in
     let exprs = head(exprs) in
     let emap = zip(exprs, args) in
     let new_args = emap >> (expr, arg) >> expr' in

@@ -358,7 +358,7 @@ module Exp = struct
     (* term operations *)
     | New_term of term
     | Vars_of of t
-    | Fresh_var of string
+    | Fresh_var of t
     | Unbind of t
     | Bound_of of t
     | Substitute of t * t
@@ -579,7 +579,7 @@ module Exp = struct
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
     | New_term t -> string_of_term t
     | Vars_of e -> Printf.sprintf "vars(%s)" (to_string e)
-    | Fresh_var v -> Printf.sprintf "fresh_var(%s)" v
+    | Fresh_var v -> Printf.sprintf "fresh_var(%s)" (to_string v)
     | Unbind e -> Printf.sprintf "unbind(%s)" (to_string e)
     | Bound_of e -> Printf.sprintf "bound(%s)" (to_string e)
     | Substitute (e1, e2) ->
@@ -1794,8 +1794,13 @@ let rec compile ctx e = match e with
        | _ -> incompat "Vars_of" [typ] []
      in (e', Type.(List Term), ctx)
   | Exp.Fresh_var v ->
-     let e' = Printf.sprintf "(lan_fresh_var \"%s\")" v in
-     (e', Type.Term, ctx)
+     let (e', typ, _) = compile ctx v in
+     begin match typ with
+     | Type.String ->
+        let e' = Printf.sprintf "(lan_fresh_var (%s))" e' in
+        (e', Type.Term, ctx)
+     | _ -> incompat "Fresh_var" [typ] Type.[String]
+     end
   | Exp.Unbind e ->
      let (e', typ, _) = compile ctx e in
      begin match typ with

@@ -392,7 +392,7 @@ module Exp = struct
         formulae: t;
         ignored_formulae: t;
         hint_map: t;
-        hint_var: string;
+        hint_var: t;
       }
     (* rule operations *)
     | New_rule of {
@@ -616,11 +616,11 @@ module Exp = struct
        Printf.sprintf "remove_relation(%s)" (to_string predicate)
     | New_formula f -> string_of_formula f
     | Uniquify_formulae {formulae; ignored_formulae; hint_map; hint_var} ->
-       Printf.sprintf "uniquify(%s, %s, %s, \"%s\")"
+       Printf.sprintf "uniquify(%s, %s, %s, %s)"
          (to_string formulae)
          (to_string ignored_formulae)
          (to_string hint_map)
-         hint_var
+         (to_string hint_var)
     | New_rule {name; premises; conclusion} ->
        Printf.sprintf "[%s] {%s---------------------%s}"
          (to_string name)
@@ -2042,6 +2042,7 @@ let rec compile ctx e = match e with
        compile ctx ignored_formulae
      in
      let (hint_map', hint_map_typ, _) = compile ctx hint_map in
+     let (hint_var', hint_var_typ, _) = compile ctx hint_var in
      let f_typ = Type.(List Formula) in
      begin match Type_unify.run [f_typ; formulae_typ] with
      | None ->
@@ -2059,22 +2060,27 @@ let rec compile ctx e = match e with
               incompat "Uniquify_formulae (hint_map)"
                 [hint_map_typ] [h_typ]
            | Some _ ->
-              let e' =
-                Printf.sprintf
-                  {|
-                   (L.uniquify_formulae
-                   (%s)
-                   ~ignored:(%s)
-                   ~hint_map:(%s)
-                   ~hint_var:"%s")
-                   |} formulae' ignored_formulae' hint_map' hint_var
-              in
-              let typ' =
-                Type.(
-                  Tuple
-                    [List Formula;
-                     List (Tuple [Term; List Term])])
-              in (e', typ', ctx)
+              match hint_var_typ with
+              | Type.String ->
+                 let e' =
+                   Printf.sprintf
+                     {|
+                      (L.uniquify_formulae
+                      (%s)
+                      ~ignored:(%s)
+                      ~hint_map:(%s)
+                      ~hint_var:(%s))
+                      |} formulae' ignored_formulae' hint_map' hint_var'
+                 in
+                 let typ' =
+                   Type.(
+                     Tuple
+                       [List Formula;
+                        List (Tuple [Term; List Term])])
+                 in (e', typ', ctx)
+              | _ ->
+                 incompat "Uniquify_formulae (hint_var)"
+                   [hint_var_typ] Type.[String]
      end
   | Exp.New_rule {name; premises; conclusion} ->
      let (name', name_typ, _) = compile ctx name in

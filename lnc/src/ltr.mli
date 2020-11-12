@@ -171,7 +171,7 @@ module Exp: sig
         formulae: t;
         ignored_formulae: t;
         hint_map: t;
-        hint_var: string;
+        hint_var: t;
       }
     (* rule operations *)
     | New_rule of {

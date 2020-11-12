@@ -1168,22 +1168,22 @@ let of_language (lan: L.t) =
   in
   (* generate the propositions *)
   let aux_formula wildcard vars rule_name f =
-    let rec aux_formula f = match f with
+    let rec aux_formula ?(depth = 0) f = match f with
       | F.Not f ->
-         let ps = aux_formula f in
+         let ps = aux_formula f ~depth:1 in
          if List.length ps > 1 then
            invalid_arg
              (Printf.sprintf "invalid 'not' formula %s of rule %s"
                 (F.to_string f) rule_name)
          else Syntax.[!(List.hd_exn ps)]
       | F.Eq (t1, t2) ->
-         let (t1', ps1) = aux_term wildcard vars rule_name 0 t1 in
+         let (t1', ps1) = aux_term wildcard vars rule_name depth t1 in
          if List.length t1' > 1 then
            invalid_arg
              (Printf.sprintf "invalid term %s in Eq of rule %s"
                 (T.to_string t1) rule_name)
          else
-           let (t2', ps2) = aux_term wildcard vars rule_name 0 t2 in
+           let (t2', ps2) = aux_term wildcard vars rule_name depth t2 in
            if List.length t1' > 1 then
              invalid_arg
                (Printf.sprintf "invalid term %s in Eq of rule %s"
@@ -1194,7 +1194,7 @@ let of_language (lan: L.t) =
              ps1 @ ps2 @ Syntax.[t1 = t2]
       | F.Prop {predicate; args} ->
          let (args, ps) =
-           List.map args ~f:(aux_term wildcard vars rule_name 0)
+           List.map args ~f:(aux_term wildcard vars rule_name depth)
            |> List.unzip
          in
          let (args, ps) = (List.concat args, List.concat ps) in

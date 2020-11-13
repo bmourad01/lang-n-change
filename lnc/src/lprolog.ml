@@ -1410,7 +1410,7 @@ let of_language (lan: L.t) =
       let t = T.uniquify t ~min:0 ~include_bindings:true in
       let (t', _) = aux_term wildcard vars rule_name 0 t in
       let t' = List.hd_exn t' in
-      let (premises, sub) = match t with
+      let prems_and_sub ignore_bindings = match t with
         | T.Constructor c ->
            (* fixme: this assumes that constructors in the
             * grammar will have a maximum term depth of 1 *)
@@ -1424,12 +1424,41 @@ let of_language (lan: L.t) =
                       (String.is_prefix orig ~prefix:meta_var_body) ()
                   in
                   let sub = orig ^ "'" in
-                  (Syntax.(
+                  (Syntax.[
                      name
                      $ [v orig;
                         "lnc_pair" @ [v meta_var_term; v var];
-                        v sub]),
-                   (T.Var v, T.Var (v ^ "'")))
+                        v sub]],
+                   (T.Var v, T.Var (v ^ "'")),
+                   false)
+               | T.Binding {var = bvar; body = T.Var v}
+                    when not ignore_bindings ->
+                  let orig = String.capitalize v in
+                  let%map _ =
+                    Option.some_if
+                      (String.is_prefix orig ~prefix:meta_var_body) ()
+                  in
+                  let sub = orig ^ "'" in
+                  let bvar' = String.capitalize bvar in
+                  (Syntax.[
+                     !(v bvar' = v var);
+                     name
+                     $ [v orig;
+                        "lnc_pair" @ [v meta_var_term; v var];
+                        v sub]],
+                   (T.Var v, T.Var (v ^ "'")),
+                   true)
+               | T.Binding {var = bvar; body = T.Var v}
+                    when ignore_bindings ->
+                  let orig = String.capitalize v in
+                  let%map _ =
+                    Option.some_if
+                      (String.is_prefix orig ~prefix:meta_var_body) ()
+                  in
+                  let bvar' = String.capitalize bvar in
+                  (Syntax.[v bvar' = v var],
+                   (T.Var v, T.Var v),
+                   false)
                | T.(List (Var v)) ->
                   let orig = String.capitalize v in
                   let%map _ =
@@ -1450,28 +1479,51 @@ let of_language (lan: L.t) =
                                 (T.to_string t) c.name)
                         | Some lv -> (lv, lv ^ "'"))
                   in 
-                  (Syntax.(
+                  (Syntax.[
                      name_list
                      $ [v lv;
                         "lnc_pair" @ [v meta_var_term; v var];
-                        v lv']),
-                   (t, T.Var lv'))
+                        v lv']],
+                   (t, T.Var lv'),
+                   false)
                | _ -> None)
-           |> List.unzip
-        | _ -> ([], [])
+           |> List.unzip3
+        | _ -> ([], [], [])
       in
-      let (t'', _) =
-        Hashtbl.clear vars;
-        aux_term wildcard vars rule_name 0
-          (T.substitute t sub)
+      let (premises, sub, is_bnd) = prems_and_sub false in
+      let r1 =
+        let premises = List.concat premises in
+        let (t'', _) =
+          Hashtbl.clear vars;
+          aux_term wildcard vars rule_name 0
+            (T.substitute t sub)
+        in
+        let t'' = List.hd_exn t'' in
+        Syntax.(
+          (rule_name,
+           name
+           $ [t';
+              "lnc_pair" @ [v meta_var_term; v var];
+              t'']) <-- premises)
       in
-      let t'' = List.hd_exn t'' in
-      Syntax.(
-        (rule_name,
-         name
-         $ [t';
-            "lnc_pair" @ [v meta_var_term; v var];
-            t'']) <-- premises)
+      if List.mem is_bnd true ~equal:Bool.equal then
+        let (premises, sub, _) = prems_and_sub true in
+        let premises = List.concat premises in
+        let (t'', _) =
+          Hashtbl.clear vars;
+          aux_term wildcard vars rule_name 0
+            (T.substitute t sub)
+        in
+        let t'' = List.hd_exn t'' in
+        let r2 =
+          Syntax.(
+            (rule_name ^ "-IGNORE",
+             name
+             $ [t';
+                "lnc_pair" @ [v meta_var_term; v var];
+                t'']) <-- premises)
+        in [r1; r2]
+      else [r1]
     in
     Hashtbl.to_alist subst_kinds
     |> List.fold ~init:rules ~f:(fun rules (body, terms) ->
@@ -1539,12 +1591,14 @@ let of_language (lan: L.t) =
                          String.capitalize tc.meta_var
                        in
                        if T.is_constructor t then
-                         let rule =
+                         let rs =
                            let vars = Hashtbl.create (module String) in
                            subst_rule
                              (ref 0) vars rule_name name name_list
                              t meta_var_body meta_var_term var_body
-                         in Map.set rules rule_name rule
+                         in
+                         List.fold rs ~init:rules ~f:(fun rules (r: Rule.t) ->
+                             Map.set rules r.name r)
                        else if String.equal body term then
                          let rule1 =
                            Syntax.(

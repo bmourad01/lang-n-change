@@ -949,7 +949,7 @@ let of_language (lan: L.t) =
          let (ts, props) = aux_term (succ depth) body in
          (Syntax.(v (String.capitalize var)) :: ts, props)
       | T.Subst {body; substs} ->
-         let subst_kind s = function
+         let rec subst_kind s = function
            | T.Var v ->
               begin match L.kind_of_var lan v with
               | None ->
@@ -976,6 +976,7 @@ let of_language (lan: L.t) =
                    | Some kind -> kind
                  in (kind_name kind, false)
               end
+           | T.Subst {body; substs} -> subst_kind "body" body              
            | _ ->
               invalid_arg
                 (Printf.sprintf

@@ -44,6 +44,7 @@ module Term: sig
   type t =
     | Var of string
     | Str of string
+    | Strcat of t * t
     | Constructor of {
         name: string;
         args: t list;

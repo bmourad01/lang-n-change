@@ -174,8 +174,8 @@ module Sigs = struct
     in
     let lnc_fresh =
       "lnc_fresh" $ [
-          "list" @ [v "A"];
-          "list" @ [v "A"];
+          v "string";
+          "list" @ [v "string"];
         ]
     in
     String.Map.of_alist_exn
@@ -425,26 +425,12 @@ module Sigs = struct
                     let term = Syntax.(name & (args, v name')) in
                     (kinds, Map.set terms' name term)
                  | T.Map {key; value} ->
-                    (* fixme: this doesn't make sense *)
-                    (* if not (Map.is_empty terms') then
-                     *   invalid_arg
-                     *     (Printf.sprintf
-                     *        "bad map term %s in category %s"
-                     *        (T.to_string t) name)
-                     * else *)
                     let typ =
                       Syntax.("list" @ ["lnc_pair" @ (aux_map key value)])
                     in
                     Hashtbl.set aliases (Syntax.v name') typ;
                     (kinds, terms')
                  | T.List t' ->
-                    (* fixme: this doesn't make sense *)
-                    (* if not (Map.is_empty terms') then
-                     *   invalid_arg
-                     *     (Printf.sprintf
-                     *        "bad term %s in category %s"
-                     *        (T.to_string t) name)
-                     * else *)
                     let t'' = aux t' in
                     if List.length t'' > 1 then
                       invalid_arg
@@ -538,6 +524,7 @@ module Term = struct
   type t =
     | Var of string
     | Str of string
+    | Strcat of t * t
     | Constructor of {
         name: string;
         args: t list;
@@ -547,6 +534,9 @@ module Term = struct
   let rec to_string = function
     | Var v -> v
     | Str s -> Printf.sprintf "\"%s\"" s
+    | Strcat (t1, t2) ->
+       Printf.sprintf "((%s) ^ (%s))"
+         (to_string t1) (to_string t2)
     | Constructor {name; args} ->
        begin match args with
        | [] -> name
@@ -562,6 +552,7 @@ module Term = struct
   let rec vars = function
     | Var v -> String.Set.singleton v
     | Str _ -> String.Set.empty
+    | Strcat _ -> String.Set.empty
     | Constructor {name; args} ->
        List.fold args ~init:String.Set.empty ~f:(fun s t ->
            Set.union s (vars t))
@@ -619,6 +610,7 @@ end
 module Syntax = struct
   let v v = Term.Var v [@@inline]
   let (!$) s = Term.Str s [@@inline]
+  let (^^) t1 t2 = Term.Strcat (t1, t2) [@@inline]
   let (@) name args = Term.Constructor {name; args} [@@inline]
   let (++) t1 t2 = Term.Cons (t1, t2) [@@inline]
   
@@ -820,11 +812,16 @@ let builtin_rules =
         "lnc_union" $ [v "L"; v "M1"; v "M2"];
       ]
   in
-  let lnc_fresh =
-    ("LNC-FRESH",
-     "lnc_fresh" $ [v "L"; v "X" ++ v "L"]) <-- [
-        "lnc_nmember" $ [v "X"; v "L"];
-      ]
+  let lnc_fresh_1 =
+    ("LNC-FRESH-1",
+     "lnc_fresh" $ [!$ "a"; "nil" @ []]) <-- []
+  in
+  let lnc_fresh_2 =
+    ("LNC-FRESH-2",
+     "lnc_fresh" $ [
+         v "X" ^^ !$ "'";
+         v "X" ++ v "L";
+    ]) <-- []
   in
   String.Map.of_alist_exn
     [(lnc_member_1.name, lnc_member_1);
@@ -858,7 +855,8 @@ let builtin_rules =
      (lnc_join_3.name, lnc_join_3);
      (lnc_union_1.name, lnc_union_1);
      (lnc_union_2.name, lnc_union_2);
-     (lnc_fresh.name, lnc_fresh);
+     (lnc_fresh_1.name, lnc_fresh_1);
+     (lnc_fresh_2.name, lnc_fresh_2);
     ]
 
 type t = {
@@ -1180,9 +1178,8 @@ let of_language (lan: L.t) =
          else
            let t' = List.hd_exn t' in
            let res = fresh_var vars "Fresh" None in
-           let prop =
-             Syntax.("lnc_fresh" $ [t'; res ++ (new_wildcard wildcard)])
-           in ([res], props @ [prop])
+           let prop = Syntax.("lnc_fresh" $ [res; t']) in
+           ([res], props @ [prop])
     in aux_term depth t
   in
   (* generate the propositions *)
@@ -1849,9 +1846,14 @@ let of_language (lan: L.t) =
                         (String.uppercase pred) i
                     in
                     let vars = Hashtbl.create (module String) in
+                    let no_tick =
+                      List.filter_map c.args ~f:(function
+                          | T.Binding {var; body} -> Some body
+                          | _ -> None)
+                    in
                     let (props, no_tick) =
                       let wildcard = ref 0 in
-                      List.fold args ~init:([], []) ~f:(fun a t ->
+                      List.fold args ~init:([], no_tick) ~f:(fun a t ->
                           step_term a t wildcard vars rule_name)
                     in 
                     let (props, no_tick) = (List.rev props, List.rev no_tick) in

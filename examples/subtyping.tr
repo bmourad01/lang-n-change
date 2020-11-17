@@ -158,12 +158,13 @@ add_rules(syntax("Type") >> (c ts) >>
   in
   
   ["JOIN-" ^ uppercase(c)] {
-    ts >> t >> (
+    concat(ts >> t >> (
       let tu = unbind(t) in
       match assoc(t, vmap) with
-      | some("contra") -> &("meet" [tu, tu', tu''])
-      | _ -> &("join" [tu, tu', tu'']))
-    -----------------------------------
+      | some("contra") -> [&("meet" [tu, tu', tu'']).]
+      | some("inv") -> [&(tu = tu'), &(tu'' = tu)]
+      | _ -> [&("join" [tu, tu', tu'']).]))
+    ---------------------------------------
     &("join" [(c ts), (c ts'), (c ts'')])
   }
 );
@@ -174,14 +175,15 @@ add_rules(syntax("Type") >> (c ts) >>
     | none -> []
     | some(variance) -> zip(ts, variance)
   in
-  
+
   ["MEET-" ^ uppercase(c)] {
-    ts >> t >> (
+    concat(ts >> t >> (
       let tu = unbind(t) in
       match assoc(t, vmap) with
-      | some("contra") -> &("join" [tu, tu', tu''])
-      | _ -> &("meet" [tu, tu', tu'']))
-    -----------------------------------
+      | some("contra") -> [&("join" [tu, tu', tu'']).]
+      | some("inv") -> [&(tu = tu'), &(tu'' = tu)]
+      | _ -> [&("meet" [tu, tu', tu'']).]))
+    ---------------------------------------
     &("meet" [(c ts), (c ts'), (c ts'')])
   }
 );

@@ -887,7 +887,7 @@ let of_language (lan: L.t) =
   let subst_kinds = Hashtbl.create (module String) in
   let subst_list_kinds = Hashtbl.create (module String) in
   let aux_term wildcard vars rule_name depth t =
-    let rec aux_term depth t = match t with
+    let rec aux_term ?(is_list = false) depth t = match t with
       | T.Wildcard -> ([new_wildcard wildcard], [])
       | T.Nil -> (Syntax.["nil" @ []], [])
       | T.Cons (element, lst) ->
@@ -916,14 +916,33 @@ let of_language (lan: L.t) =
            | None -> []
            | Some kind ->
               let kind = kind_name kind in
-              if Map.mem sigs.props kind
-              then [Prop.Prop {name = kind; args = t'}]
+              if Map.mem sigs.props kind then
+                let kind = if is_list then kind ^ "_list" else kind in
+                [Prop.Prop {name = kind; args = t'}]
               else []
          in (t', prop)
       | T.Str s -> (Syntax.[!$ s], [])
       | T.Constructor {name; args} ->
+         let arg_map =
+           let name_kind = L.kind_of_op lan name in
+           let name_kind = Option.value_exn name_kind in
+           let c = Map.find_exn lan.grammar name_kind in
+           let ts =
+             Set.to_list c.terms
+             |> List.find_map_exn ~f:(function
+                    | T.Constructor {name = op; args = ts}
+                         when String.equal name op -> Some ts
+                    | _ -> None)
+           in
+           List.zip_exn args ts
+           |> List.map ~f:(fun (t1, t2) ->
+                  match t2 with
+                  | T.List _ -> (t1, true)
+                  | _ -> (t1, false))
+         in
          let (args, props) =
-           List.map args ~f:(aux_term (succ depth))
+           List.map arg_map ~f:(fun (t, is_list) ->
+               aux_term (succ depth) t ~is_list)
            |> List.unzip
          in
          let (args, props) = (List.concat args, List.concat props) in
@@ -1263,13 +1282,44 @@ let of_language (lan: L.t) =
            (* reorder premises where the predicates indicating
             * a subset kind are moved to the end *)
            let premises =
-             let subset_prems =
+             let subset_list_prems =
                List.filter premises ~f:(function
-                   | Prop.Prop {name; args} ->
+                   | Prop.Prop {name; args}
+                        when String.is_suffix name ~suffix:"_list" ->
+                      let name =
+                        String.chop_suffix_exn name ~suffix:"_list"
+                      in
                       let name' = cat_name lan name in
                       Map.mem subsets name'
                    | _ -> false)
              in
+             let removed = ref [] in
+             let subset_prems =
+               List.filter premises ~f:(fun p ->
+                   match p with
+                   | Prop.Prop {name; args} ->
+                      let found =
+                        List.find subset_list_prems ~f:(function
+                            | Prop.Prop {name = name2; args = args2} ->
+                               String.is_prefix name2 ~prefix:name
+                               && List.equal Term.equal args args2
+                            | _ -> false)
+                      in
+                      if Option.is_some found then
+                        begin
+                          removed := p :: !removed;
+                          false
+                        end
+                      else
+                        let name' = cat_name lan name in
+                        Map.mem subsets name'
+                   | _ -> false)
+             in
+             let premises =
+               Aux.diff_list_stable ~equal:Prop.equal
+                 premises !removed
+             in
+             let subset_prems = subset_list_prems @ subset_prems in
              let premises =
                Aux.diff_list_stable ~equal:Prop.equal
                  premises subset_prems

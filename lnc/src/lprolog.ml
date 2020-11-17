@@ -1286,10 +1286,11 @@ let of_language (lan: L.t) =
                List.filter premises ~f:(function
                    | Prop.Prop {name; args}
                         when String.is_suffix name ~suffix:"_list" ->
-                      let name =
-                        String.chop_suffix_exn name ~suffix:"_list"
+                      let name' =
+                        cat_name lan
+                          (String.chop_suffix_exn name
+                             ~suffix:"_list")
                       in
-                      let name' = cat_name lan name in
                       Map.mem subsets name'
                    | _ -> false)
              in

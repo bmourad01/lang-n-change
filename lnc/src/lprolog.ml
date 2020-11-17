@@ -552,7 +552,7 @@ module Term = struct
   let rec vars = function
     | Var v -> String.Set.singleton v
     | Str _ -> String.Set.empty
-    | Strcat _ -> String.Set.empty
+    | Strcat (t1, t2) -> String.Set.union (vars t1) (vars t2)
     | Constructor {name; args} ->
        List.fold args ~init:String.Set.empty ~f:(fun s t ->
            Set.union s (vars t))

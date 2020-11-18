@@ -89,10 +89,10 @@ module Type_unify = struct
 
   module Solution_set = Set.Make(Solution_comparable)
 
-  let run ?(init_state = []) typs = match typs with
+  let run ?(init_state = []) = function
     | [] when List.is_empty init_state -> None
     | t :: [] when List.is_empty init_state -> Some t
-    | _ ->
+    | typs ->
        let state = match typs with
          | t :: [] -> Solution_set.singleton (Solution.Soln t)
          | _ ->

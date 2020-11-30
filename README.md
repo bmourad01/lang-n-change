@@ -46,7 +46,7 @@ Run `./transform <.lan> <.tr>`. The transformed language definition is printed t
 
 ## Compiling to λProlog
 
-Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively).
+Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).
 
 ## TODO
 

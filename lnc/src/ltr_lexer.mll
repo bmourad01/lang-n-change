@@ -128,6 +128,7 @@ rule token = parse
   | "set_syntax" {SETSYNTAX}
   | "remove_syntax" {REMOVESYNTAX}
   | "meta_var" {METAVAR}
+  | "categories" {CATEGORIES}
   | "syntax" {SYNTAX}
   | "var_kind" {VARKIND}
   | "op_kind" {OPKIND}

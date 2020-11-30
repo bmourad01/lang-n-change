@@ -366,6 +366,7 @@ module Exp = struct
     | Ticked of t
     | Ticked_restricted of t * t
     (* grammar operations *)
+    | Categories_of
     | New_syntax of {
         extend: bool;
         name: string;
@@ -592,6 +593,7 @@ module Exp = struct
     | Ticked_restricted (e1, e2) ->
        Printf.sprintf "%s'|%s"
          (to_string e1) (to_string e2)
+    | Categories_of -> "categories"
     | New_syntax {extend; name; meta_var; terms} ->
        let extend_str = if extend then " ... | " else " " in
        Printf.sprintf "%s %s ::=%s%s."
@@ -1873,6 +1875,13 @@ let rec compile ctx e = match e with
         incompat "Ticked_restricted"
           [typ1; typ2] [Type.Term; Type.(List Term)]
      end
+  | Exp.Categories_of ->
+     let e' =
+       {|
+        (Map.to_alist lan.grammar
+        |> List.map ~f:(fun (name, (c: C.t)) -> (name, Set.to_list c.terms)))
+        |}
+     in (e', Type.(List (Tuple [String; List Term])), ctx)
   | Exp.New_syntax {extend; name; meta_var; terms} ->
      let (terms', term_typs, _) =
        List.map terms ~f:(compile ctx)

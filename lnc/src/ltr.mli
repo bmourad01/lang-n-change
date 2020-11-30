@@ -145,6 +145,7 @@ module Exp: sig
     | Ticked of t
     | Ticked_restricted of t * t
     (* grammar operations *)
+    | Categories_of
     | New_syntax of {
         extend: bool;
         name: string;

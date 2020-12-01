@@ -1,0 +1,362 @@
+Expression e ::= x | (err.) | (address a) | (deref e) | (new N [e...]) | (null.) | (access e f) | (invoke e q [e...]) | (cast e T) | (unit.) | (seq e e) | (ite e e e) | (assign e e) | (update e f e) | (decl N (x)e)
+Value v ::= (address a) | (new N [v...]) | (null.) | (unit.)
+Type T ::= (classT N) | (refT T) | (unitT.)
+Class C ::= (class_decl N N P [W...])
+Method W ::= (method_decl T q Gamma e)
+Declarations D ::= [C...]
+Environment Gamma ::= {x => T}
+MethodLookup ML ::= (method_result W) | (method_nil.)
+Error er ::= (err.)
+Context E ::= (hole.) | (deref E) | (new N [E...]) | (access E f) | (invoke E q [e...]) | (invoke v q [E...]) | (cast E T) | (seq E e) | (ite E e e) | (assign E e) | (assign v E) | (update E f e) | (update v f E)
+Memory m ::= {a => v}
+Store Sigma ::= {a => T}
+Params P ::= {f => T}
+
+%
+
+typeof_args <Gamma, Sigma, D> [e...] [T...].
+subtype_list D {T => T}.
+lookup_params N D P.
+lookup_method N q D ML.
+decl_type_ok D T.
+memory_ok Sigma D m.
+method_ok D N W.
+method_list_ok D N [W...].
+class_ok D N.
+declarations_ok D D.
+<Gamma, Sigma, D> |- e : T.
+<e, D, m> --> <e, D, m>.
+D |- T <: T.
+join D T T T.
+
+%
+
+[TYPEOF-ARGS-NIL]
+--------------------------------------
+typeof_args <Gamma, Sigma, D> nil nil.
+
+[TYPEOF-ARGS]
+<Gamma, Sigma, D> |- e : T,
+typeof_args <Gamma, Sigma, D> args types
+--------------------------------------
+typeof_args <Gamma, Sigma, D> (e :: args) (T :: types).
+
+[SUBTYPE-LIST-NIL]
+--------------------------------------
+subtype_list D nil.
+
+[SUBTYPE-LIST]
+D |- T1 <: T2,
+subtype_list D types
+--------------------------------------
+subtype_list D (<T1, T2> :: types).
+
+[LOOKUP-PARAMS-1]
+--------------------------------------
+lookup_params "Object" D nil.
+
+[LOOKUP-PARAMS-2]
+member (class_decl N N' P _) D,
+lookup_params N' D P'
+--------------------------------------
+lookup_params N D union(P, P').
+
+[LOOKUP-METHOD-1]
+--------------------------------------
+lookup_method "Object" q D (method_nil.).
+
+[LOOKUP-METHOD-2]
+member (class_decl N N' _ methods) D,
+not(member (method_decl T q Gamma e) methods),
+lookup_method N' q D ML
+--------------------------------------
+lookup_method N q D ML.
+
+[LOOKUP-METHOD-3]
+member (class_decl N N' _ methods) D,
+member (method_decl T q Gamma e) methods
+--------------------------------------
+lookup_method N q D (method_result (method_decl T q Gamma e)).
+
+[LOOKUP-METHOD-4]
+member (class_decl N "Object" _ methods) D,
+not(member (method_decl T q Gamma e) methods)
+--------------------------------------
+lookup_method N q D (method_nil.).
+
+[DECL-TYPE-OK-1]
+--------------------------------------
+decl_type_ok D (classT "Object").
+
+[DECL-TYPE-OK-2]
+member (class_decl N _ _ _) D
+--------------------------------------
+decl_type_ok D (classT N).
+
+[METHOD-OK-1]
+member (class_decl N N' _ methods) D,
+not(member (method_decl T q Gamma e) methods),
+lookup_method N' q D (method_result (method_decl T q Gamma e)),
+<["this" => (classT N)]Gamma, nil, D> |- e : T',
+D |- T' <: T
+--------------------------------------
+method_ok D N (method_decl T q Gamma e).
+
+[METHOD-OK-2]
+member (class_decl N N' _ methods) D,
+member (method_decl T q Gamma e) methods,
+<["this" => (classT N)]Gamma, nil, D> |- e : T',
+D |- T' <: T
+--------------------------------------
+method_ok D N (method_decl T q Gamma e).
+
+[METHOD-LIST-OK-NIL]
+--------------------------------------
+method_list_ok D N nil.
+
+[METHOD-LIST-OK]
+method_ok D N W,
+method_list_ok D N methods
+--------------------------------------
+method_list_ok D N (W :: methods).
+
+[CLASS-OK]
+member (class_decl N N' P methods) D,
+lookup_params N' D P',
+subset P' P,
+method_list_ok D N methods
+--------------------------------------
+class_ok D N.
+
+[DECLARATIONS-OK]
+member (class_decl N N' P methods) D,
+class_ok D N
+--------------------------------------
+declarations_ok D ((class_decl N N' P methods) :: classes).
+
+[DECLARATIONS-OK-NIL]
+--------------------------------------
+declarations_ok D nil.
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+<Gamma, Sigma, D> |- x : T.
+
+[T-ERR]
+--------------------------------------
+<Gamma, Sigma, D> |- (err.) : T.
+
+[T-ADDRESS]
+member <a, T> Sigma
+--------------------------------------
+<Gamma, Sigma, D> |- (address a) : (refT T).
+
+[T-DEREF]
+<Gamma, Sigma, D> |- e : (refT T)
+--------------------------------------
+<Gamma, Sigma, D> |- (deref e) : T.
+
+[T-NEW]
+lookup_params N D P,
+typeof_args <Gamma, Sigma, D> args types,
+subtype_list D zip(types, range(P))
+--------------------------------------
+<Gamma, Sigma, D> |- (new N args) : (classT N).
+
+[T-NULL]
+--------------------------------------
+<Gamma, Sigma, D> |- (null.) : (classT N).
+
+[T-ACCESS]
+<Gamma, Sigma, D> |- e : (classT N),
+lookup_params N D P,
+member <f, T> P
+--------------------------------------
+<Gamma, Sigma, D> |- (access e f) : T.
+
+[T-INVOKE]
+<Gamma, Sigma, D> |- e : (classT N),
+lookup_method N q D (method_result (method_decl T q Gamma' _)),
+typeof_args <Gamma, Sigma, D> args types,
+subtype_list D zip(types, range(Gamma'))
+--------------------------------------
+<Gamma, Sigma, D> |- (invoke e q args) : T.
+
+[T-CAST]
+<Gamma, Sigma, D> |- e : T',
+D |- T' <: T
+--------------------------------------
+<Gamma, Sigma, D> |- (cast e T) : T.
+
+[T-UNIT]
+--------------------------------------
+<Gamma, Sigma, D> |- (unit.) : (unitT.).
+
+[T-SEQ]
+<Gamma, Sigma, D> |- e1 : (unitT.),
+<Gamma, Sigma, D> |- e2 : T
+--------------------------------------
+<Gamma, Sigma, D> |- (seq e1 e2) : T.
+
+[T-IF]
+<Gamma, Sigma, D> |- e1 : (classT N),
+<Gamma, Sigma, D> |- e2 : T1,
+<Gamma, Sigma, D> |- e3 : T2,
+join D T1 T2 T
+--------------------------------------
+<Gamma, Sigma, D> |- (ite e1 e2 e3) : T.
+
+[T-ASSIGN]
+<Gamma, Sigma, D> |- e1 : (refT T1),
+<Gamma, Sigma, D> |- e2 : T2,
+D |- T2 <: T1
+--------------------------------------
+<Gamma, Sigma, D> |- (assign e1 e2) : (unitT.).
+
+[T-UPDATE]
+<Gamma, Sigma, D> |- e1 : (refT (classT N)),
+<Gamma, Sigma, D> |- e2 : T,
+lookup_params N D P,
+member <f, T'> P,
+D |- T <: T'
+--------------------------------------
+<Gamma, Sigma, D> |- (update e1 f e2) : (unitT.).
+
+[T-DECL]
+not(x = "this"),
+decl_type_ok D (classT N),
+<[x => (refT (classT N))]Gamma, Sigma, D> |- e : T2
+--------------------------------------
+<Gamma, Sigma, D> |- (decl N (x)e) : T2.
+
+[S-UNITT]
+--------------------------------------
+D |- (unitT.) <: (unitT.).
+
+[S-REFT]
+--------------------------------------
+D |- (refT T) <: (refT T).
+
+[S-CLASST-TRANSITIVE]
+member (class_decl N1 N2 _ _) D
+--------------------------------------
+D |- (classT N1) <: (classT N2).
+
+[S-CLASST-REFLEXIVE]
+--------------------------------------
+D |- (classT N) <: (classT N).
+
+[S-CLASST-SUPER]
+not(member (class_decl N1 N2 _ _) D),
+member (class_decl N1 N3 _ _) D,
+D |- (classT N3) <: (classT N2)
+--------------------------------------
+D |- (classT N1) <: (classT N2).
+
+[JOIN-UNITT]
+--------------------------------------
+join D (unitT.) (unitT.) (unitT.).
+
+[JOIN-REFT]
+--------------------------------------
+join D (refT T) (refT T) (refT T).
+
+[JOIN-CLASST-1]
+D |- (classT N1) <: (classT N2)
+--------------------------------------
+join D (classT N1) (classT N2) (classT N2).
+
+[JOIN-CLASST-2]
+D |- (classT N2) <: (classT N1)
+--------------------------------------
+join D (classT N1) (classT N2) (classT N1).
+
+[JOIN-CLASST-3]
+member (class_decl N1 N1' _ _) D,
+member (class_decl N2 N2' _ _) D,
+join D (classT N1') (classT N2') (classT N3)
+--------------------------------------
+join D (classT N1) (classT N2) (classT N3).
+
+[R-DEREF]
+member <a, v> m
+--------------------------------------
+<(deref (address a)), D, m> --> <v, D, m>.
+
+[R-ACCESS-NEW]
+lookup_params N D P,
+member <f, v> zip(dom(p), v_args)
+--------------------------------------
+<(access (new N v_args) f), D, m> --> <v, D, m>.
+
+[R-ACCESS-NULL]
+--------------------------------------
+<(access (null.) f), D, m> --> <(err.), D, m>.
+
+[R-INVOKE-NEW]
+lookup_method N q D (method_result (method_decl T q Gamma e)),
+S = zip(v_args2, dom(Gamma))
+--------------------------------------
+<(invoke (new N v_args1) q v_args2), D, m> --> <e[S: Expression][(new N v_args1)/this], D, m>.
+
+[R-ACCESS-NULL]
+--------------------------------------
+<(invoke (null.) q v_args2), D, m> --> <(err.), D, m>.   
+
+[R-CAST]
+--------------------------------------
+<(cast v T), D, m> --> <v, D, m>.
+
+[R-SEQ]
+--------------------------------------
+<(seq (unit.) e), D, m> --> <e, D, m>.
+
+[R-IF-NEW]
+--------------------------------------
+<(ite (new N v_args) e1 e2), D, m> --> <e1, D, m>.
+
+[R-IF-NULL]
+--------------------------------------
+<(ite (null.) e1 e2), D, m> --> <e2, D, m>.
+
+[R-ASSIGN]
+member a dom(m)
+--------------------------------------
+<(assign (address a) v), D, m> --> <(unit.), D, [a => v]m>.
+
+[R-UPDATE-NEW]
+member <a, (new N v_args)> m,
+lookup_params N D P,
+fields = zip(dom(p), v_args),
+v' = (new N range([f => v]fields))
+--------------------------------------
+<(update (address a) f v), D, m> --> <(unit.), D, [a => v']m>.
+
+[R-UPDATE-NULL]
+member <a, (null.)> m
+--------------------------------------
+<(update (address a) f v), D, m> --> <(err.), D, m>.
+
+[R-DECL]
+a = fresh(dom(m))
+--------------------------------------
+<(decl N (x)e), D, m> --> <e[(address a)/x], D, [a => (null.)]m>.
+
+[MEMORY-OK-NIL]
+--------------------------------------
+memory_ok Sigma D nil.
+
+[MEMORY-OK]
+<nil, Sigma, D> |- v : T1,
+member <a, T2> Sigma,
+D |- T1 <: T2,
+memory_ok Sigma D m
+--------------------------------------
+memory_ok Sigma D (<a, v> :: m).
+
+%
+
+mode: typeof => inp inp out | step => inp out | subtype => inp inp inp | join => inp inp inp out | lookup_params => inp inp out | lookup_method => inp inp inp out | typeof_args => inp inp out | subtype_list => inp inp | decl_type_ok => inp inp | method_ok => inp inp inp | method_list_ok => inp inp inp | class_ok => inp inp | memory_ok => inp inp inp.
+principal: step => yes no | subtype => no yes yes | join => no yes yes no | typeof => no yes no | lookup_params => yes no no | lookup_method => yes no no no | typeof_args => no yes no | subtype_list => no yes | decl_type_ok => no yes | method_ok => no no yes | method_list_ok => no no yes | class_ok => no yes | memory_ok => no no yes.
+variance: refT => inv.

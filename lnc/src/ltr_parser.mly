@@ -41,7 +41,7 @@
 
 %left AND OR
 %left CARET
-%right CONS
+%right CONS SEMI
 
 %start ltr
 %type <Ltr.Exp.t> ltr

@@ -357,6 +357,6 @@ memory_ok Sigma D (<a, v> :: m).
 
 %
 
-mode: typeof => inp inp out | step => inp out | subtype => inp inp inp | join => inp inp inp out | lookup_params => inp inp out | lookup_method => inp inp inp out | typeof_args => inp inp out | subtype_list => inp inp | decl_type_ok => inp inp | method_ok => inp inp inp | method_list_ok => inp inp inp | class_ok => inp inp | memory_ok => inp inp inp.
-principal: step => yes no | subtype => no yes yes | join => no yes yes no | typeof => no yes no | lookup_params => yes no no | lookup_method => yes no no no | typeof_args => no yes no | subtype_list => no yes | decl_type_ok => no yes | method_ok => no no yes | method_list_ok => no no yes | class_ok => no yes | memory_ok => no no yes.
+mode: typeof => inp inp out | step => inp out | subtype => inp inp inp | join => inp inp inp out | lookup_params => inp inp out | lookup_method => inp inp inp out | typeof_args => inp inp out | subtype_list => inp inp | decl_type_ok => inp inp | method_ok => inp inp inp | method_list_ok => inp inp inp | class_ok => inp inp | declarations_ok => inp inp | memory_ok => inp inp inp.
+principal: step => yes no | subtype => no yes yes | join => no yes yes no | typeof => no yes no | lookup_params => yes no no | lookup_method => yes no no no | typeof_args => no yes no | subtype_list => no yes | decl_type_ok => no yes | method_ok => no no yes | method_list_ok => no no yes | class_ok => no yes | declarations_ok => no yes | memory_ok => no no yes.
 variance: refT => inv.

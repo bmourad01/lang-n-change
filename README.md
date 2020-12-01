@@ -7,7 +7,7 @@ It provides a domain-specific language, L-Tr (pronounced "Elter"), for expressin
 
 Given a language definition expressed in the style of operational semantics (`.lan` file) and an algorithm (`.tr` file), the algorithm is applied to the language definition, producing a new language definition.
 
-L-Tr is based on a calculus described in [1].
+L-Tr is based on a calculus of the same name, described in [1].
 A prototype of lang-n-change is presented in [2].
 The current tool is a new and improved version of the prototype.
 

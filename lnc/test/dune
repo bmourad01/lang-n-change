@@ -1,5 +1,5 @@
 (executables
- (names parse_lan parse_ltr compile_lprolog unify_typeof)
+ (names parse_lan parse_ltr)
  (flags -w -33)
  (modes byte native)
  (libraries core_kernel lang-n-change)

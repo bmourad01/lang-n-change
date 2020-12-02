@@ -1,6 +1,6 @@
 open Core_kernel
 
-module Type: sig
+module Type : sig
   type t =
     | Var of string
     | Lan
@@ -14,13 +14,14 @@ module Type: sig
     | Tuple of t list
     | Option of t
     | List of t
-    | Arrow of t list [@@deriving equal]
+    | Arrow of t list
+  [@@deriving equal]
 
-  val to_string: t -> string
+  val to_string : t -> string
 end
 
-module Exp: sig
-  module Pattern: sig
+module Exp : sig
+  module Pattern : sig
     type t =
       | Wildcard
       | Var of string
@@ -32,6 +33,7 @@ module Exp: sig
       | Tuple of t list
       | Nothing
       | Something of t
+
     and term =
       | Term_nil
       | Term_var of string
@@ -46,14 +48,14 @@ module Exp: sig
       | Term_cons of t * t
       | Term_list of t
       | Term_map of string * t
-      | Term_tuple of t 
+      | Term_tuple of t
       | Term_union of t
       | Term_map_union of t
       | Term_zip of t * t
       | Term_fresh of t
-    and subst =
-      | Subst_pair of t * string
-      | Subst_var of string
+
+    and subst = Subst_pair of t * string | Subst_var of string
+
     and formula =
       | Formula_not of t
       | Formula_eq of t * t
@@ -61,22 +63,23 @@ module Exp: sig
       | Formula_member of t * t
       | Formula_subset of t * t
 
-    val to_string: t -> string
-    val string_of_term: term -> string
-    val string_of_formula: formula -> string
+    val to_string : t -> string
+
+    val string_of_term : term -> string
+
+    val string_of_formula : formula -> string
   end
-  
+
   type t =
     (* builtin *)
     | Self
-    | Unify of {
-        normalize: bool;
-        rules: t;
-        term_subs: t;
-        formula_subs: t;
-        candidates: t;
-        proven: t;
-      }
+    | Unify of
+        { normalize: bool
+        ; rules: t
+        ; term_subs: t
+        ; formula_subs: t
+        ; candidates: t
+        ; proven: t }
     (* variable operations *)
     | Var of string
     (* string operations *)
@@ -90,27 +93,18 @@ module Exp: sig
     (* boolean operations *)
     | Bool_exp of boolean
     (* control operations *)
-    | Let of {
-        recursive: bool;
-        names: string list;
-        args: (string * Type.t) list;
-        ret: Type.t option;
-        exp: t;
-        body: t;
-      }
+    | Let of
+        { recursive: bool
+        ; names: string list
+        ; args: (string * Type.t) list
+        ; ret: Type.t option
+        ; exp: t
+        ; body: t }
     | Apply of t * t list
     | Ite of t * t * t
     | Seq of t * t
-    | Select of {
-        keep: bool;
-        field: t;
-        pattern: Pattern.t;
-        body: t;
-      }
-    | Match of {
-        exp: t;
-        cases: (Pattern.t * t) list;
-      }
+    | Select of {keep: bool; field: t; pattern: Pattern.t; body: t}
+    | Match of {exp: t; cases: (Pattern.t * t) list}
     (* tuple operations *)
     | Tuple of t list
     (* list operations *)
@@ -146,16 +140,9 @@ module Exp: sig
     | Ticked_restricted of t * t
     (* grammar operations *)
     | Categories_of
-    | New_syntax of {
-        extend: bool;
-        name: string;
-        meta_var: string;
-        terms: t list;
-      }
-    | Set_syntax_terms of {
-        name: t;
-        terms: t;
-      }
+    | New_syntax of
+        {extend: bool; name: string; meta_var: string; terms: t list}
+    | Set_syntax_terms of {name: t; terms: t}
     | Remove_syntax of t
     | Meta_var_of of t
     | Syntax_terms_of of t
@@ -168,18 +155,10 @@ module Exp: sig
     | Remove_relation of t
     (* formula operations *)
     | New_formula of formula
-    | Uniquify_formulae of {
-        formulae: t;
-        ignored_formulae: t;
-        hint_map: t;
-        hint_var: t;
-      }
+    | Uniquify_formulae of
+        {formulae: t; ignored_formulae: t; hint_map: t; hint_var: t}
     (* rule operations *)
-    | New_rule of {
-        name: t;
-        premises: t list;
-        conclusion: t;
-      }
+    | New_rule of {name: t; premises: t list; conclusion: t}
     | Rule_name of t
     | Rule_premises of t
     | Rule_conclusion of t
@@ -188,12 +167,10 @@ module Exp: sig
     | Add_rules of t
     | Set_rules of t
     (* hint operations *)
-    | New_hint of {
-        extend: bool;
-        name: string;
-        elements: (string * string list) list;
-      }
+    | New_hint of
+        {extend: bool; name: string; elements: (string * string list) list}
     | Lookup_hint of t
+
   and boolean =
     | Bool of bool
     | Not of t
@@ -220,7 +197,8 @@ module Exp: sig
     | Has_syntax of string
     | Starts_with of t * t
     | Ends_with of t * t
-  and term = 
+
+  and term =
     | Term_nil
     | Term_var of string
     | Term_var_exp of t
@@ -239,9 +217,9 @@ module Exp: sig
     | Term_map_union of t
     | Term_zip of t * t
     | Term_fresh of t
-  and subst =
-    | Subst_pair of t * string
-    | Subst_var of string * string
+
+  and subst = Subst_pair of t * string | Subst_var of string * string
+
   and formula =
     | Formula_not of t
     | Formula_eq of t * t
@@ -249,11 +227,15 @@ module Exp: sig
     | Formula_member of t * t
     | Formula_subset of t * t
 
-  val to_string: t -> string
-  val string_of_boolean: boolean -> string
-  val string_of_term: term -> string
-  val string_of_subst: subst -> string
-  val string_of_formula: formula -> string
+  val to_string : t -> string
+
+  val string_of_boolean : boolean -> string
+
+  val string_of_term : term -> string
+
+  val string_of_subst : subst -> string
+
+  val string_of_formula : formula -> string
 end
 
-val generate_caml: Exp.t -> string
+val generate_caml : Exp.t -> string

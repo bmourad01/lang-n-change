@@ -33,6 +33,8 @@ Additionally, the following OCaml packages are required (available through `opam
 - ppx_sexp_conv
 
 For compiling to λProlog, the most recent version of Teyjus (https://github.com/teyjus/teyjus) is needed to compile and query the generated `.mod` and `.sig` files.
+Teyjus is known to build with OCaml 4.08.1.
+If you are using a newer version of the OCaml compiler, then it is recommended that you create a new switch on opam for building Teyjus: `opam switch create <name> 4.08.01`.
 
 ## Building
 

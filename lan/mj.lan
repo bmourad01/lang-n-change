@@ -300,7 +300,7 @@ S = zip(v_args2, dom(Gamma))
 --------------------------------------
 <(invoke (new N v_args1) q v_args2), D, m> --> <e[S: Expression][(new N v_args1)/this], D, m>.
 
-[R-ACCESS-NULL]
+[R-INVOKE-NULL]
 --------------------------------------
 <(invoke (null.) q v_args2), D, m> --> <(err.), D, m>.   
 

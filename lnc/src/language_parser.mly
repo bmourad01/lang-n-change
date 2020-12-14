@@ -14,7 +14,10 @@
     in
     let rules =
       List.fold rules ~init:String.Map.empty ~f:(fun m r ->
-        Map.set m Rule.(r.name) r)
+        match Map.add m Rule.(r.name) r with
+        | `Ok m -> m
+        | `Duplicate ->
+           failwith (Printf.sprintf "duplicate rule name %s" Rule.(r.name)))
     in
     let hints =
       List.fold hints ~init:String.Map.empty ~f:(fun m h ->

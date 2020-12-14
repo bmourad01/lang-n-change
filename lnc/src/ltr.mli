@@ -41,7 +41,7 @@ module Exp : sig
       | Term_str of string
       | Term_constructor of t * t
       | Term_binding of t * t
-      | Term_subst of t * subst list
+      | Term_subst of t * subst
       | Term_map_update of t * t * t
       | Term_map_domain of t
       | Term_map_range of t
@@ -205,7 +205,7 @@ module Exp : sig
     | Term_str of string
     | Term_constructor of t * t
     | Term_binding of t * t
-    | Term_subst of t * subst list
+    | Term_subst of t * subst
     | Term_map_update of t * t * t
     | Term_map_domain of t
     | Term_map_range of t

@@ -449,7 +449,7 @@ term:
     { Exp.Term_constructor ($2, $3) }
   | DOLLAR LPAREN exp RPAREN exp
     { Exp.Term_binding ($3, $5) }
-  | exp LSQUARE separated_nonempty_list(COMMA, subst) RSQUARE
+  | exp LSQUARE subst RSQUARE
     { Exp.Term_subst ($1, $3) }
   | LSQUARE exp MAPSTO exp RSQUARE exp
     { Exp.Term_map_update ($2, $4, $6) }
@@ -559,7 +559,7 @@ pattern_term:
     { Exp.Pattern.Term_constructor ($2, $3) }
   | DOLLAR LPAREN pattern RPAREN pattern
     { Exp.Pattern.Term_binding ($3, $5) }
-  | pattern LSQUARE separated_nonempty_list(COMMA, pattern_subst) RSQUARE
+  | pattern LSQUARE pattern_subst RSQUARE
     { Exp.Pattern.Term_subst ($1, $3) }
   | LSQUARE pattern MAPSTO pattern RSQUARE pattern
     { Exp.Pattern.Term_map_update ($2, $4, $6) }

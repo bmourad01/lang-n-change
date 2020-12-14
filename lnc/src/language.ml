@@ -8,7 +8,7 @@ module Term = struct
     | Str of string
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
-    | Subst of {body: t; substs: subst list}
+    | Subst of {body: t; subst: subst}
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
@@ -44,18 +44,10 @@ module Term = struct
         in
         Printf.sprintf "(%s%s)" name args_str
     | Binding {var; body} -> Printf.sprintf "(%s)%s" var (to_string body)
-    | Subst {body; substs} ->
-        let substs_str =
-          if List.is_empty substs then ""
-          else
-            Printf.sprintf "[%s]"
-              ( List.map substs ~f:(function
-                  | Subst_pair (term, var) ->
-                      Printf.sprintf "%s/%s" (to_string term) var
-                  | Subst_var (v, kind) -> Printf.sprintf "%s:%s" v kind)
-              |> String.concat ~sep:", " )
-        in
-        Printf.sprintf "%s%s" (to_string body) substs_str
+    | Subst {body; subst= Subst_pair (term, var)} ->
+        Printf.sprintf "%s[%s/%s]" (to_string body) (to_string term) var
+    | Subst {body; subst= Subst_var (var, kind)} ->
+        Printf.sprintf "%s[%s: %s]" (to_string body) var kind
     | Map_update {key; value; map} ->
         Printf.sprintf "[%s => %s]%s" (to_string key) (to_string value)
           (to_string map)
@@ -165,13 +157,13 @@ module Term = struct
     | Constructor {name; args} ->
         Constructor {name; args= List.map args ~f:unbind_rec}
     | Binding {var; body} -> unbind_rec body
-    | Subst {body; substs} ->
-        let substs =
-          List.map substs ~f:(function
-            | Subst_pair (term, var) -> Subst_pair (unbind_rec term, var)
-            | Subst_var (v, name) -> Subst_var (v, name))
+    | Subst {body; subst} ->
+        let subst =
+          match subst with
+          | Subst_pair (term, var) -> Subst_pair (unbind_rec term, var)
+          | Subst_var (v, name) -> Subst_var (v, name)
         in
-        Subst {body= unbind_rec body; substs}
+        Subst {body= unbind_rec body; subst}
     | Map_update {key; value; map} ->
         Map_update {key; value= unbind_rec value; map}
     | Map_domain t -> Map_domain (unbind_rec t)
@@ -193,15 +185,14 @@ module Term = struct
     | Constructor {name; args} -> List.map args ~f |> List.concat
     | Binding {var; body} ->
         if include_bindings then Var var :: f body else f body
-    | Subst {body; substs} ->
-        let substs_vars =
-          List.map substs ~f:(function
-            | Subst_pair (term, var) ->
-                if include_bindings then Var var :: f term else f term
-            | Subst_var (v, _) -> [Var v])
-          |> List.concat
+    | Subst {body; subst} ->
+        let subst_vars =
+          match subst with
+          | Subst_pair (term, var) ->
+              if include_bindings then Var var :: f term else f term
+          | Subst_var (v, _) -> [Var v]
         in
-        f body @ substs_vars
+        f body @ subst_vars
     | Map_update {key; value; map} -> f key @ f value @ f map
     | Map_domain m | Map_range m -> f m
     | Cons (element, lst) -> List.map [element; lst] ~f |> List.concat
@@ -225,13 +216,13 @@ module Term = struct
     | Constructor {name; args} ->
         Constructor {name; args= List.map args ~f:ticked}
     | Binding {var; body} -> Binding {var; body= ticked body}
-    | Subst {body; substs} ->
-        let substs =
-          List.map substs ~f:(function
-            | Subst_pair (term, var) -> Subst_pair (ticked term, var)
-            | Subst_var (v, kind) -> Subst_var (v ^ "'", kind))
+    | Subst {body; subst} ->
+        let subst =
+          match subst with
+          | Subst_pair (term, var) -> Subst_pair (ticked term, var)
+          | Subst_var (v, kind) -> Subst_var (v ^ "'", kind)
         in
-        Subst {body= ticked body; substs}
+        Subst {body= ticked body; subst}
     | Map_update {key; value; map} ->
         Map_update {key= ticked key; value= ticked value; map= ticked map}
     | Map_domain m -> Map_domain (ticked m)
@@ -257,13 +248,13 @@ module Term = struct
     | Constructor {name; args} ->
         Constructor {name; args= List.map args ~f:unticked}
     | Binding {var; body} -> Binding {var; body= unticked body}
-    | Subst {body; substs} ->
-        let substs =
-          List.map substs ~f:(function
-            | Subst_pair (term, var) -> Subst_pair (unticked term, var)
-            | Subst_var (v, kind) -> Subst_var (f v, kind))
+    | Subst {body; subst} ->
+        let subst =
+          match subst with
+          | Subst_pair (term, var) -> Subst_pair (unticked term, var)
+          | Subst_var (v, kind) -> Subst_var (f v, kind)
         in
-        Subst {body= unticked body; substs}
+        Subst {body= unticked body; subst}
     | Map_update {key; value; map} ->
         Map_update
           {key= unticked key; value= unticked value; map= unticked map}
@@ -286,15 +277,15 @@ module Term = struct
     | Var _ -> t
     | Constructor {name; args} -> Constructor {name; args= List.map args ~f}
     | Binding {var; body} -> Binding {var; body= f body}
-    | Subst {body; substs} ->
-        let substs =
-          List.map substs ~f:(function
-            | Subst_pair (term, var) -> Subst_pair (f term, var)
-            | Subst_var (v, kind) ->
-                if List.mem ts (Var v) ~equal then Subst_var (v ^ "'", kind)
-                else Subst_var (v, kind))
+    | Subst {body; subst} ->
+        let subst =
+          match subst with
+          | Subst_pair (term, var) -> Subst_pair (f term, var)
+          | Subst_var (v, kind) ->
+              if List.mem ts (Var v) ~equal then Subst_var (v ^ "'", kind)
+              else Subst_var (v, kind)
         in
-        Subst {body= f body; substs}
+        Subst {body= f body; subst}
     | Map_update {key; value; map} ->
         let key = f key in
         let value = f value in
@@ -321,16 +312,16 @@ module Term = struct
         | Constructor {name; args} ->
             Constructor {name; args= List.map args ~f}
         | Binding {var; body} -> Binding {var; body= f body}
-        | Subst {body; substs} ->
-            let substs =
-              List.map substs ~f:(function
-                | Subst_pair (term, var) -> Subst_pair (f term, var)
-                | Subst_var (v, kind) -> (
-                  match List.Assoc.find sub ~equal (Var v) with
-                  | Some (Var v') -> Subst_var (v', kind)
-                  | _ -> Subst_var (v, kind) ))
+        | Subst {body; subst} ->
+            let subst =
+              match subst with
+              | Subst_pair (term, var) -> Subst_pair (f term, var)
+              | Subst_var (v, kind) -> (
+                match List.Assoc.find sub ~equal (Var v) with
+                | Some (Var v') -> Subst_var (v', kind)
+                | _ -> Subst_var (v, kind) )
             in
-            Subst {body= f body; substs}
+            Subst {body= f body; subst}
         | Map_update {key; value; map} ->
             let key = f key in
             let value = f value in
@@ -403,33 +394,26 @@ module Term = struct
           in
           let body, m = aux body m in
           (Binding {var; body}, m)
-      | Subst {body; substs} ->
-          let rec aux' m = function
-            | [] -> ([], m)
-            | x :: xs ->
-                let x, m =
-                  match x with
-                  | Subst_pair (term, var) ->
-                      let var, m =
-                        if include_bindings then
-                          match make_var (Var var) m with
-                          | Var v, m -> (v, m)
-                          | _, m -> (var, m)
-                        else (var, m)
-                      in
-                      let term, m = aux term m in
-                      (Subst_pair (term, var), m)
-                  | Subst_var (v, kind) -> (
-                    match make_var (Var v) m with
-                    | Var v, m -> (Subst_var (v, kind), m)
-                    | _ -> (x, m) )
-                in
-                let xs, m = aux' m xs in
-                (x :: xs, m)
-          in
+      | Subst {body; subst} ->
           let body, m = aux body m in
-          let substs, m = aux' m substs in
-          (Subst {body; substs}, m)
+          let subst, m =
+            match subst with
+            | Subst_pair (term, var) ->
+                let var, m =
+                  if include_bindings then
+                    match make_var (Var var) m with
+                    | Var v, m -> (v, m)
+                    | _, m -> (var, m)
+                  else (var, m)
+                in
+                let term, m = aux term m in
+                (Subst_pair (term, var), m)
+            | Subst_var (v, kind) -> (
+              match make_var (Var v) m with
+              | Var v, m -> (Subst_var (v, kind), m)
+              | _ -> (subst, m) )
+          in
+          (Subst {body; subst}, m)
       | Map_update {key; value; map} ->
           let key, m = aux key m in
           let value, m = aux value m in

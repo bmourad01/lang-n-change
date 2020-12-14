@@ -8,7 +8,7 @@ module Term : sig
     | Str of string
     | Constructor of {name: string; args: t list}
     | Binding of {var: string; body: t}
-    | Subst of {body: t; substs: subst list}
+    | Subst of {body: t; subst: subst}
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t

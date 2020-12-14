@@ -204,8 +204,8 @@ term:
     { Term.Var $1 }
   | LPAREN var = NAME RPAREN body = term
     { Term.Binding {var; body} }
-  | body = term LSQUARE substs = separated_nonempty_list(COMMA, subst) RSQUARE
-    { Term.Subst {body; substs} }
+  | body = term LSQUARE subst = subst RSQUARE
+    { Term.Subst {body; subst} }
   | LSQUARE key = term MAPSTO value = term RSQUARE map = term
     { Term.Map_update {map; key; value} }
   | NIL

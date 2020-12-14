@@ -851,7 +851,7 @@ let of_language (lan : L.t) =
       | T.Binding {var; body} ->
           let ts, props = aux_term (succ depth) body in
           (Syntax.(v (String.capitalize var)) :: ts, props)
-      | T.Subst {body; substs} ->
+      | T.Subst {body; subst} ->
           let rec subst_kind s = function
             | T.Var v -> (
               match L.kind_of_var lan v with
@@ -879,7 +879,7 @@ let of_language (lan : L.t) =
                     | Some kind -> kind
                   in
                   (kind_name kind, false) )
-            | T.Subst {body; substs} -> subst_kind "body" body
+            | T.Subst {body; subst} -> subst_kind "body" body
             | _ ->
                 invalid_arg
                   (Printf.sprintf "invalid subst %s term %s in rule %s" s
@@ -898,69 +898,53 @@ let of_language (lan : L.t) =
                    (T.to_string body) rule_name)
             else
               let body' = List.hd_exn body' in
-              let rec aux props subs = function
-                | [] -> (List.rev props, List.rev subs)
-                | x :: xs -> (
-                  match x with
-                  | T.Subst_pair (term, var) ->
-                      let term_kind, wrap = subst_kind "term" term in
-                      let sub = fresh_var vars "Sub" None in
-                      (* fixme: this is a hack *)
-                      let depth' = if wrap then 0 else succ depth in
-                      let terms, props' = aux_term depth' term in
-                      if List.length terms > 1 then
-                        invalid_arg
-                          (Printf.sprintf "invalid subst term %s in rule %s"
-                             (T.to_string t) rule_name)
-                      else
-                        let term = List.hd_exn terms in
-                        let var = Syntax.(v (String.capitalize var)) in
-                        let arg = Syntax.("lnc_pair" @ [term; var]) in
-                        let body =
-                          match List.hd subs with
-                          | None -> body'
-                          | Some sub -> sub
-                        in
-                        let args = [body; arg; sub] in
-                        let name =
-                          Printf.sprintf "lnc_subst_%s_%s" body_kind
-                            term_kind
-                        in
-                        let prop = Syntax.(name $ args) in
-                        Hashtbl.add_multi subst_kinds body_kind term_kind;
-                        aux
-                          (prop :: (List.rev props' @ props))
-                          (sub :: subs) xs
-                  | T.Subst_var (s, k) ->
-                      let term_kind =
-                        match Map.find lan.grammar k with
-                        | Some _ -> kind_name k
-                        | None ->
-                            invalid_arg
-                              (Printf.sprintf
-                                 "invalid kind %s for subst %s in rule %s" k
-                                 (T.to_string t) rule_name)
-                      in
-                      let sub = fresh_var vars "Sub" None in
-                      let body =
-                        match List.hd subs with
-                        | None -> body'
-                        | Some sub -> sub
-                      in
-                      let args =
-                        Syntax.[body; v (String.capitalize s); sub]
-                      in
+              let props, sub =
+                match subst with
+                | T.Subst_pair (term, var) ->
+                    let term_kind, wrap = subst_kind "term" term in
+                    let sub = fresh_var vars "Sub" None in
+                    (* fixme: this is a hack *)
+                    let depth' = if wrap then 0 else succ depth in
+                    let terms, props' = aux_term depth' term in
+                    if List.length terms > 1 then
+                      invalid_arg
+                        (Printf.sprintf "invalid subst term %s in rule %s"
+                           (T.to_string t) rule_name)
+                    else
+                      let term = List.hd_exn terms in
+                      let var = Syntax.(v (String.capitalize var)) in
+                      let arg = Syntax.("lnc_pair" @ [term; var]) in
+                      let args = [body'; arg; sub] in
                       let name =
-                        Printf.sprintf "lnc_subst_list_%s_%s" body_kind
-                          term_kind
+                        Printf.sprintf "lnc_subst_%s_%s" body_kind term_kind
                       in
                       let prop = Syntax.(name $ args) in
-                      Hashtbl.add_multi subst_kinds body_kind body_kind;
-                      Hashtbl.add_multi subst_list_kinds body_kind body_kind;
-                      aux (prop :: props) (sub :: subs) xs )
+                      Hashtbl.add_multi subst_kinds body_kind term_kind;
+                      (prop :: (List.rev props' @ props), sub)
+                | T.Subst_var (s, k) ->
+                    let term_kind =
+                      match Map.find lan.grammar k with
+                      | Some _ -> kind_name k
+                      | None ->
+                          invalid_arg
+                            (Printf.sprintf
+                               "invalid kind %s for subst %s in rule %s" k
+                               (T.to_string t) rule_name)
+                    in
+                    let sub = fresh_var vars "Sub" None in
+                    let args =
+                      Syntax.[body'; v (String.capitalize s); sub]
+                    in
+                    let name =
+                      Printf.sprintf "lnc_subst_list_%s_%s" body_kind
+                        term_kind
+                    in
+                    let prop = Syntax.(name $ args) in
+                    Hashtbl.add_multi subst_kinds body_kind body_kind;
+                    Hashtbl.add_multi subst_list_kinds body_kind body_kind;
+                    (prop :: props, sub)
               in
-              let props, subs = aux props [] substs in
-              ([List.last_exn subs], props)
+              ([sub], props)
       | T.Map_update {key; value; map} ->
           let key', ps1 = aux_term (succ depth) key in
           if List.length key' > 1 then

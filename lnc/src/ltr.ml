@@ -193,7 +193,7 @@ module Exp = struct
       | Term_str of string
       | Term_constructor of t * t
       | Term_binding of t * t
-      | Term_subst of t * subst list
+      | Term_subst of t * subst
       | Term_map_update of t * t * t
       | Term_map_domain of t
       | Term_map_range of t
@@ -241,9 +241,8 @@ module Exp = struct
           Printf.sprintf "(%s %s)" (to_string p1) (to_string p2)
       | Term_binding (p1, p2) ->
           Printf.sprintf "(%s)%s" (to_string p1) (to_string p2)
-      | Term_subst (p, substs) ->
-          Printf.sprintf "%s[%s]" (to_string p)
-            (List.map substs ~f:string_of_subst |> String.concat ~sep:", ")
+      | Term_subst (p, subst) ->
+          Printf.sprintf "%s[%s]" (to_string p) (string_of_subst subst)
       | Term_map_update (key, value, map) ->
           Printf.sprintf "[%s => %s]%s" (to_string key) (to_string value)
             (to_string map)
@@ -411,7 +410,7 @@ module Exp = struct
     | Term_str of string
     | Term_constructor of t * t
     | Term_binding of t * t
-    | Term_subst of t * subst list
+    | Term_subst of t * subst
     | Term_map_update of t * t * t
     | Term_map_domain of t
     | Term_map_range of t
@@ -629,11 +628,8 @@ module Exp = struct
         Printf.sprintf "(%s %s)" (to_string name) (to_string e)
     | Term_binding (var, e) ->
         Printf.sprintf "(%s)%s" (to_string var) (to_string e)
-    | Term_subst (e, substs) ->
-        let substs_str =
-          List.map substs ~f:string_of_subst |> String.concat ~sep:", "
-        in
-        Printf.sprintf "%s[%s]" (to_string e) substs_str
+    | Term_subst (e, subst) ->
+        Printf.sprintf "%s[%s]" (to_string e) (string_of_subst subst)
     | Term_map_update (key, value, map) ->
         Printf.sprintf "[%s => %s]%s" (to_string key) (to_string value)
           (to_string map)
@@ -931,23 +927,15 @@ and compile_pattern_term ctx t =
           (p', Type.Term, ctx)
       | _ -> incompat "Term_binding pattern" [typ1; typ2] Type.[String; Term]
       )
-  | Exp.Pattern.Term_subst (p, substs) -> (
+  | Exp.Pattern.Term_subst (p, subst) -> (
       let p', typ, ctx = compile_pattern ctx Type.Term p in
       match typ with
       | Type.Term ->
-          let substs', substs_ctx =
-            List.map substs ~f:(compile_pattern_subst ctx) |> List.unzip
-          in
-          let ctx =
-            let init = List.hd_exn substs_ctx in
-            List.fold (List.tl_exn substs_ctx) ~init ~f:(fun ctx ctx' ->
-                merge_ctx ctx ctx')
-          in
+          let subst', subst_ctx = compile_pattern_subst ctx subst in
           let p' =
-            Printf.sprintf "(T.Subst {body = %s; substs = [%s]})" p'
-              (String.concat substs' ~sep:"; ")
+            Printf.sprintf "(T.Subst {body = %s; subst = (%s)})" p' subst'
           in
-          (p', Type.Term, ctx)
+          (p', Type.Term, subst_ctx)
       | _ -> incompat "Term_subst pattern (body)" [typ] Type.[Term] )
   | Exp.Pattern.Term_map_update (key, value, map) -> (
       let key', key_typ, key_ctx = compile_pattern ctx Type.Term key in
@@ -2357,14 +2345,13 @@ and compile_term ctx t =
       | _ ->
           incompat "Term_binding" [var_typ; body_typ] [Type.String; Type.Term]
       )
-  | Exp.Term_subst (e, substs) -> (
+  | Exp.Term_subst (e, subst) -> (
       let e', typ, _ = compile ctx e in
-      let substs' = List.map substs ~f:(compile_subst ctx) in
+      let subst' = compile_subst ctx subst in
       match typ with
       | Type.Term ->
           let e' =
-            Printf.sprintf "(T.(Subst {body = %s; substs = %s}))" e'
-              (Printf.sprintf "[%s]" (String.concat substs' ~sep:"; "))
+            Printf.sprintf "(T.(Subst {body = %s; subst = (%s)}))" e' subst'
           in
           (e', Type.Term, ctx)
       | _ -> incompat "Term_subst" [typ] [Type.Term] )

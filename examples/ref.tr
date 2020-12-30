@@ -3,8 +3,8 @@ Expression e ::= ... | ("address" [$a.]) | ("unit" []) | ("ref" [$e.]) | ("deref
 Value v ::= ... | ("address" [$a.]) | ("unit" []).;
 Type T ::= ... | ("unitT" []) | ("refT" [$T.]).;
 Context E ::= ... | ("ref" [$E.]) | ("deref" [$E.]) | ("assign" [$E, $e]) | ("assign" [$v, $E]) | ("seq" [$E, $e]).;
-Memory m ::= {a => $v}.;
-Store Sigma ::= {a => $T}.;
+Memory m ::= [<[$a, $v]>...].;
+Store Sigma ::= [<[$a, $T]>...].;
 
 (* references are always invariant *)
 # variance: ... | refT => inv;

@@ -12,12 +12,11 @@ module Term = struct
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
+    | Map_union of t list
     | Cons of t * t
     | List of t
-    | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
-    | Map_union of t list
     | Zip of t * t
     | Fresh of t
 
@@ -56,7 +55,6 @@ module Term = struct
     | Cons (element, lst) ->
         Printf.sprintf "(%s :: %s)" (to_string element) (to_string lst)
     | List t -> Printf.sprintf "[%s...]" (to_string t)
-    | Map {key; value} -> Printf.sprintf "{%s => %s}" key (to_string value)
     | Tuple ts ->
         Printf.sprintf "<%s>"
           (List.map ts ~f:to_string |> String.concat ~sep:", ")
@@ -110,6 +108,10 @@ module Term = struct
     | Map_range _ -> true
     | _ -> false
 
+  let is_map_union = function
+    | Map_union _ -> true
+    | _ -> false
+
   let is_nil = function
     | Nil -> true
     | _ -> false
@@ -122,20 +124,12 @@ module Term = struct
     | List _ -> true
     | _ -> false
 
-  let is_map = function
-    | Map _ -> true
-    | _ -> false
-
   let is_tuple = function
     | Tuple _ -> true
     | _ -> false
 
   let is_union = function
     | Union _ -> true
-    | _ -> false
-
-  let is_map_union = function
-    | Map_union _ -> true
     | _ -> false
 
   let is_zip = function
@@ -168,12 +162,11 @@ module Term = struct
         Map_update {key; value= unbind_rec value; map}
     | Map_domain t -> Map_domain (unbind_rec t)
     | Map_range t -> Map_range (unbind_rec t)
+    | Map_union ts -> Map_union (List.map ts ~f:unbind_rec)
     | Cons (element, lst) -> Cons (unbind_rec element, unbind_rec lst)
     | List t -> List (unbind_rec t)
-    | Map {key; value} -> Map {key; value= unbind_rec value}
     | Tuple ts -> Tuple (List.map ts ~f:unbind_rec)
     | Union ts -> Union (List.map ts ~f:unbind_rec)
-    | Map_union ts -> Map_union (List.map ts ~f:unbind_rec)
     | Zip (t1, t2) -> Zip (unbind_rec t1, unbind_rec t2)
     | Fresh t -> Fresh (unbind_rec t)
 
@@ -197,7 +190,6 @@ module Term = struct
     | Map_domain m | Map_range m -> f m
     | Cons (element, lst) -> List.map [element; lst] ~f |> List.concat
     | List s -> f s
-    | Map {key; value} -> f value
     | Tuple ts | Union ts | Map_union ts -> List.map ts ~f |> List.concat
     | Zip (t1, t2) -> f t1 @ f t2
     | Fresh t -> f t
@@ -227,12 +219,11 @@ module Term = struct
         Map_update {key= ticked key; value= ticked value; map= ticked map}
     | Map_domain m -> Map_domain (ticked m)
     | Map_range m -> Map_range (ticked m)
+    | Map_union ts -> Map_union (List.map ts ~f:ticked)
     | Cons (element, lst) -> Cons (ticked element, ticked lst)
     | List s -> List (ticked s)
-    | Map {key; value} -> Map {key; value= ticked value}
     | Tuple ts -> Tuple (List.map ts ~f:ticked)
     | Union ts -> Union (List.map ts ~f:ticked)
-    | Map_union ts -> Map_union (List.map ts ~f:ticked)
     | Zip (t1, t2) -> Zip (ticked t1, ticked t2)
     | Fresh t -> Fresh (ticked t)
 
@@ -260,12 +251,11 @@ module Term = struct
           {key= unticked key; value= unticked value; map= unticked map}
     | Map_domain m -> Map_domain (unticked m)
     | Map_range m -> Map_range (unticked m)
+    | Map_union ts -> Map_union (List.map ts ~f:unticked)
     | Cons (element, lst) -> Cons (unticked element, unticked lst)
     | List s -> List (unticked s)
-    | Map {key; value} -> Map {key; value= unticked value}
     | Tuple ts -> Tuple (List.map ts ~f:unticked)
     | Union ts -> Union (List.map ts ~f:unticked)
-    | Map_union ts -> Map_union (List.map ts ~f:unticked)
     | Zip (t1, t2) -> Zip (unticked t1, unticked t2)
     | Fresh t -> Fresh (unticked t)
 
@@ -293,12 +283,11 @@ module Term = struct
         Map_update {key; value; map}
     | Map_domain m -> Map_domain (ticked_restricted m ts)
     | Map_range m -> Map_range (ticked_restricted m ts)
+    | Map_union ts -> Map_union (List.map ts ~f)
     | Cons (element, lst) -> Cons (f element, f lst)
     | List s -> List (f s)
-    | Map {key; value} -> Map {key; value= f value}
     | Tuple ts -> Tuple (List.map ts ~f)
     | Union ts -> Union (List.map ts ~f)
-    | Map_union ts -> Map_union (List.map ts ~f)
     | Zip (t1, t2) -> Zip (f t1, f t2)
     | Fresh t -> Fresh (f t)
 
@@ -329,12 +318,11 @@ module Term = struct
             Map_update {key; value; map}
         | Map_domain m -> Map_domain (f m)
         | Map_range m -> Map_range (f m)
+        | Map_union ts -> Map_union (List.map ts ~f)
         | Cons (element, lst) -> Cons (f element, f lst)
         | List s -> List (f s)
-        | Map {key; value} -> Map {key; value= f value}
         | Tuple ts -> Tuple (List.map ts ~f)
         | Union ts -> Union (List.map ts ~f)
-        | Map_union ts -> Map_union (List.map ts ~f)
         | Zip (t1, t2) -> Zip (f t1, f t2)
         | Fresh t -> Fresh (f t) )
 
@@ -425,6 +413,16 @@ module Term = struct
       | Map_range t ->
           let t, m = aux t m in
           (Map_range t, m)
+      | Map_union ts ->
+          let rec aux' m = function
+            | [] -> ([], m)
+            | x :: xs ->
+                let x, m = aux x m in
+                let xs, m = aux' m xs in
+                (x :: xs, m)
+          in
+          let ts, m = aux' m ts in
+          (Map_union ts, m)
       | Cons (element, lst) ->
           let element, m = aux element m in
           let lst, m = aux lst m in
@@ -432,14 +430,6 @@ module Term = struct
       | List t ->
           let t, m = aux t m in
           (List t, m)
-      | Map {key; value} ->
-          let key, m =
-            match make_var (Var key) m with
-            | Var v, m -> (v, m)
-            | _ -> (key, m)
-          in
-          let value, m = aux value m in
-          (Map {key; value}, m)
       | Tuple ts ->
           let rec aux' m = function
             | [] -> ([], m)
@@ -460,16 +450,6 @@ module Term = struct
           in
           let ts, m = aux' m ts in
           (Union ts, m)
-      | Map_union ts ->
-          let rec aux' m = function
-            | [] -> ([], m)
-            | x :: xs ->
-                let x, m = aux x m in
-                let xs, m = aux' m xs in
-                (x :: xs, m)
-          in
-          let ts, m = aux' m ts in
-          (Map_union ts, m)
       | Zip (t1, t2) ->
           let t1, m = aux t1 m in
           let t2, m = aux t2 m in

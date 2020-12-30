@@ -34,8 +34,6 @@ rule token = parse
   | "]" {RSQUARE}
   | "(" {LPAREN}
   | ")" {RPAREN}
-  | "{" {LBRACE}
-  | "}" {RBRACE}
   | "<" {LANGLE}
   | ">" {RANGLE}
   | "-" {DASH}

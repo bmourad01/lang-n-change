@@ -1,4 +1,4 @@
-Expression e ::= ... | ("pmatch" [$e, {p => $e}]).;
+Expression e ::= ... | ("pmatch" [$e, [<[$p, $e]>...]]).;
 
 let has_binding (ts: term list) : bool =
   not(empty?(ts >> _ >> if binding?(self) then some(self) else none))
@@ -15,7 +15,7 @@ Pattern p ::= {
 };
 
 Pattern p ::= ... | ("pattern_var" [$x, $T]).;
-Context E ::= ... | ("pmatch" [$E, {p => $e}]).;
+Context E ::= ... | ("pmatch" [$E, [<[$p, $e]>...]]).;
 MatchResult MR ::= ("match_error" []) | ("match_subst" [[<[$v, $x]>...].]).;
     
 add_relation("typeof_pattern" [$Gamma, $p, $T, $Gamma]);
@@ -143,7 +143,7 @@ add_rule(["TYPES-EQUAL"] {
   &("types_equal" [$($T :: $typs), $T])
 });
 
-add_relation("typeof_match" [$Gamma, $T, {p => $e}, [$T...]]);
+add_relation("typeof_match" [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
 
 # mode: ... | typeof_match => inp inp inp out;
 # principal: ... | typeof_match => no no yes no;
@@ -169,7 +169,7 @@ add_rule(["T-PMATCH"] {
   $Gamma |- ("pmatch" [$e, $($branch :: $M)]) : $T'
 });
 
-add_relation("first_non_error" [{MR => $e}, $MR, $e]);
+add_relation("first_non_error" [[<[$MR, $e]>...], $MR, $e]);
 
 # mode: ... | first_non_error => inp out out;
 # principal: ... | first_non_error => yes no no;
@@ -190,7 +190,7 @@ add_rule(["FIRST-NON-ERROR-SUCCESS"] {
   &("first_non_error" [$(<[("match_subst" [$S.]), $e]> :: $M), ("match_subst" [$S.]), $e])
 });
 
-add_relation("do_match" [$v, {p => $e}, {MR => $e}]);
+add_relation("do_match" [$v, [<[$p, $e]>...], [<[$MR, $e]>...]]);
 
 # mode: ... | do_match => inp inp out;
 # principal: ... | do_match => no yes no;

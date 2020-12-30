@@ -49,7 +49,7 @@ Context E ::= (hole.)
               | (fix E)
               | (fold E (Z)T) | (unfold E)
 
-Environment Gamma ::= {x => T}
+Environment Gamma ::= [<x, T>...]
     
 %
 

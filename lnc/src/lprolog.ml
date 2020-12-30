@@ -212,11 +212,6 @@ module Sigs = struct
                      | T.List t ->
                          let kinds, arg = aux kinds t in
                          (kinds, Syntax.("list" @ [arg]))
-                     | T.Map {key; value} ->
-                         let key = kind_of_var_rel pred key in
-                         let kinds, arg = aux kinds value in
-                         ( key :: kinds
-                         , Syntax.("list" @ ["lnc_pair" @ [v key; arg]]) )
                      | T.Tuple ts ->
                          let kinds, args =
                            let init = (kinds, []) in
@@ -333,13 +328,6 @@ module Sigs = struct
                          (Printf.sprintf "bad list kind %s in category %s"
                             (T.to_string t) name)
                      else Syntax.["list" @ [List.hd_exn t']]
-                 | T.Map {key; value} ->
-                     let t' = aux_map key value in
-                     if List.length t' <> 2 then
-                       invalid_arg
-                         (Printf.sprintf "bad map %s in category %s"
-                            (T.to_string t) name)
-                     else Syntax.["list" @ ["lnc_pair" @ t']]
                  | T.Tuple ts ->
                      let ts' = List.map ts ~f:aux |> List.concat in
                      let len = List.length ts' in
@@ -354,23 +342,6 @@ module Sigs = struct
                      invalid_arg
                        (Printf.sprintf "invalid term %s in category %s"
                           (T.to_string t) name)
-               and aux_map key value =
-                 let key =
-                   match L.kind_of_var lan key with
-                   | None -> Syntax.v "string"
-                   | Some kind ->
-                       if L.is_meta_var_of lan key kind then
-                         let kind = kind_name kind in
-                         if Map.mem kinds kind then Syntax.v kind
-                         else Syntax.v "string"
-                       else Syntax.v "string"
-                 in
-                 let value' = aux value in
-                 if List.length value' > 1 then
-                   invalid_arg
-                     (Printf.sprintf "bad map value %s in category %s"
-                        (T.to_string value) name)
-                 else key :: value'
                in
                let f (kinds, terms') t =
                  match t with
@@ -379,12 +350,6 @@ module Sigs = struct
                      let args = List.map args ~f:aux |> List.concat in
                      let term = Syntax.(name & (args, v name')) in
                      (kinds, Map.set terms' name term)
-                 | T.Map {key; value} ->
-                     let typ =
-                       Syntax.("list" @ ["lnc_pair" @ aux_map key value])
-                     in
-                     Hashtbl.set aliases (Syntax.v name') typ;
-                     (kinds, terms')
                  | T.List t' ->
                      let t'' = aux t' in
                      if List.length t'' > 1 then
@@ -1005,7 +970,6 @@ let of_language (lan : L.t) =
             | n -> Printf.sprintf "lnc_%dtuple" n
           in
           (Syntax.[name @ args], props)
-      | T.Map _ -> ([fresh_var vars "Map" (Some t)], [])
       | T.List _ -> ([fresh_var vars "List" (Some t)], [])
       | T.Union ts ->
           let ts', props =

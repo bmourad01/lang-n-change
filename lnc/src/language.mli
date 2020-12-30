@@ -12,12 +12,11 @@ module Term : sig
     | Map_update of {key: t; value: t; map: t}
     | Map_domain of t
     | Map_range of t
+    | Map_union of t list
     | Cons of t * t
     | List of t
-    | Map of {key: string; value: t}
     | Tuple of t list
     | Union of t list
-    | Map_union of t list
     | Zip of t * t
     | Fresh of t
 
@@ -50,19 +49,17 @@ module Term : sig
 
   val is_map_range : t -> bool
 
+  val is_map_union : t -> bool
+
   val is_nil : t -> bool
 
   val is_cons : t -> bool
 
   val is_list : t -> bool
 
-  val is_map : t -> bool
-
   val is_tuple : t -> bool
 
   val is_union : t -> bool
-
-  val is_map_union : t -> bool
 
   val is_zip : t -> bool
 

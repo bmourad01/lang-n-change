@@ -17,6 +17,7 @@ let parse filename =
           failwith
             (Printf.sprintf "Language: %s parse error: %s" filename
                (file_pos lexbuf))
+      | Invalid_argument _ as x -> raise x
       | _ ->
           failwith
             (Printf.sprintf "Language: %s unknown error: %s" filename

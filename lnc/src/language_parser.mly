@@ -10,21 +10,42 @@
     let relations = match String.Map.of_alist relations with
       | `Ok r -> r
       | `Duplicate_key p ->
-         failwith (Printf.sprintf "duplicate relation signature for %s" p)
+         invalid_arg (Printf.sprintf "duplicate relation signature for %s" p)
     in
     let rules =
+      let check_undefined_relations (r : Rule.t) =
+        let rec collect_props = function
+          | Formula.Not f -> collect_props f
+          | Formula.Eq _ -> []
+          | Formula.Prop _ as p -> [p]
+          | Formula.Member _ -> []
+          | Formula.Subset _ -> []
+        in
+        List.fold (r.conclusion :: r.premises) ~init:[] ~f:(fun acc f ->
+          acc @ (collect_props f))
+        |> List.iter ~f:(function
+             | Formula.Prop {predicate} -> (
+                match Map.find relations predicate with
+                | Some _ -> ()
+                | None ->
+                   invalid_arg
+                     (Printf.sprintf "use of undefined relation %s in rule %s"
+                        predicate r.name) )
+             | _ -> ()) 
+      in
       List.fold rules ~init:String.Map.empty ~f:(fun m r ->
+        check_undefined_relations r; 
         match Map.add m Rule.(r.name) r with
         | `Ok m -> m
         | `Duplicate ->
-           failwith (Printf.sprintf "duplicate rule name %s" Rule.(r.name)))
+           invalid_arg (Printf.sprintf "duplicate rule name %s" Rule.(r.name)))
     in
     let hints =
       List.fold hints ~init:String.Map.empty ~f:(fun m h ->
         match Map.add m Hint.(h.name) h with
         | `Ok m -> m
         | `Duplicate ->
-           failwith (Printf.sprintf "duplicate hint %s" Hint.(h.name)))
+           invalid_arg (Printf.sprintf "duplicate hint %s" Hint.(h.name)))
     in {grammar; relations; rules; hints}
 %}
 
@@ -43,7 +64,7 @@
 %token COLON
 %token DOT
 %token DASH
-%token LSQUARE RSQUARE LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
+%token LSQUARE RSQUARE LPAREN RPAREN LANGLE RANGLE
 %token FSLASH
 %token MAPSTO
 %token EQ
@@ -215,8 +236,6 @@ term:
     { Term.Nil }
   | LSQUARE term DOT DOT DOT RSQUARE
     { Term.List $2 }
-  | LBRACE key = NAME MAPSTO value = term RBRACE
-    { Term.Map {key; value} }
   | LPAREN term CONS term RPAREN
     { Term.Cons ($2, $4) }
   | LANGLE t1 = term COMMA t2 = term RANGLE

@@ -45,12 +45,11 @@ module Exp : sig
       | Term_map_update of t * t * t
       | Term_map_domain of t
       | Term_map_range of t
+      | Term_map_union of t
       | Term_cons of t * t
       | Term_list of t
-      | Term_map of string * t
       | Term_tuple of t
       | Term_union of t
-      | Term_map_union of t
       | Term_zip of t * t
       | Term_fresh of t
 
@@ -190,7 +189,6 @@ module Exp : sig
     | Is_binding of t
     | Is_subst of t
     | Is_list of t
-    | Is_map of t
     | Is_tuple of t
     | Is_var_kind of t * t
     | Is_op_kind of t * t
@@ -209,12 +207,11 @@ module Exp : sig
     | Term_map_update of t * t * t
     | Term_map_domain of t
     | Term_map_range of t
+    | Term_map_union of t
     | Term_cons of t * t
     | Term_list of t
-    | Term_map of string * t
     | Term_tuple of t
     | Term_union of t
-    | Term_map_union of t
     | Term_zip of t * t
     | Term_fresh of t
 

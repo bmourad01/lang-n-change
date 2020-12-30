@@ -74,7 +74,6 @@ rule token = parse
   | "binding?" {QBINDING}
   | "subst?" {QSUBST}
   | "list?" {QLIST}
-  | "map?" {QMAP}
   | "tuple?" {QTUPLE}
   | "var_kind?" {QVARKIND}
   | "op_kind?" {QOPKIND}

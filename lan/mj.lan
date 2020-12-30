@@ -4,18 +4,18 @@ Type T ::= (classT N) | (refT T) | (unitT.)
 Class C ::= (class_decl N N P [W...])
 Method W ::= (method_decl T q Gamma e)
 Declarations D ::= [C...]
-Environment Gamma ::= {x => T}
+Environment Gamma ::= [<x, T>...]
 MethodLookup ML ::= (method_result W) | (method_nil.)
 Error er ::= (err.)
 Context E ::= (hole.) | (deref E) | (new N [E...]) | (access E f) | (invoke E q [e...]) | (invoke v q [E...]) | (cast E T) | (seq E e) | (ite E e e) | (assign E e) | (assign v E) | (update E f e) | (update v f E)
-Memory m ::= {a => v}
-Store Sigma ::= {a => T}
-Params P ::= {f => T}
+Memory m ::= [<a, v>...]
+Store Sigma ::= [<a, T>...]
+Params P ::= [<f, T>...]
 
 %
 
 typeof_args <Gamma, Sigma, D> [e...] [T...].
-subtype_list D {T => T}.
+subtype_list D [<T, T>...].
 lookup_params N D P.
 lookup_method N q D ML.
 decl_type_ok D T.

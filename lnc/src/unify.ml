@@ -151,7 +151,7 @@ let run ?(normalize = false) state (lan : L.t) =
         (* add new substitutions and continue the loop *)
         let state' = Set.remove state tsub in
         match (t1, t2) with
-        | T.Map _, _ | _, T.Map _ | T.List _, _ | _, T.List _ ->
+        | T.List _, _ | _, T.List _ ->
             (* these shouldn't appear in formulae *)
             incompat ()
         | T.Constructor c1, T.Constructor c2 ->

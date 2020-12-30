@@ -197,12 +197,11 @@ module Exp = struct
       | Term_map_update of t * t * t
       | Term_map_domain of t
       | Term_map_range of t
+      | Term_map_union of t
       | Term_cons of t * t
       | Term_list of t
-      | Term_map of string * t
       | Term_tuple of t
       | Term_union of t
-      | Term_map_union of t
       | Term_zip of t * t
       | Term_fresh of t
 
@@ -248,13 +247,12 @@ module Exp = struct
             (to_string map)
       | Term_map_domain p -> Printf.sprintf "$dom(%s)" (to_string p)
       | Term_map_range p -> Printf.sprintf "$range(%s)" (to_string p)
+      | Term_map_union p -> Printf.sprintf "$map_union(%s)" (to_string p)
       | Term_cons (p1, p2) ->
           Printf.sprintf "$(%s :: %s)" (to_string p1) (to_string p2)
       | Term_list p -> Printf.sprintf "[%s...]" (to_string p)
-      | Term_map (var, p) -> Printf.sprintf "{%s => %s}" var (to_string p)
       | Term_tuple p -> Printf.sprintf "<%s>" (to_string p)
       | Term_union p -> Printf.sprintf "$union(%s)" (to_string p)
-      | Term_map_union p -> Printf.sprintf "$map_union(%s)" (to_string p)
       | Term_zip (p1, p2) ->
           Printf.sprintf "$zip(%s, %s)" (to_string p1) (to_string p2)
       | Term_fresh p -> Printf.sprintf "$fresh(%s)" (to_string p)
@@ -395,7 +393,6 @@ module Exp = struct
     | Is_binding of t
     | Is_subst of t
     | Is_list of t
-    | Is_map of t
     | Is_tuple of t
     | Is_var_kind of t * t
     | Is_op_kind of t * t
@@ -414,12 +411,11 @@ module Exp = struct
     | Term_map_update of t * t * t
     | Term_map_domain of t
     | Term_map_range of t
+    | Term_map_union of t
     | Term_cons of t * t
     | Term_list of t
-    | Term_map of string * t
     | Term_tuple of t
     | Term_union of t
-    | Term_map_union of t
     | Term_zip of t * t
     | Term_fresh of t
 
@@ -606,7 +602,6 @@ module Exp = struct
     | Is_binding e -> Printf.sprintf "binding?(%s)" (to_string e)
     | Is_subst e -> Printf.sprintf "subst?(%s)" (to_string e)
     | Is_list e -> Printf.sprintf "list?(%s)" (to_string e)
-    | Is_map e -> Printf.sprintf "map?(%s)" (to_string e)
     | Is_tuple e -> Printf.sprintf "tuple?(%s)" (to_string e)
     | Is_var_kind (e, kind) ->
         Printf.sprintf "var_kind?(%s, %s)" (to_string e) (to_string kind)
@@ -634,14 +629,12 @@ module Exp = struct
           (to_string map)
     | Term_map_domain e -> Printf.sprintf "$dom(%s)" (to_string e)
     | Term_map_range e -> Printf.sprintf "$range(%s)" (to_string e)
+    | Term_map_union e -> Printf.sprintf "$map_union(%s)" (to_string e)
     | Term_cons (e1, e2) ->
         Printf.sprintf "$(%s :: %s)" (to_string e1) (to_string e2)
     | Term_list e -> Printf.sprintf "[%s...]" (to_string e)
-    | Term_map (key, value) ->
-        Printf.sprintf "{%s => %s}" key (to_string value)
     | Term_tuple e -> Printf.sprintf "<%s>" (to_string e)
     | Term_union e -> Printf.sprintf "$union(%s)" (to_string e)
-    | Term_map_union e -> Printf.sprintf "$map_union(%s)" (to_string e)
     | Term_zip (e1, e2) ->
         Printf.sprintf "$zip(%s, %s)" (to_string e1) (to_string e2)
     | Term_fresh e -> Printf.sprintf "$fresh(%s)" (to_string e)
@@ -968,6 +961,13 @@ and compile_pattern_term ctx t =
           let p' = Printf.sprintf "(T.Map_range (%s))" p' in
           (p', Type.Term, ctx)
       | _ -> incompat "Term_map_range pattern" [typ] Type.[Term] )
+  | Exp.Pattern.Term_map_union p -> (
+      let p', typ, ctx = compile_pattern ctx Type.(List Term) p in
+      match typ with
+      | Type.(List Term) ->
+          let p' = Printf.sprintf "(T.Map_union (%s))" p' in
+          (p', Type.Term, ctx)
+      | _ -> incompat "Term_map_union pattern" [typ] Type.[List Term] )
   | Exp.Pattern.Term_cons (p1, p2) -> (
       let p1', typ1, ctx1 = compile_pattern ctx Type.Term p1 in
       let p2', typ2, ctx2 = compile_pattern ctx Type.Term p2 in
@@ -984,14 +984,6 @@ and compile_pattern_term ctx t =
           let p' = Printf.sprintf "(T.List (%s))" p' in
           (p', Type.Term, ctx)
       | _ -> incompat "Term_list pattern" [typ] Type.[Term] )
-  | Exp.Pattern.Term_map (var, p) -> (
-      let p', typ, ctx = compile_pattern ctx Type.Term p in
-      match typ with
-      | Type.Term ->
-          let ctx = merge_ctx ctx (ctx_singleton var Type.String) in
-          let p' = Printf.sprintf "(T.Map {key = %s; value = %s})" var p' in
-          (p', Type.Term, ctx)
-      | _ -> incompat "Term_map pattern (value)" [typ] Type.[Term] )
   | Exp.Pattern.Term_tuple p -> (
       let p', typ, ctx = compile_pattern ctx Type.(List Term) p in
       match typ with
@@ -1006,13 +998,6 @@ and compile_pattern_term ctx t =
           let p' = Printf.sprintf "(T.Union (%s))" p' in
           (p', Type.Term, ctx)
       | _ -> incompat "Term_union pattern" [typ] Type.[List Term] )
-  | Exp.Pattern.Term_map_union p -> (
-      let p', typ, ctx = compile_pattern ctx Type.(List Term) p in
-      match typ with
-      | Type.(List Term) ->
-          let p' = Printf.sprintf "(T.Map_union (%s))" p' in
-          (p', Type.Term, ctx)
-      | _ -> incompat "Term_map_union pattern" [typ] Type.[List Term] )
   | Exp.Pattern.Term_zip (p1, p2) -> (
       let p1', typ1, ctx1 = compile_pattern ctx Type.Term p1 in
       let p2', typ2, ctx2 = compile_pattern ctx Type.Term p2 in
@@ -2227,13 +2212,6 @@ and compile_bool ctx b =
           let e' = Printf.sprintf "(T.is_list %s)" e' in
           (e', Type.Bool, ctx)
       | _ -> incompat "Is_list" [typ] [Type.Term] )
-  | Exp.Is_map e -> (
-      let e', typ, _ = compile ctx e in
-      match typ with
-      | Type.Term ->
-          let e' = Printf.sprintf "(T.is_map %s)" e' in
-          (e', Type.Bool, ctx)
-      | _ -> incompat "Is_map" [typ] [Type.Term] )
   | Exp.Is_tuple e -> (
       let e', typ, _ = compile ctx e in
       match typ with
@@ -2378,6 +2356,13 @@ and compile_term ctx t =
           let e' = Printf.sprintf "(T.Map_range %s)" e' in
           (e', Type.Term, ctx)
       | _ -> incompat "Term_map_range" [typ] [Type.Term] )
+  | Exp.Term_map_union e -> (
+      let e', typ, _ = compile ctx e in
+      match Type_unify.run Type.[List Term; typ] with
+      | Some Type.(List Term) ->
+          let e' = Printf.sprintf "(T.Map_union (%s))" e' in
+          (e', Type.Term, ctx)
+      | _ -> incompat "Term_map_union" [typ] Type.[List Term] )
   | Exp.Term_cons (e1, e2) -> (
       let e1', typ1, _ = compile ctx e1 in
       let e2', typ2, _ = compile ctx e2 in
@@ -2393,15 +2378,6 @@ and compile_term ctx t =
           let e' = Printf.sprintf "(T.List %s)" e' in
           (e', Type.Term, ctx)
       | _ -> incompat "Term_list" [typ] [Type.Term] )
-  | Exp.Term_map (key, e) -> (
-      let e', typ, _ = compile ctx e in
-      match typ with
-      | Type.Term ->
-          let e' =
-            Printf.sprintf "(T.(Map {key = \"%s\"; value = %s}))" key e'
-          in
-          (e', Type.Term, ctx)
-      | _ -> incompat "Term_map" [typ] [Type.Term] )
   | Exp.Term_tuple e -> (
       let e', typ, _ = compile ctx e in
       match Type_unify.run Type.[List Term; typ] with
@@ -2416,13 +2392,6 @@ and compile_term ctx t =
           let e' = Printf.sprintf "(T.Union (%s))" e' in
           (e', Type.Term, ctx)
       | _ -> incompat "Term_union" [typ] Type.[List Term] )
-  | Exp.Term_map_union e -> (
-      let e', typ, _ = compile ctx e in
-      match Type_unify.run Type.[List Term; typ] with
-      | Some Type.(List Term) ->
-          let e' = Printf.sprintf "(T.Map_union (%s))" e' in
-          (e', Type.Term, ctx)
-      | _ -> incompat "Term_map_union" [typ] Type.[List Term] )
   | Exp.Term_zip (e1, e2) -> (
       let e1', typ1, _ = compile ctx e1 in
       let e2', typ2, _ = compile ctx e2 in

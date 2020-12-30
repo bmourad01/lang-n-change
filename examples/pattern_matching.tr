@@ -15,9 +15,7 @@ Pattern p ::= {
 };
 
 Pattern p ::= ... | ("pattern_var" [$x, $T]).;
-
 Context E ::= ... | ("pmatch" [$E, {p => $e}]).;
-
 MatchResult MR ::= ("match_error" []) | ("match_subst" [[<[$v, $x]>...].]).;
     
 add_relation("typeof_pattern" [$Gamma, $p, $T, $Gamma]);

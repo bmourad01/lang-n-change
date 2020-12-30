@@ -348,7 +348,6 @@ module Exp = struct
     | New_syntax of
         {extend: bool; name: string; meta_var: string; terms: t list}
     | New_syntax_of_exp of {name: string; meta_var: string; terms: t}
-    | Set_syntax_terms of {name: t; terms: t}
     | Remove_syntax of t
     | Meta_var_of of t
     | Syntax_terms_of of t
@@ -545,9 +544,6 @@ module Exp = struct
           (List.map terms ~f:to_string |> String.concat ~sep:" | ")
     | New_syntax_of_exp {name; meta_var; terms} ->
         Printf.sprintf "%s %s ::= {%s}" name meta_var (to_string terms)
-    | Set_syntax_terms {name; terms} ->
-        Printf.sprintf "set_syntax(%s, %s)" (to_string name)
-          (to_string terms)
     | Remove_syntax name ->
         Printf.sprintf "remove_syntax(%s)" (to_string name)
     | Meta_var_of name -> Printf.sprintf "meta_var(%s)" (to_string name)
@@ -1787,33 +1783,6 @@ let rec compile ctx e =
           in
           (e', Type.Lan, ctx)
       | _ -> incompat "New_syntax_of_exp" [terms_typ] [terms_typ_exp] )
-  | Exp.Set_syntax_terms {name; terms} -> (
-      let name', name_typ, _ = compile ctx name in
-      match name_typ with
-      | Type.String -> (
-          let e', typ, _ = compile ctx terms in
-          match Type_unify.run Type.[List Term; typ] with
-          | Some Type.(List Term) ->
-              let e' =
-                Printf.sprintf
-                  {|
-                {lan with grammar =
-                (match Map.find lan.grammar (%s) with
-                | None ->
-                failwith ("Set_syntax_terms: grammar " ^ (%s) ^ " doesn't exist")
-                | Some c ->
-                let terms = match (%s) with
-                | [] -> failwith "Set_syntax_terms: list cannot be empty"
-                | terms -> L.Term_set.of_list terms
-                in
-                let c = {c with terms} |> C.deuniquify_terms in
-                Map.set lan.grammar (%s) c)}
-                |}
-                  name' name' e' name'
-              in
-              (e', Type.Lan, ctx)
-          | _ -> incompat "Set_syntax_terms (terms)" [typ] Type.[List Term] )
-      | _ -> incompat "Set_syntax_terms (name)" [name_typ] Type.[String] )
   | Exp.Remove_syntax s -> (
       let e', e_typ, _ = compile ctx s in
       match e_typ with

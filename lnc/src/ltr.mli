@@ -143,7 +143,6 @@ module Exp : sig
     | New_syntax of
         {extend: bool; name: string; meta_var: string; terms: t list}
     | New_syntax_of_exp of {name: string; meta_var: string; terms: t}
-    | Set_syntax_terms of {name: t; terms: t}
     | Remove_syntax of t
     | Meta_var_of of t
     | Syntax_terms_of of t

@@ -125,7 +125,6 @@ rule token = parse
   | "unify_normalize" {UNIFYNORMALIZE}
   | "unify" {UNIFY}
   | "uniquify" {UNIQUIFY}
-  | "set_syntax" {SETSYNTAX}
   | "remove_syntax" {REMOVESYNTAX}
   | "meta_var" {METAVAR}
   | "categories" {CATEGORIES}

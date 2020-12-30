@@ -347,6 +347,7 @@ module Exp = struct
     | Categories_of
     | New_syntax of
         {extend: bool; name: string; meta_var: string; terms: t list}
+    | New_syntax_of_exp of {name: string; meta_var: string; terms: t}
     | Set_syntax_terms of {name: t; terms: t}
     | Remove_syntax of t
     | Meta_var_of of t
@@ -542,6 +543,8 @@ module Exp = struct
         let extend_str = if extend then " ... | " else " " in
         Printf.sprintf "%s %s ::=%s%s." name meta_var extend_str
           (List.map terms ~f:to_string |> String.concat ~sep:" | ")
+    | New_syntax_of_exp {name; meta_var; terms} ->
+        Printf.sprintf "%s %s ::= {%s}" name meta_var (to_string terms)
     | Set_syntax_terms {name; terms} ->
         Printf.sprintf "set_syntax(%s, %s)" (to_string name)
           (to_string terms)
@@ -1763,6 +1766,27 @@ let rec compile ctx e =
         in
         (e', Type.Lan, ctx)
       else incompat "New_syntax" term_typs []
+  | Exp.New_syntax_of_exp {name; meta_var; terms} -> (
+      let terms', terms_typ, _ = compile ctx terms in
+      let terms_typ_exp = Type.(List Term) in
+      match Type_unify.run [terms_typ_exp; terms_typ] with
+      | Some Type.(List Term) ->
+          let terms' = Printf.sprintf "(L.Term_set.of_list (%s))" terms' in
+          let new_cat =
+            Printf.sprintf
+              {|
+            (C.{name = "%s"; meta_var = "%s"; terms = %s}
+            |> C.deuniquify_terms)
+            |}
+              name meta_var terms'
+          in
+          let e' =
+            Printf.sprintf
+              "{lan with grammar = (Map.set lan.grammar \"%s\" %s)}" name
+              new_cat
+          in
+          (e', Type.Lan, ctx)
+      | _ -> incompat "New_syntax_of_exp" [terms_typ] [terms_typ_exp] )
   | Exp.Set_syntax_terms {name; terms} -> (
       let name', name_typ, _ = compile ctx name in
       match name_typ with
@@ -1778,7 +1802,7 @@ let rec compile ctx e =
                 | None ->
                 failwith ("Set_syntax_terms: grammar " ^ (%s) ^ " doesn't exist")
                 | Some c ->
-                let terms = match %s with
+                let terms = match (%s) with
                 | [] -> failwith "Set_syntax_terms: list cannot be empty"
                 | terms -> L.Term_set.of_list terms
                 in
@@ -2453,7 +2477,8 @@ and compile_subst ctx subst =
       match typ with
       | Type.Term -> Printf.sprintf "(T.Subst_pair (%s, %s))" e' var
       | _ -> incompat "Subst_pair" [typ] [Type.Term] )
-  | Exp.Subst_var (v, kind) -> Printf.sprintf "(T.Subst_var (%s, %s))" v kind
+  | Exp.Subst_var (v, kind) ->
+      Printf.sprintf "(T.Subst_var (\"%s\", \"%s\"))" v kind
 
 and compile_formula ctx f =
   match f with

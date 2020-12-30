@@ -257,6 +257,14 @@ exp:
           terms;
         }
     }
+  | name = CAPNAME meta_var = meta_var GRAMMARASSIGN LBRACE terms = exp RBRACE
+    {
+      Exp.New_syntax_of_exp {
+          name;
+          meta_var;
+          terms;
+        }
+    }
   | SETSYNTAX LPAREN name = exp COMMA terms = exp RPAREN
     { Exp.Set_syntax_terms {name; terms} }
   | REMOVESYNTAX LPAREN exp RPAREN
@@ -433,7 +441,7 @@ boolean:
 subst:
   | exp FSLASH NAME
     { Exp.Subst_pair ($1, $3) }
-  | NAME COLON k = CAPNAME
+  | meta_var COLON k = CAPNAME
     { Exp.Subst_var ($1, k) }
 
 term:
@@ -461,7 +469,7 @@ term:
     { Exp.Term_cons ($3, $5) }
   | LSQUARE exp DOT DOT DOT RSQUARE
     { Exp.Term_list $2 }
-  | LBRACE NAME MAPSTO exp RBRACE
+  | LBRACE meta_var MAPSTO exp RBRACE
     { Exp.Term_map ($2, $4) }
   | LANGLE exp RANGLE
     { Exp.Term_tuple $2 }

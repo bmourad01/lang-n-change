@@ -352,7 +352,7 @@ module Exp = struct
     | Kind_of_op of t
     | Kind_of_var of t
     (* relation operations *)
-    | New_relation of string * t
+    | New_relation of t * t
     | Relations_of
     | Set_relations of t
     | Remove_relation of t
@@ -547,7 +547,8 @@ module Exp = struct
     | Kind_of_op e -> Printf.sprintf "op_kind(%s)" (to_string e)
     | Kind_of_var e -> Printf.sprintf "var_kind(%s)" (to_string e)
     | New_relation (predicate, e) ->
-        Printf.sprintf "add_relation(\"%s\" %s)" predicate (to_string e)
+        Printf.sprintf "add_relation(%s, %s)" (to_string predicate)
+          (to_string e)
     | Relations_of -> "relations"
     | Set_relations e -> Printf.sprintf "set_relations(%s)" (to_string e)
     | Remove_relation predicate ->
@@ -1834,16 +1835,20 @@ let rec compile ctx e =
           (e', Type.(Option String), ctx)
       | _ -> incompat "Kind_of_var" [e_typ] Type.[String] )
   | Exp.New_relation (name, e) -> (
-      let e', typ, _ = compile ctx e in
-      match Type_unify.run Type.[List Term; typ] with
-      | Some Type.(List Term) ->
-          let e' =
-            Printf.sprintf
-              "{lan with relations = Map.set lan.relations \"%s\" %s}" name
-              e'
-          in
-          (e', Type.Lan, ctx)
-      | _ -> incompat "New_relation" [typ] Type.[List Term] )
+      let name', name_typ, _ = compile ctx name in
+      match name_typ with
+      | Type.String -> (
+          let e', typ, _ = compile ctx e in
+          match Type_unify.run Type.[List Term; typ] with
+          | Some Type.(List Term) ->
+              let e' =
+                Printf.sprintf
+                  "{lan with relations = Map.set lan.relations (%s) %s}"
+                  name' e'
+              in
+              (e', Type.Lan, ctx)
+          | _ -> incompat "New_relation (args)" [typ] Type.[List Term] )
+      | _ -> incompat "New_relation (predicate)" [name_typ] [Type.String] )
   | Exp.Relations_of ->
       let e' = Printf.sprintf "(Map.to_alist lan.relations)" in
       (e', Type.(List (Tuple [String; List Term])), ctx)

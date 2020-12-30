@@ -368,19 +368,19 @@ hint_element:
 
 sugared_relation:
   | exp TURNSTILE exp COLON exp
-    { Exp.New_relation (Language.Predicate.Builtin.typeof, Exp.List [$1; $3; $5]) }
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.typeof, Exp.List [$1; $3; $5]) }
   | exp STEP exp
-    { Exp.New_relation (Language.Predicate.Builtin.step, Exp.List [$1; $3]) }
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.step, Exp.List [$1; $3]) }
   | exp SUBTYPE exp
-    { Exp.New_relation (Language.Predicate.Builtin.subtype, Exp.List [$1; $3]) }
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3]) }
   | exp TURNSTILE exp SUBTYPE exp
-    { Exp.New_relation (Language.Predicate.Builtin.subtype, Exp.List [$1; $3; $5]) }
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3; $5]) }
 
 relation:
   | sugared_relation
     { $1 }
-  | STR exp
-    { Exp.New_relation ($1, $2) }
+  | exp COMMA exp
+    { Exp.New_relation ($1, $3) }
 
 boolean:
   | TRUE

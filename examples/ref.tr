@@ -160,7 +160,7 @@ add_rule(
 
 (* add the relation to check the memory for well-formedness *)
 
-add_relation("memory_ok" [$Sigma, $m]);
+add_relation("memory_ok", [$Sigma, $m]);
 
 # mode: ... | memory_ok => inp inp;
 # principal: ... | memory_ok => no yes;

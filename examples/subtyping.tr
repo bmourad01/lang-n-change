@@ -207,8 +207,8 @@ add_rules(syntax("Type") >> (c ts) >>
   }
 );
 
-add_relation("join" [$T, $T, $T]);
-add_relation("meet" [$T, $T, $T]);
+add_relation("join", [$T, $T, $T]);
+add_relation("meet", [$T, $T, $T]);
 add_relation($T <: $T);
 
 # mode: ... | join => inp inp out | meet => inp inp out | subtype => inp inp;

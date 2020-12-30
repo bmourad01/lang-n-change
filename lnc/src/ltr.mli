@@ -148,7 +148,7 @@ module Exp : sig
     | Kind_of_op of t
     | Kind_of_var of t
     (* relation operations *)
-    | New_relation of string * t
+    | New_relation of t * t
     | Relations_of
     | Set_relations of t
     | Remove_relation of t

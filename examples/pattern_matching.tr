@@ -18,7 +18,7 @@ Pattern p ::= ... | ("pattern_var" [$x, $T]).;
 Context E ::= ... | ("pmatch" [$E, [<[$p, $e]>...]]).;
 MatchResult MR ::= ("match_error" []) | ("match_subst" [[<[$v, $x]>...].]).;
     
-add_relation("typeof_pattern" [$Gamma, $p, $T, $Gamma]);
+add_relation("typeof_pattern", [$Gamma, $p, $T, $Gamma]);
 
 # mode: ... | typeof_pattern => inp inp out out;
 # principal: ... | typeof_pattern => no yes no no;
@@ -64,7 +64,7 @@ add_rule(["T-MATCH-VAR"] {
   &("typeof_pattern" [$Gamma, ("pattern_var" [$x, $T]), $T, [$x => $T]$Gamma])
 });
 
-add_relation("match_pattern" [$p, $v, $MR]);
+add_relation("match_pattern", [$p, $v, $MR]);
 
 # mode: ... | match_pattern => inp inp out;
 # principal: ... | match_pattern => yes yes no;
@@ -127,7 +127,7 @@ add_rule(["MATCH-VAR"] {
   &("match_pattern" [("pattern_var" [$x, $T]), $v, ("match_subst" [$(<[$v, $x]> :: $nil).])])
 });
     
-add_relation("types_equal" [[$T...], $T]);
+add_relation("types_equal", [[$T...], $T]);
 
 # mode: ... | types_equal => inp out;
 # principal: ... | types_equal => yes no;
@@ -143,7 +143,7 @@ add_rule(["TYPES-EQUAL"] {
   &("types_equal" [$($T :: $typs), $T])
 });
 
-add_relation("typeof_match" [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
+add_relation("typeof_match", [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
 
 # mode: ... | typeof_match => inp inp inp out;
 # principal: ... | typeof_match => no no yes no;
@@ -169,7 +169,7 @@ add_rule(["T-PMATCH"] {
   $Gamma |- ("pmatch" [$e, $($branch :: $M)]) : $T'
 });
 
-add_relation("first_non_error" [[<[$MR, $e]>...], $MR, $e]);
+add_relation("first_non_error", [[<[$MR, $e]>...], $MR, $e]);
 
 # mode: ... | first_non_error => inp out out;
 # principal: ... | first_non_error => yes no no;
@@ -190,7 +190,7 @@ add_rule(["FIRST-NON-ERROR-SUCCESS"] {
   &("first_non_error" [$(<[("match_subst" [$S.]), $e]> :: $M), ("match_subst" [$S.]), $e])
 });
 
-add_relation("do_match" [$v, [<[$p, $e]>...], [<[$MR, $e]>...]]);
+dd_relation("do_match", [$v, [<[$p, $e]>...], [<[$MR, $e]>...]]);
 
 # mode: ... | do_match => inp inp out;
 # principal: ... | do_match => no yes no;

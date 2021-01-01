@@ -190,7 +190,7 @@ add_rule(["FIRST-NON-ERROR-SUCCESS"] {
   &("first_non_error" [$(<[("match_subst" [$S.]), $e]> :: $M), ("match_subst" [$S.]), $e])
 });
 
-dd_relation("do_match", [$v, [<[$p, $e]>...], [<[$MR, $e]>...]]);
+add_relation("do_match", [$v, [<[$p, $e]>...], [<[$MR, $e]>...]]);
 
 # mode: ... | do_match => inp inp out;
 # principal: ... | do_match => no yes no;

@@ -120,6 +120,7 @@ module Exp : sig
     | Diff of t * t
     | Intersect of t * t
     | Zip of t * t
+    | Unzip of t
     | Assoc of t * t
     | Interleave_pairs of t
     | Length of t

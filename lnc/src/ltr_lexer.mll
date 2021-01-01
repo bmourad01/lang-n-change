@@ -89,6 +89,7 @@ rule token = parse
   | "map_union" {MAPUNION}
   | "subset" {SUBSET}
   | "zip" {ZIP}
+  | "unzip" {UNZIP}
   | "fresh_var" {FRESHVAR}
   | "fresh" {FRESH}
   | "substitute" {SUBSTITUTE}

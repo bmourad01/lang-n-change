@@ -324,6 +324,7 @@ module Exp = struct
     | Diff of t * t
     | Intersect of t * t
     | Zip of t * t
+    | Unzip of t
     | Assoc of t * t
     | Interleave_pairs of t
     | Length of t
@@ -513,6 +514,7 @@ module Exp = struct
         Printf.sprintf "intersect(%s, %s)" (to_string e1) (to_string e2)
     | Zip (e1, e2) ->
         Printf.sprintf "zip(%s, %s)" (to_string e1) (to_string e2)
+    | Unzip e -> Printf.sprintf "unzip(%s)" (to_string e)
     | Assoc (e1, e2) ->
         Printf.sprintf "assoc(%s, %s)" (to_string e1) (to_string e2)
     | Interleave_pairs e ->
@@ -1580,6 +1582,16 @@ let rec compile ctx e =
           let e' = Printf.sprintf "(List.zip_exn %s %s)" e1' e2' in
           (e', Type.(List (Tuple [typ1'; typ2'])), ctx)
       | _ -> incompat "Zip" [typ1; typ2] [] )
+  | Exp.Unzip e -> (
+      let e', typ, _ = compile ctx e in
+      let typ_exp =
+        Type.(List (Tuple [fresh_type_var ctx; fresh_type_var ctx]))
+      in
+      match Type_unify.run [typ_exp; typ] with
+      | Some Type.(List (Tuple [typ1; typ2])) ->
+          let e' = Printf.sprintf "(List.unzip %s)" e' in
+          (e', Type.(Tuple [List typ1; List typ2]), ctx)
+      | _ -> incompat "Zip" [typ] [typ_exp] )
   | Exp.Assoc (e1, e2) -> (
       let e1', typ1, _ = compile ctx e1 in
       let e2', typ2, _ = compile ctx e2 in

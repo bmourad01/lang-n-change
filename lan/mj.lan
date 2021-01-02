@@ -286,7 +286,7 @@ member <a, v> m
 
 [R-ACCESS-NEW]
 lookup_params N D P,
-member <f, v> zip(dom(p), v_args)
+member <f, v> zip(dom(P), v_args)
 --------------------------------------
 <(access (new N v_args) f), D, m> --> <v, D, m>.
 

@@ -918,6 +918,10 @@ let to_string lan =
                  (Term.to_string (List.hd_exn ts))
                  (Term.to_string (List.nth_exn ts 1))
                  (Term.to_string (List.last_exn ts))
+             else if Predicate.(equal p Builtin.consistent) && len = 2 then
+               Printf.sprintf "%s ~ %s"
+                 (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.last_exn ts))
              else
                Printf.sprintf "%s %s." p
                  (List.map ts ~f:Term.to_string |> String.concat ~sep:" "))

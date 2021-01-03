@@ -75,9 +75,7 @@ set_rules(rules >> _ >> (
             some(concat(vars(e) >> v >>
               match assoc(v, tmap) with
               | none ->
-                 let ov = dedup(concat(concat(
-                   tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
-                 in
+                 let ov = var_overlap(tv, contra_types) in
                  if empty?(ov)
                  then zip([tk.], [tk.])
                  else zip([tk.], ov)
@@ -123,13 +121,9 @@ set_rules(rules >> _ >> (
     let r = [rule_name(r)] {
       premises(r),
       tmap >> (tk, tv) >> (
-        let ov = dedup(concat(concat(
-          tv >> t >> (contra_types >> c >> var_overlap(t, c)))))
-        in
+        let ov = var_overlap(tv, contra_types) in
         if not(empty?(ov)) then none else
-          let ov = dedup(concat(concat(
-            tv >> t >> (inv_types >> c >> var_overlap(t, c)))))
-          in
+          let ov = var_overlap(tv, inv_types) in
           if empty?(ov)
           then some(&("join" (tv @ [tk.])))
           else
@@ -148,8 +142,8 @@ set_rules(rules >> _ >> (
     let r = [rule_name(r)] {
       premises(r) >>! t1 <: t2 >> (
         let joins = premises(r) >> &("join" ts) >> (
-          let ov1 = dedup(concat(ts >> t >> var_overlap(t1, t))) in
-          let ov2 = dedup(concat(ts >> t >> var_overlap(t2, t))) in
+          let ov1 = var_overlap([t1.], ts) in
+          let ov2 = var_overlap([t2.], ts) in
           if empty?(ov1) || empty?(ov2) then none else some(self))
         in
         if empty?(joins) then some(self) else none)

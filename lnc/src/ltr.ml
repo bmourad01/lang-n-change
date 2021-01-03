@@ -1674,7 +1674,19 @@ let rec compile ctx e =
       | Type.Term, Type.Term ->
           let e' = Printf.sprintf "(T.var_overlap %s %s)" e1' e2' in
           (e', Type.(List Term), ctx)
-      | _ -> incompat "Var_overlap" [typ1; typ2] [] )
+      | _ -> (
+          let exp_typ = Type.(List Term) in
+          match Type_unify.run [exp_typ; typ1; typ2] with
+          | Some Type.(List Term) ->
+              let e' =
+                Printf.sprintf
+                  "(Aux.dedup_list_stable ~compare:T.compare (List.concat \
+                   (List.concat (List.map (%s) ~f:(fun t1 -> List.map (%s) \
+                   ~f:(fun t2 -> T.var_overlap t1 t2))))))"
+                  e1' e2'
+              in
+              (e', Type.(List Term), ctx)
+          | _ -> incompat "Var_overlap" [typ1; typ2] [] ) )
   | Exp.Ticked e -> (
       let e', typ, _ = compile ctx e in
       match typ with

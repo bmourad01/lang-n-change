@@ -17,6 +17,7 @@
 %token GRAMMARASSIGN
 %token TURNSTILE
 %token SUBTYPE
+%token TILDE
 %token STEP
 %token ARROW
 %token MID
@@ -34,7 +35,7 @@
 %token MAPSTO
 %token EQ
 %token QLESS QGREATER QMEMBER QNOTHING QSOMETHING QEMPTY QVAR QCONSTVAR QSTR QCONSTRUCTOR QBINDING QSUBST QLIST QTUPLE QVARKIND QOPKIND QSYNTAX QSTARTSWITH QENDSWITH
-%token MATCH WITH FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF INTERSECT ASSOC INTERLEAVEPAIRS LENGTH APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE INTSTR SELF UNIFYNORMALIZE UNIFY UNIQUIFY REMOVESYNTAX METAVAR CATEGORIES SYNTAX OPKIND VARKIND ADDRELATION RELATIONS SETRELATIONS REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT
+%token MATCH WITH FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF INTERSECT ASSOC LENGTH APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE INTSTR SELF UNIFYNORMALIZE UNIFY UNIQUIFY REMOVESYNTAX METAVAR CATEGORIES SYNTAX OPKIND VARKIND ADDRELATION RELATIONS SETRELATIONS REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT
 %token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP UNZIP FRESH
 %token LAN RULE FORMULA TERM STRING BOOL INT TUPLE OPTION LIST
 %token TRUE FALSE
@@ -211,8 +212,6 @@ exp:
     { Exp.Unzip ($3) }
   | ASSOC LPAREN exp COMMA exp RPAREN
     { Exp.Assoc ($3, $5) }
-  | INTERLEAVEPAIRS LPAREN exp RPAREN
-    { Exp.Interleave_pairs $3 }
   | LENGTH LPAREN exp RPAREN
     { Exp.Length $3 }
   | NOTHING
@@ -377,6 +376,8 @@ sugared_relation:
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3]) }
   | exp TURNSTILE exp SUBTYPE exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3; $5]) }
+  | exp TILDE exp
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.consistent, Exp.List [$1; $3]) }
 
 relation:
   | sugared_relation
@@ -503,6 +504,12 @@ sugared_formula:
       let args = Exp.List [$1; $3; $5] in
       Exp.Formula_prop (predicate, args)
     }
+  | exp TILDE exp
+    {
+      let predicate = Exp.Str Language.Predicate.Builtin.consistent in
+      let args = Exp.List [$1; $3] in
+      Exp.Formula_prop (predicate, args)
+    }
 
 formula:
   | sugared_formula
@@ -609,6 +616,12 @@ sugared_pattern_formula:
     {
       let predicate = Exp.Pattern.Str Language.Predicate.Builtin.subtype in
       let args = Exp.Pattern.List [$1; $3; $5] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+  | pattern TILDE pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.consistent in
+      let args = Exp.Pattern.List [$1; $3] in
       Exp.Pattern.Formula_prop (predicate, args)
     }
 

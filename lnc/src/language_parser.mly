@@ -55,6 +55,7 @@
 %token MOD
 %token GRAMMARASSIGN
 %token WILDCARD
+%token TILDE
 %token TURNSTILE
 %token SUBTYPE
 %token STEP
@@ -137,6 +138,8 @@ sugared_relation:
     { (Predicate.Builtin.subtype, [$1; $3]) }
   | term TURNSTILE term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3; $5]) }
+  | term TILDE term DOT
+    { (Predicate.Builtin.consistent, [$1; $3]) }
 
 relation:
   | sugared_relation
@@ -167,6 +170,12 @@ sugared_formula:
     {
       let predicate = Predicate.Builtin.subtype in
       let args = [$1; $3; $5] in
+      Formula.Prop {predicate; args}
+    }
+  | term TILDE term
+    {
+      let predicate = Predicate.Builtin.consistent in
+      let args = [$1; $3] in
       Formula.Prop {predicate; args}
     }
 

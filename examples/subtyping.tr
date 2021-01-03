@@ -1,3 +1,13 @@
+let interleave_pairs (l: term list) =
+  let rec loop (l: term list) : (term, term) tuple list =
+    match l with
+    | [] -> []
+    | x :: y :: rest -> (x, y) :: loop(y :: rest)
+    | x :: [] -> []
+  in
+  loop(l)
+in
+
 (* modify all typing rules *)
 set_rules(rules >> _ >> (
   let typ_prems = premises(self) >> &("typeof" _) >> self in

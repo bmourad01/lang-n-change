@@ -46,6 +46,7 @@ rule token = parse
   | "-->" {STEP}
   | "->" {ARROW}
   | "<:" {SUBTYPE}
+  | "~" {TILDE}
   | "|" {MID}
   | "[" {LSQUARE}
   | "]" {RSQUARE}
@@ -101,7 +102,6 @@ rule token = parse
   | "diff" {DIFF}
   | "intersect" {INTERSECT}
   | "assoc" {ASSOC}
-  | "interleave_pairs" {INTERLEAVEPAIRS}
   | "length" {LENGTH}
   | "append" {APPEND}
   | "rev" {REV}

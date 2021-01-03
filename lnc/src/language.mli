@@ -118,6 +118,8 @@ module Predicate : sig
     val step : t
 
     val subtype : t
+
+    val consistent : t
   end
 end
 

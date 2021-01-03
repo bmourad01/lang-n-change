@@ -492,6 +492,8 @@ module Predicate = struct
     let step = "step"
 
     let subtype = "subtype"
+
+    let consistent = "consistent"
   end
 end
 
@@ -527,6 +529,11 @@ module Formula = struct
           Printf.sprintf "%s |- %s <: %s"
             (Term.to_string (List.hd_exn args))
             (Term.to_string (List.nth_exn args 1))
+            (Term.to_string (List.last_exn args))
+        else if Predicate.(equal predicate Builtin.consistent) && len = 2
+        then
+          Printf.sprintf "%s ~ %s"
+            (Term.to_string (List.hd_exn args))
             (Term.to_string (List.last_exn args))
         else
           let args_str =

@@ -704,11 +704,6 @@ let incompat name ts ts' =
        expect)
 
 let type_equal pref t =
-  let no_equal t =
-    failwith
-      (Printf.sprintf "%s: no equality predicate exits for type %s" pref
-         (Type.to_string t))
-  in
   let rec eq t =
     match t with
     | Type.Lan -> "L.equal"
@@ -720,16 +715,12 @@ let type_equal pref t =
     | Type.Bool -> "Bool.equal"
     | Type.Int -> "Int.equal"
     | Type.List t -> Printf.sprintf "(List.equal %s)" (eq t)
-    | Type.Var _ | Type.Tuple _ | Type.Option _ | Type.Arrow _ -> no_equal t
+    | Type.Var _ | Type.Tuple _ | Type.Option _ | Type.Arrow _ ->
+        "Poly.equal"
   in
   eq t
 
 let type_compare pref t =
-  let no_compare t =
-    failwith
-      (Printf.sprintf "%s: no comparison predicate exits for type %s" pref
-         (Type.to_string t))
-  in
   let rec eq t =
     match t with
     | Type.Lan -> "L.compare"
@@ -742,7 +733,7 @@ let type_compare pref t =
     | Type.Int -> "Int.compate"
     | Type.List t -> Printf.sprintf "(List.compare %s)" (eq t)
     | Type.Var _ | Type.Tuple _ | Type.Option _ | Type.Arrow _ ->
-        no_compare t
+        "Poly.compare"
   in
   eq t
 

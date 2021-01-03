@@ -307,6 +307,7 @@ module Exp = struct
     | Ite of t * t * t
     | Seq of t * t
     | Lift of Pattern.t * t
+    | Lift_in_rule of Pattern.t * t * t
     | Select of {keep: bool; field: t; pattern: Pattern.t; body: t}
     | Match of {exp: t; cases: (Pattern.t * t option * t) list}
     (* tuple operations *)
@@ -478,6 +479,9 @@ module Exp = struct
     | Seq (e1, e2) -> Printf.sprintf "%s; %s" (to_string e1) (to_string e2)
     | Lift (p, e) ->
         Printf.sprintf "lift %s to %s" (Pattern.to_string p) (to_string e)
+    | Lift_in_rule (p, e, r) ->
+        Printf.sprintf "lift %s to %s in %s" (Pattern.to_string p)
+          (to_string e) (to_string r)
     | Select {keep; field; pattern; body} ->
         let field_str = to_string field in
         let op_str = if keep then ">>!" else ">>" in
@@ -1382,6 +1386,36 @@ let rec compile ctx e =
           in
           (e', Type.Lan, ctx)
       | _ -> incompat "Lift" [typ] [Type.Formula] )
+  | Exp.Lift_in_rule (p, e, r) -> (
+      let pat_ctx = {ctx with type_env= String.Map.empty} in
+      let pat', pat_typ, pat_ctx = compile_pattern pat_ctx Type.Formula p in
+      let pat_ctx =
+        let type_env =
+          Map.merge_skewed pat_ctx.type_env ctx.type_env
+            ~combine:(fun ~key t _ -> t)
+        in
+        {pat_ctx with type_env}
+      in
+      let e', typ, _ = compile pat_ctx e in
+      let r', r_typ, _ = compile ctx r in
+      match r_typ with
+      | Type.Rule -> (
+        match typ with
+        | Type.Formula ->
+            let e' =
+              Printf.sprintf
+                "((fun (r : R.t) -> \n\
+                \                let tr = function\n\
+                \          | %s -> %s\n\
+                \          | x -> x\n\
+                \          in\n\
+                 {r with premises = List.map r.premises ~f:tr; conclusion = \
+                 tr r.conclusion}) (%s))"
+                pat' e' r'
+            in
+            (e', Type.Rule, ctx)
+        | _ -> incompat "Lift_in_rule (body)" [typ] [Type.Formula] )
+      | _ -> incompat "Lift_in_rule (rule)" [r_typ] [Type.Rule] )
   | Exp.Select {keep; field; pattern; body} -> (
       let field', field_typ, _ = compile ctx field in
       match field_typ with

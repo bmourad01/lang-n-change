@@ -174,6 +174,8 @@ exp:
     { Exp.Seq ($1, $3) }
   | LIFT pattern TO exp 
     { Exp.Lift ($2, $4) }
+  | LIFT pattern TO exp IN exp
+    { Exp.Lift_in_rule ($2, $4, $6) }
   | field = exp LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
     { Exp.Select {keep = false; field; pattern; body} }
   | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp

@@ -52,6 +52,7 @@
 %token EOF
 %token <string> STRING
 %token <string> NAME
+%token <int> NUM
 %token MOD
 %token GRAMMARASSIGN
 %token WILDCARD
@@ -89,8 +90,14 @@ language:
   | grammar = nonempty_list(grammar_category) MOD relations = nonempty_list(relation) MOD rules = nonempty_list(rule)
     { create_lan grammar rules ~relations }
 
+hint_value:
+  | NAME
+    { $1 }
+  | NUM
+    { Int.to_string $1 }
+
 hint_element:
-  | NAME MAPSTO nonempty_list(NAME)
+  | NAME MAPSTO nonempty_list(hint_value)
     {
       let open Core_kernel in
       String.Map.singleton $1 $3
@@ -99,6 +106,11 @@ hint_element:
     {
       let open Core_kernel in
       String.Map.singleton $1 []
+    }
+  | NUM
+    {
+      let open Core_kernel in
+      String.Map.singleton (Int.to_string $1) []
     }
 
 hint:

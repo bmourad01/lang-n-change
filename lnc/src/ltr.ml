@@ -290,6 +290,7 @@ module Exp = struct
     | Str_concat of t * t
     | Uppercase of t
     | Lowercase of t
+    | Str_int of t
     (* integer operations *)
     | Int of int
     | Int_str of t
@@ -444,6 +445,7 @@ module Exp = struct
         Printf.sprintf "%s ^ %s" (to_string e1) (to_string e2)
     | Uppercase e -> Printf.sprintf "uppercase(%s)" (to_string e)
     | Lowercase e -> Printf.sprintf "lowercase(%s)" (to_string e)
+    | Str_int e -> Printf.sprintf "str_int(%s)" (to_string e)
     | Int n -> Int.to_string n
     | Int_str e -> Printf.sprintf "int_str(%s)" (to_string e)
     | Bool_exp b -> string_of_boolean b
@@ -1216,6 +1218,13 @@ let rec compile ctx e =
           let e' = Printf.sprintf "(String.lowercase %s)" e' in
           (e', typ, ctx)
       | _ -> incompat "Lowercase" [typ] [Type.String] )
+  | Exp.Str_int e -> (
+      let e', typ, _ = compile ctx e in
+      match typ with
+      | Type.String ->
+          let e' = Printf.sprintf "(Int.of_string (%s))" e' in
+          (e', Type.Int, ctx)
+      | _ -> incompat "Str_int" [typ] [Type.String] )
   | Exp.Int i -> (Int.to_string i, Type.Int, ctx)
   | Exp.Int_str e -> (
       let e', typ, _ = compile ctx e in
@@ -1756,6 +1765,9 @@ let rec compile ctx e =
         | Type.(List (Tuple [Term; Term])) -> (
           match typ1 with
           | Type.Term -> Printf.sprintf "(T.substitute %s %s)" e1' e2'
+          | Type.(List Term) ->
+              Printf.sprintf
+                "(List.map (%s) ~f:(fun _t -> T.substitute _t %s))" e1' e2'
           | Type.Formula -> Printf.sprintf "(F.substitute %s %s)" e1' e2'
           | Type.Rule -> Printf.sprintf "(R.substitute %s %s)" e1' e2'
           | _ -> incompat "Substitute" [typ1] [] )
@@ -1798,6 +1810,13 @@ let rec compile ctx e =
       match (typ1, typ2) with
       | Type.Term, Type.(List Term) ->
           let e' = Printf.sprintf "(T.ticked_restricted %s %s)" e1' e2' in
+          (e', typ1, ctx)
+      | Type.(List Term), Type.(List Term) ->
+          let e' =
+            Printf.sprintf
+              "(List.map (%s) ~f:(fun _t -> (T.ticked_restricted _t %s)))"
+              e1' e2'
+          in
           (e', typ1, ctx)
       | _ ->
           incompat "Ticked_restricted" [typ1; typ2]
@@ -2103,8 +2122,8 @@ let rec compile ctx e =
       | _ -> incompat "Add_rule" [typ] [Type.Rule] )
   | Exp.Add_rules e -> (
       let e', typ, _ = compile ctx e in
-      match typ with
-      | Type.(List Rule) ->
+      match Type_unify.run [Type.(List Rule); typ] with
+      | Some Type.(List Rule) ->
           let e' =
             Printf.sprintf
               {|
@@ -2115,7 +2134,7 @@ let rec compile ctx e =
               e'
           in
           (e', Type.Lan, ctx)
-      | _ -> incompat "Add_rule" [typ] [Type.Rule] )
+      | _ -> incompat "Add_rules" [typ] [Type.Rule] )
   | Exp.Set_rules e -> (
       let e', typ, _ = compile ctx e in
       match typ with

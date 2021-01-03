@@ -124,6 +124,7 @@ rule token = parse
   | "rec" {REC}
   | "uppercase" {UPPERCASE}
   | "lowercase" {LOWERCASE}
+  | "str_int" {STRINT}
   | "int_str" {INTSTR}
   | "self" {SELF}
   | "unify_normalize" {UNIFYNORMALIZE}

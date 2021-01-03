@@ -12,12 +12,14 @@
 }
 
 let digit = ['0'-'9']
+let integer = digit+
 let alpha = ['a'-'z' 'A'-'Z']
 let name = ['a'-'z' 'A'-'Z'] (alpha | '_' | '-' | '\'' | digit)*
 
 rule token = parse                            
   | ['\r' '\n'] {next_line lexbuf; token lexbuf} 
   | [' ' '\t'] {token lexbuf}
+  | integer as n {NUM (int_of_string n)}
   | "\"" (name as s) "\"" {STRING s}
   | '%' {MOD}
   | "::=" {GRAMMARASSIGN}

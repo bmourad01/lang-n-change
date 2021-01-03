@@ -86,6 +86,7 @@ module Exp : sig
     | Str_concat of t * t
     | Uppercase of t
     | Lowercase of t
+    | Str_int of t
     (* integer operations *)
     | Int of int
     | Int_str of t

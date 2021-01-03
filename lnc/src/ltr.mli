@@ -102,8 +102,9 @@ module Exp : sig
     | Apply of t * t list
     | Ite of t * t * t
     | Seq of t * t
+    | Lift of Pattern.t * t
     | Select of {keep: bool; field: t; pattern: Pattern.t; body: t}
-    | Match of {exp: t; cases: (Pattern.t * t) list}
+    | Match of {exp: t; cases: (Pattern.t * t option * t) list}
     (* tuple operations *)
     | Tuple of t list
     (* list operations *)

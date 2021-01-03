@@ -60,8 +60,12 @@ rule token = parse
   | "/" {FSLASH}
   | "=>" {MAPSTO}
   | "=" {EQ}
+  | "lift" {LIFT}
+  | "to" {TO}
+  | "keep" {KEEP}
   | "match" {MATCH}
   | "with" {WITH}
+  | "when" {WHEN}
   | "less?" {QLESS}
   | "greater?" {QGREATER}
   | "member?" {QMEMBER}

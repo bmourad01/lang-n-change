@@ -35,7 +35,7 @@
 %token MAPSTO
 %token EQ
 %token QLESS QGREATER QMEMBER QNOTHING QSOMETHING QEMPTY QVAR QCONSTVAR QSTR QCONSTRUCTOR QBINDING QSUBST QLIST QTUPLE QVARKIND QOPKIND QSYNTAX QSTARTSWITH QENDSWITH
-%token MATCH WITH FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF INTERSECT ASSOC LENGTH APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE INTSTR SELF UNIFYNORMALIZE UNIFY UNIQUIFY REMOVESYNTAX METAVAR CATEGORIES SYNTAX OPKIND VARKIND ADDRELATION RELATIONS SETRELATIONS REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT
+%token LIFT TO KEEP MATCH WITH WHEN FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF INTERSECT ASSOC LENGTH APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE INTSTR SELF UNIFYNORMALIZE UNIFY UNIQUIFY REMOVESYNTAX METAVAR CATEGORIES SYNTAX OPKIND VARKIND ADDRELATION RELATIONS SETRELATIONS REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT
 %token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP UNZIP FRESH
 %token LAN RULE FORMULA TERM STRING BOOL INT TUPLE OPTION LIST
 %token TRUE FALSE
@@ -55,6 +55,12 @@ ltr:
 meta_var:
   | CAPNAME
     { $1 }
+  | NAME
+    { $1 }
+
+let_name:
+  | WILDCARD
+    { "_" }
   | NAME
     { $1 }
 
@@ -138,7 +144,7 @@ exp:
           body;
         }
     }
-  | LET LPAREN name1 = NAME COMMA name2 = NAME RPAREN EQ exp = exp IN body = exp
+  | LET LPAREN name1 = let_name COMMA name2 = let_name RPAREN EQ exp = exp IN body = exp
     {
       Exp.Let {
           recursive = false;
@@ -149,7 +155,7 @@ exp:
           body;
         }
     }
-  | LET LPAREN name1 = NAME COMMA name2 = NAME COMMA names = separated_nonempty_list(COMMA, NAME) RPAREN EQ exp = exp IN body = exp
+  | LET LPAREN name1 = let_name COMMA name2 = let_name COMMA names = separated_nonempty_list(COMMA, let_name) RPAREN EQ exp = exp IN body = exp
     {
       Exp.Let {
           recursive = false;
@@ -166,6 +172,12 @@ exp:
     { Exp.Ite ($2, $4, $6) }
   | exp SEMI exp
     { Exp.Seq ($1, $3) }
+  | LIFT pattern TO exp 
+    { Exp.Lift ($2, $4) }
+  | field = exp LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
+    { Exp.Select {keep = false; field; pattern; body} }
+  | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
+    { Exp.Select {keep = true; field; pattern; body} }
   | field = exp SELECT pattern = pattern SELECT body = exp
     { Exp.Select {keep = false; field; pattern; body} }
   | field = exp SELECT EXCL pattern = pattern SELECT body = exp
@@ -325,7 +337,9 @@ exp:
 
 match_case:
   | pattern ARROW exp
-    { ($1, $3) }
+    { ($1, None, $3) }
+  | pattern WHEN exp ARROW exp
+    { ($1, Some $3, $5) }
 
 typ:
   | LAN

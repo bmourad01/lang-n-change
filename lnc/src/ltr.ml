@@ -306,8 +306,9 @@ module Exp = struct
     | Apply of t * t list
     | Ite of t * t * t
     | Seq of t * t
+    | Lift of Pattern.t * t
     | Select of {keep: bool; field: t; pattern: Pattern.t; body: t}
-    | Match of {exp: t; cases: (Pattern.t * t) list}
+    | Match of {exp: t; cases: (Pattern.t * t option * t) list}
     (* tuple operations *)
     | Tuple of t list
     (* list operations *)
@@ -475,6 +476,8 @@ module Exp = struct
         Printf.sprintf "if %s then %s else %s" (to_string b) (to_string e1)
           (to_string e2)
     | Seq (e1, e2) -> Printf.sprintf "%s; %s" (to_string e1) (to_string e2)
+    | Lift (p, e) ->
+        Printf.sprintf "lift %s to %s" (Pattern.to_string p) (to_string e)
     | Select {keep; field; pattern; body} ->
         let field_str = to_string field in
         let op_str = if keep then ">>!" else ">>" in
@@ -483,8 +486,14 @@ module Exp = struct
           (to_string body)
     | Match {exp; cases} ->
         let cases_str =
-          List.map cases ~f:(fun (p, e) ->
-              Printf.sprintf "%s -> (%s)" (Pattern.to_string p) (to_string e))
+          List.map cases ~f:(fun (p, w, e) ->
+              let wstr =
+                match w with
+                | None -> ""
+                | Some w -> " " ^ to_string w
+              in
+              Printf.sprintf "%s%s -> (%s)" (Pattern.to_string p) wstr
+                (to_string e))
           |> String.concat ~sep:" | "
         in
         Printf.sprintf "match %s with %s" (to_string exp) cases_str
@@ -686,9 +695,11 @@ let reserved_name v =
     failwith (Printf.sprintf "cannot bind reserved var name %s" v)
 
 let bind_var ctx v typ =
-  reserved_name v;
-  let type_env = Map.set ctx.type_env v typ in
-  {ctx with type_env}
+  if String.equal v "_" then ctx
+  else (
+    reserved_name v;
+    let type_env = Map.set ctx.type_env v typ in
+    {ctx with type_env} )
 
 let incompat name ts ts' =
   let expect =
@@ -1345,6 +1356,32 @@ let rec compile ctx e =
           in
           (e', Type.Lan, ctx2)
       | _ -> incompat "Seq" [typ1; typ2] Type.[Lan; Lan] )
+  | Exp.Lift (p, e) -> (
+      let pat_ctx = {ctx with type_env= String.Map.empty} in
+      let pat', pat_typ, pat_ctx = compile_pattern pat_ctx Type.Formula p in
+      let pat_ctx =
+        let type_env =
+          Map.merge_skewed pat_ctx.type_env ctx.type_env
+            ~combine:(fun ~key t _ -> t)
+        in
+        {pat_ctx with type_env}
+      in
+      let e', typ, _ = compile pat_ctx e in
+      match typ with
+      | Type.Formula ->
+          let e' =
+            Printf.sprintf
+              "{lan with rules=let tr = function\n\
+              \          | %s -> %s\n\
+              \          | x -> x\n\
+              \          in\n\
+              \          String.Map.of_alist_exn (List.map (Map.data \
+               lan.rules) ~f:(fun r -> (r.name, {r with premises = List.map \
+               r.premises ~f:tr; conclusion = tr r.conclusion})))}"
+              pat' e'
+          in
+          (e', Type.Lan, ctx)
+      | _ -> incompat "Lift" [typ] [Type.Formula] )
   | Exp.Select {keep; field; pattern; body} -> (
       let field', field_typ, _ = compile ctx field in
       match field_typ with
@@ -1382,13 +1419,24 @@ let rec compile ctx e =
               | Type.Option typ -> (body', typ)
               | typ -> (Printf.sprintf "Some (%s)" body', typ)
             in
+            let typ', to_list =
+              match body_typ with
+              | Type.(List t) when keep && Type.equal typ' t ->
+                  (body_typ, true)
+              | _ -> (typ', false)
+            in
             if keep && Option.is_none (Type_unify.run [typ'; body_typ]) then
               incompat "Select (body)" [body_typ] [typ']
             else
               let p' =
                 let keep_var = if matching_concl then "self" else "x" in
                 let keep_str =
-                  if keep then Printf.sprintf "Some (%s)" keep_var
+                  if keep then
+                    let keep_var =
+                      if to_list then Printf.sprintf "[%s]" keep_var
+                      else keep_var
+                    in
+                    Printf.sprintf "Some (%s)" keep_var
                   else "None"
                 in
                 let match_str =
@@ -1413,9 +1461,9 @@ let rec compile ctx e =
         | Type.Rule -> (Type.Formula, true)
         | _ -> (exp_typ, false)
       in
-      let ps', es', typs =
+      let ps', ews, typs =
         let pat_ctx = {ctx with type_env= String.Map.empty} in
-        List.map cases ~f:(fun (p, e) ->
+        List.map cases ~f:(fun (p, w, e) ->
             (* any variables that are mentioned in a
              * pattern will shadow existing variables *)
             let p', _, pat_ctx = compile_pattern pat_ctx exp_typ p in
@@ -1426,16 +1474,24 @@ let rec compile ctx e =
               in
               {pat_ctx with type_env}
             in
-            let e', typ, _ = compile pat_ctx e in
-            (p', e', typ))
+            let w', w_typ, _ =
+              match w with
+              | None -> ("true", Type.Bool, ctx)
+              | Some w -> compile pat_ctx w
+            in
+            match w_typ with
+            | Type.Bool ->
+                let e', typ, _ = compile pat_ctx e in
+                (p', (e', w'), typ)
+            | _ -> incompat "Match (when)" [w_typ] [Type.Bool])
         |> List.unzip3
       in
       match Type_unify.run typs with
       | None -> incompat "Match" typs []
       | Some typ ->
           let cases_str =
-            List.map (List.zip_exn ps' es') ~f:(fun (p', e') ->
-                Printf.sprintf "(%s) -> (%s)" p' e')
+            List.map (List.zip_exn ps' ews) ~f:(fun (p', (e', w')) ->
+                Printf.sprintf "(%s) when (%s) -> (%s)" p' w' e')
             |> String.concat ~sep:" | "
           in
           let exp' =
@@ -1618,6 +1674,11 @@ let rec compile ctx e =
       let e' =
         match typ with
         | Type.Term -> Printf.sprintf "(T.vars %s)" e'
+        | Type.(List Term) ->
+            Printf.sprintf
+              "(Aux.dedup_list_stable ~compare:T.compare List.(concat (map \
+               (%s) ~f:(fun t -> T.vars t))))"
+              e'
         | Type.Formula -> Printf.sprintf "(F.vars %s)" e'
         | Type.Rule -> Printf.sprintf "(R.vars %s)" e'
         | _ -> incompat "Vars_of" [typ] []
@@ -1931,6 +1992,7 @@ let rec compile ctx e =
       let check_prems = function
         | Type.Formula
          |Type.(List Formula)
+         |Type.(List (List Formula))
          |Type.(List (Var _)) (* fixme: this is a hack *)
          |Type.(Option Formula) -> true
         | _ -> false
@@ -1949,6 +2011,8 @@ let rec compile ctx e =
                            match typ with
                            | Type.Formula -> Printf.sprintf "[%s]" p
                            | Type.(List Formula) | Type.(List (Var _)) -> p
+                           | Type.(List (List Formula)) ->
+                               Printf.sprintf "(List.concat (%s))" p
                            | Type.(Option Formula) ->
                                Printf.sprintf
                                  "(List.filter_map [%s] ~f:(fun x -> x))" p

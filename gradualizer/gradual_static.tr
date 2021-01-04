@@ -21,12 +21,11 @@ in
 
 add_relation($T ~ $T);
 add_relation("matches", [$T, $T]);
-add_relation("flows", [$T, $T]);
 add_relation("join", [$T, $T, $T]);
 add_relation("static", [$T.]);
 
-# mode: ... | consistent => inp inp | matches => inp out | flows => inp out | join => inp inp out | static => inp;
-# principal: ... | consistent => yes yes | matches => yes no | flows => yes no | join => yes yes no | static => yes;
+# mode: ... | consistent => inp inp | matches => inp out | join => inp inp out | static => inp;
+# principal: ... | consistent => yes yes | matches => yes no | join => yes yes no | static => yes;
 
 add_rules(syntax("Type")[|(c ts)|]:
   ["C-" ^ uppercase(c)] {
@@ -221,18 +220,17 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   let r = [name] {
     premises(r)
     ------------------------------------------------------------
-    gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
-  } in
-
-  (*    
-  let r = [name] {
-    premises(r)(keep)[|&("join" [t1, t2, t3])|]:
-      if member?(t3, vars(conclusion(r))) then self
-      else t1 ~ t2
-    -----------------------
-    conclusion(r)
+    match conclusion(r) with gamma |- ("ci" [e, _]) : t ->
+      gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
   } in
   
+  let r = [name] {
+    premises(r)(keep)[|&("join" [_, _, t])|]:
+      if member?(t, vars(conclusion(r))) then some(self) else none
+    ----------------------------------
+    conclusion(r)
+  } in
+
   let in_join (t: term) =
     not(empty?(premises(r)[|&("join" [_, _, t3])|]:
       if t = t3 then some(self) else none))
@@ -240,11 +238,10 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
 
   let r = [name] {
     premises(r)(keep)[|&("flows" [t1, t2])|]:
-      if in_join(t2) || t1 = t2 then none else some(self)
-    --------------------------------
+      if in_join(t2) || t1 = t2 then none else some(t1 ~ t2)
+    --------------------------------------------------------
     conclusion(r)
   } in
-  *)
 
   r
 ))

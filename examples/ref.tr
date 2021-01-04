@@ -10,10 +10,10 @@ Store Sigma ::= [<[$a, $T]>...].;
 # variance: ... | refT => inv;
 
 (* modify the shape of the typing relation *)
-set_relations(relations(keep)[|("typeof", [$Gamma, $e, $T])|]: ("typeof", [<[$Gamma, $Sigma]>, $e, $T]));
+add_relation(<[$Gamma, $Sigma]> |- $e : $T);
 
 (* modify the shape of the step relation *)
-set_relations(relations(keep)[|("step", [$e, $e])|]: ("step", [<[$e, $m]>, <[$e, $m]>]));
+add_relation(<[$e, $m]> --> <[$e, $m]>);
 
 (* modify all typing judgements in rules to have the new shape *)
 lift (gamma |- e : t) to (<[gamma, $Sigma]> |- e : t).;

@@ -10,18 +10,10 @@ Store Sigma ::= [<[$a, $T]>...].;
 # variance: ... | refT => inv;
 
 (* modify the shape of the typing relation *)
-set_relations(relations >>! ("typeof", [a, e, t]) >>
-  match a with
-  | <ts> -> ("typeof", [<ts @ [$Sigma.]>, e, t])
-  | _ -> ("typeof", [<[a, $Sigma]>, e, t])
-);
+set_relations(relations(keep)[|("typeof", [$Gamma, $e, $T])|]: ("typeof", [<[$Gamma, $Sigma]>, $e, $T]));
 
 (* modify the shape of the step relation *)
-set_relations(relations >>! ("step", [t1, t2]) >>
-  match (t1, t2) with
-  | (<ts1>, <ts2>) -> ("step", [<ts1 @ [$m.]>, <ts2 @ [$m.]>])
-  | _ -> ("step", [<[t1, $m]>, <[t2, $m]>])
-);
+set_relations(relations(keep)[|("step", [$e, $e])|]: ("step", [<[$e, $m]>, <[$e, $m]>]));
 
 (* modify all typing judgements in rules to have the new shape *)
 lift (gamma |- e : t) to (<[gamma, $Sigma]> |- e : t).;

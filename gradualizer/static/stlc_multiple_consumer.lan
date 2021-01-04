@@ -1,7 +1,7 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (app1 e e e) | (app2 e e e) | (app3 e e) | (tt.) | (ff.) | (pair e e) | (fst e) | (snd e)
+Expression e ::= x | (abs T (x)e) | (app e e) | (app1 e e e) | (app2 e e e) | (app3 e e) | (app4 e e e) | (tt.) | (ff.) | (pair e e) | (fst e) | (snd e)
 Value v ::= (abs T (x)e) | (tt.) | (ff.) | (pair v v)
 Type T ::= (arrow T T) | (bool.) | (times T T)
-Context E ::= (hole.) | (app E e) | (app v E) | (app1 E e e) | (app1 v E e) | (app1 v v E) | (app2 E e e) | (app2 v E e) | (app2 v v E) | (app3 E e) | (app3 v E) | (pair E e) | (pair v E) | (fst E) | (snd E)
+Context E ::= (hole.) | (app E e) | (app v E) | (app1 E e e) | (app1 v E e) | (app1 v v E) | (app2 E e e) | (app2 v E e) | (app2 v v E) | (app3 E e) | (app3 v E) | (app4 E e e) | (app4 v E e) | (app4 v v E) | (pair E e) | (pair v E) | (fst E) | (snd E)
 Environment Gamma ::= [<x, T>...]
 
 %
@@ -45,7 +45,14 @@ Gamma |- (app1 e1 e2 e3) : (times (arrow T (bool.)) (arrow T (bool.))).
 Gamma |- e1 : (arrow T (arrow T (bool.))),
 Gamma |- e2 : (times T T)
 --------------------------------
-Gamma |- (app e1 e2) : T2.
+Gamma |- (app3 e1 e2) : (times (arrow T (bool.)) (arrow T (bool.))).
+
+[T-APP4]
+Gamma |- e1 : (arrow T1 (times (arrow T1 (bool.)) (arrow T1 (arrow T2 (bool.))))),
+Gamma |- e2 : (times T1 T1),
+Gamma |- e3 : (times T2 T2)
+--------------------------------
+Gamma |- (app4 e1 e2 e3) : (times (bool.) (bool.)).
 
 [T-TRUE]
 --------------------------------
@@ -87,6 +94,10 @@ Gamma |- (snd e) : T2.
 --------------------------------
 (app3 v1 v2) --> (pair (app v1 (snd v2)) (app v1 (fst v2))).
 
+[R-APP4]
+--------------------------------
+(app4 v1 v2 v3) --> (pair (app (app (fst v1) (fst v1)) (snd v2)) (app (app (snd v1) (fst v2)) (snd v2))).
+
 [R-FST]
 --------------------------------
 (fst (pair v1 v2)) --> v1.
@@ -101,4 +112,8 @@ mode: typeof => inp inp out | step => inp out.
 principal: typeof => no yes no | step => yes no.
 variance: arrow => contra cov.
 eliminationform: app => 0 | app1 => 0 | app2 => 0 | app3 => 0.
-flows: app1 => [e1, 0, e2, 0] [e1, 1, e3, 0] | app2 => [e1, 0, e2, 0] [e1, 1, e3, 0] | app3 => [e1, 0, e2, 1] [e1, 1, e2, 0].
+
+flows: app1 => [e1, 0, e2, 0] [e1, 1, e3, 0]
+     | app2 => [e1, 0, e2, 0] [e1, 1, e3, 0]
+     | app3 => [e1, 0, e2, 1] [e1, 1, e2, 0]
+     | app4 => [e1, 0, e2, 0] [e1, 1, e2, 1] [e1, 0, e3, 0] [e1, 1, e3, 1].

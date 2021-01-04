@@ -93,7 +93,9 @@ let run ?(normalize = false) state (lan : L.t) =
       | Unequal_lengths -> []
       | Ok l ->
           List.filter_map l ~f:(fun (m, t) ->
-              Option.some_if (String.equal m "yes") t) )
+              match m with
+              | L.Hint.Str s -> Option.some_if (String.equal s "yes") t
+              | _ -> None) )
   in
   let inputs predicate args =
     match Map.find mode.elements predicate with
@@ -103,7 +105,9 @@ let run ?(normalize = false) state (lan : L.t) =
       | Unequal_lengths -> []
       | Ok l ->
           List.filter_map l ~f:(fun (m, t) ->
-              Option.some_if (String.equal m "inp") t) )
+              match m with
+              | L.Hint.Str s -> Option.some_if (String.equal s "inp") t
+              | _ -> None) )
   in
   let is_provable = function
     (* only propositions can be provable

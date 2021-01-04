@@ -148,6 +148,7 @@ rule token = parse
   | "add_rule" {ADDRULE}
   | "set_rules" {SETRULES}
   | "hint" {HINT}
+  | "hint_list" {HINTLIST}
   | "lan" {LAN}
   | "rule" {RULE}
   | "formula" {FORMULA}

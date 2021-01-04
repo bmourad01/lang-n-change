@@ -105,7 +105,8 @@ module Exp : sig
     | Seq of t * t
     | Lift of Pattern.t * t
     | Lift_in_rule of Pattern.t * t * t
-    | Select of {keep: bool; field: t; pattern: Pattern.t; body: t}
+    | Select of
+        {keep: bool; field: t; pattern: Pattern.t; when_: t option; body: t}
     | Match of {exp: t; cases: (Pattern.t * t option * t) list}
     (* tuple operations *)
     | Tuple of t list
@@ -172,6 +173,7 @@ module Exp : sig
     | New_hint of
         {extend: bool; name: string; elements: (string * string list) list}
     | Lookup_hint of t
+    | Lookup_hint_list of t
 
   and boolean =
     | Bool of bool

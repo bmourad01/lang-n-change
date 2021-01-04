@@ -606,6 +606,26 @@ end
 
 module Formula_set = Set.Make (Formula_comparable)
 
+module Hint = struct
+  type elem = Str of string | Strs of string list
+  [@@deriving equal, compare]
+
+  type t = {name: string; elements: elem list String.Map.t}
+  [@@deriving equal, compare]
+
+  let string_of_elem = function
+    | Str s -> s
+    | Strs s -> Printf.sprintf "[%s]" (String.concat s ~sep:", ")
+
+  let to_string h =
+    Printf.sprintf "%s: %s" h.name
+      ( Map.to_alist h.elements
+      |> List.map ~f:(fun (k, v) ->
+             Printf.sprintf "%s => %s" k
+               (List.map v ~f:string_of_elem |> String.concat ~sep:" "))
+      |> String.concat ~sep:" | " )
+end
+
 let hint_vars_of_formulae fs ignored hint_map hint_var =
   let is_hint_constructor = function
     | Term.Constructor {name; _} ->
@@ -872,18 +892,6 @@ module Grammar = struct
 
   let to_string g =
     Map.data g |> List.map ~f:Category.to_string |> String.concat ~sep:"\n"
-end
-
-module Hint = struct
-  type t = {name: string; elements: string list String.Map.t}
-  [@@deriving equal, compare]
-
-  let to_string h =
-    Printf.sprintf "%s: %s" h.name
-      ( Map.to_alist h.elements
-      |> List.map ~f:(fun (k, v) ->
-             Printf.sprintf "%s => %s" k (String.concat v ~sep:" "))
-      |> String.concat ~sep:" | " )
 end
 
 type t =

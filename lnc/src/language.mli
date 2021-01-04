@@ -163,6 +163,16 @@ end
 
 module Formula_set : module type of Set.Make (Formula_comparable)
 
+module Hint : sig
+  type elem = Str of string | Strs of string list
+  [@@deriving equal, compare]
+
+  type t = {name: string; elements: elem list String.Map.t}
+  [@@deriving equal, compare]
+
+  val to_string : t -> string
+end
+
 val uniquify_formulae :
      ?underscore:bool
   -> ?ignored:Formula.t list
@@ -203,13 +213,6 @@ module Grammar : sig
   end
 
   type t = Category.t String.Map.t [@@deriving equal, compare]
-
-  val to_string : t -> string
-end
-
-module Hint : sig
-  type t = {name: string; elements: string list String.Map.t}
-  [@@deriving equal, compare]
 
   val to_string : t -> string
 end

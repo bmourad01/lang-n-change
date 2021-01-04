@@ -96,8 +96,18 @@ hint_value:
   | NUM
     { Int.to_string $1 }
 
+hint_element_list:
+  | LSQUARE separated_nonempty_list(COMMA, hint_value) RSQUARE
+    { Hint.Strs $2 }
+
 hint_element:
-  | NAME MAPSTO nonempty_list(hint_value)
+  | NAME MAPSTO elems = nonempty_list(hint_value)
+    {
+      let open Core_kernel in
+      let elems = List.map elems ~f:(fun e -> Hint.Str e) in
+      String.Map.singleton $1 elems
+    }
+  | NAME MAPSTO nonempty_list(hint_element_list)
     {
       let open Core_kernel in
       String.Map.singleton $1 $3

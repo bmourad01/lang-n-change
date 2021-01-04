@@ -35,7 +35,7 @@
 %token MAPSTO
 %token EQ
 %token QLESS QGREATER QMEMBER QNOTHING QSOMETHING QEMPTY QVAR QCONSTVAR QSTR QCONSTRUCTOR QBINDING QSUBST QLIST QTUPLE QVARKIND QOPKIND QSYNTAX QSTARTSWITH QENDSWITH
-%token LIFT TO KEEP MATCH WITH WHEN FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF INTERSECT ASSOC LENGTH APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE STRINT INTSTR SELF UNIFYNORMALIZE UNIFY UNIQUIFY REMOVESYNTAX METAVAR CATEGORIES SYNTAX OPKIND VARKIND ADDRELATION RELATIONS SETRELATIONS REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT
+%token LIFT TO KEEP MATCH WITH WHEN FRESHVAR SUBSTITUTE VAROVERLAP NTH HEAD TAIL LAST DIFF INTERSECT ASSOC LENGTH APPEND REV DEDUP CONCAT VARS UNBIND BOUND NOTHING SOMETHING GET IF THEN ELSE LET REC IN UPPERCASE LOWERCASE STRINT INTSTR SELF UNIFYNORMALIZE UNIFY UNIQUIFY REMOVESYNTAX METAVAR CATEGORIES SYNTAX OPKIND VARKIND ADDRELATION RELATIONS SETRELATIONS REMOVERELATION RULENAME PREMISES CONCLUSION RULES ADDRULES ADDRULE SETRULES HINT HINTLIST
 %token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP UNZIP FRESH
 %token LAN RULE FORMULA TERM STRING BOOL INT TUPLE OPTION LIST
 %token TRUE FALSE
@@ -178,14 +178,18 @@ exp:
     { Exp.Lift ($2, $4) }
   | LIFT pattern TO exp IN exp
     { Exp.Lift_in_rule ($2, $4, $6) }
+  | field = exp LSQUARE MID pattern = pattern WHEN when_ = exp MID RSQUARE COLON body = exp
+    { Exp.Select {keep = false; field; pattern; when_ = Some when_; body} }
   | field = exp LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
-    { Exp.Select {keep = false; field; pattern; body} }
+    { Exp.Select {keep = false; field; pattern; when_ = None; body} }
+  | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern WHEN when_ = exp MID RSQUARE COLON body = exp
+    { Exp.Select {keep = true; field; pattern; when_ = Some when_; body} }
   | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
-    { Exp.Select {keep = true; field; pattern; body} }
+    { Exp.Select {keep = true; field; pattern; when_ = None; body} }
   | field = exp SELECT pattern = pattern SELECT body = exp
-    { Exp.Select {keep = false; field; pattern; body} }
+    { Exp.Select {keep = false; field; pattern; when_ = None; body} }
   | field = exp SELECT EXCL pattern = pattern SELECT body = exp
-    { Exp.Select {keep = true; field; pattern; body} }
+    { Exp.Select {keep = true; field; pattern; when_ = None; body} }
   | MATCH exp = exp WITH MID cases = separated_nonempty_list(MID, match_case)
     { Exp.Match {exp; cases} }
   | MATCH exp = exp WITH cases = separated_nonempty_list(MID, match_case)
@@ -338,6 +342,8 @@ exp:
     }
   | HINT LPAREN exp RPAREN
     { Exp.Lookup_hint $3 }
+  | HINTLIST LPAREN exp RPAREN
+    { Exp.Lookup_hint_list $3 }
 
 match_case:
   | pattern ARROW exp

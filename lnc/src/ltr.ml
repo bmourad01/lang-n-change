@@ -309,7 +309,8 @@ module Exp = struct
     | Seq of t * t
     | Lift of Pattern.t * t
     | Lift_in_rule of Pattern.t * t * t
-    | Select of {keep: bool; field: t; pattern: Pattern.t; body: t}
+    | Select of
+        {keep: bool; field: t; pattern: Pattern.t; when_: t option; body: t}
     | Match of {exp: t; cases: (Pattern.t * t option * t) list}
     (* tuple operations *)
     | Tuple of t list
@@ -376,6 +377,7 @@ module Exp = struct
     | New_hint of
         {extend: bool; name: string; elements: (string * string list) list}
     | Lookup_hint of t
+    | Lookup_hint_list of t
 
   and boolean =
     | Bool of bool
@@ -484,12 +486,17 @@ module Exp = struct
     | Lift_in_rule (p, e, r) ->
         Printf.sprintf "lift %s to %s in %s" (Pattern.to_string p)
           (to_string e) (to_string r)
-    | Select {keep; field; pattern; body} ->
+    | Select {keep; field; pattern; when_; body} ->
         let field_str = to_string field in
         let op_str = if keep then ">>!" else ">>" in
-        Printf.sprintf "%s %s %s >> (%s)" field_str op_str
+        let when_str =
+          match when_ with
+          | None -> ""
+          | Some w -> Printf.sprintf " when %s" (to_string w)
+        in
+        Printf.sprintf "%s %s%s %s >> (%s)" field_str op_str
           (Pattern.to_string pattern)
-          (to_string body)
+          when_str (to_string body)
     | Match {exp; cases} ->
         let cases_str =
           List.map cases ~f:(fun (p, w, e) ->
@@ -592,6 +599,8 @@ module Exp = struct
         in
         Printf.sprintf "#%s:%s%s" name extend_str elements_str
     | Lookup_hint hint -> Printf.sprintf "hint(%s)" (to_string hint)
+    | Lookup_hint_list hint ->
+        Printf.sprintf "hint_list(%s)" (to_string hint)
 
   and string_of_boolean = function
     | Bool b -> Bool.to_string b
@@ -1425,7 +1434,7 @@ let rec compile ctx e =
             (e', Type.Rule, ctx)
         | _ -> incompat "Lift_in_rule (body)" [typ] [Type.Formula] )
       | _ -> incompat "Lift_in_rule (rule)" [r_typ] [Type.Rule] )
-  | Exp.Select {keep; field; pattern; body} -> (
+  | Exp.Select {keep; field; pattern; when_; body} -> (
       let field', field_typ, _ = compile ctx field in
       match field_typ with
       | Type.List typ' ->
@@ -1455,46 +1464,55 @@ let rec compile ctx e =
           if
             matching_concl || Option.is_some (Type_unify.run [typ'; pat_typ])
           then
-            let pat_ctx = bind_var pat_ctx "self" typ' in
-            let body', body_typ, body_ctx = compile pat_ctx body in
-            let body', body_typ =
-              match body_typ with
-              | Type.Option typ -> (body', typ)
-              | typ -> (Printf.sprintf "Some (%s)" body', typ)
+            let when', when_typ, _ =
+              match when_ with
+              | None -> ("true", Type.Bool, pat_ctx)
+              | Some w -> compile pat_ctx w
             in
-            let typ', to_list =
-              match body_typ with
-              | Type.(List t) when keep && Type.equal typ' t ->
-                  (body_typ, true)
-              | _ -> (typ', false)
-            in
-            if keep && Option.is_none (Type_unify.run [typ'; body_typ]) then
-              incompat "Select (body)" [body_typ] [typ']
-            else
-              let p' =
-                let keep_var = if matching_concl then "self" else "x" in
-                let keep_str =
-                  if keep then
-                    let keep_var =
-                      if to_list then Printf.sprintf "[%s]" keep_var
-                      else keep_var
+            match when_typ with
+            | Type.Bool ->
+                let pat_ctx = bind_var pat_ctx "self" typ' in
+                let body', body_typ, body_ctx = compile pat_ctx body in
+                let body', body_typ =
+                  match body_typ with
+                  | Type.Option typ -> (body', typ)
+                  | typ -> (Printf.sprintf "Some (%s)" body', typ)
+                in
+                let typ', to_list =
+                  match body_typ with
+                  | Type.(List t) when keep && Type.equal typ' t ->
+                      (body_typ, true)
+                  | _ -> (typ', false)
+                in
+                if keep && Option.is_none (Type_unify.run [typ'; body_typ])
+                then incompat "Select (body)" [body_typ] [typ']
+                else
+                  let p' =
+                    let keep_var = if matching_concl then "self" else "x" in
+                    let keep_str =
+                      if keep then
+                        let keep_var =
+                          if to_list then Printf.sprintf "[%s]" keep_var
+                          else keep_var
+                        in
+                        Printf.sprintf "Some (%s)" keep_var
+                      else "None"
                     in
-                    Printf.sprintf "Some (%s)" keep_var
-                  else "None"
-                in
-                let match_str =
-                  if matching_concl then "R.(self.conclusion)" else "self"
-                in
-                Printf.sprintf
-                  {|
-                 (List.filter_map %s ~f:(fun self ->
-                 match %s with
-                 | %s -> %s
-                 | x -> %s))
-                 |}
-                  field' match_str pat' body' keep_str
-              in
-              (p', Type.(List body_typ), ctx)
+                    let match_str =
+                      if matching_concl then "R.(self.conclusion)"
+                      else "self"
+                    in
+                    Printf.sprintf
+                      {|
+                      (List.filter_map %s ~f:(fun self ->
+                       match %s with
+                       | %s when %s -> %s
+                       | x -> %s))
+                       |}
+                      field' match_str pat' when' body' keep_str
+                  in
+                  (p', Type.(List body_typ), ctx)
+            | _ -> incompat "Select (when)" [when_typ] [Type.Bool]
           else incompat "Select (pattern)" [pat_typ] [typ']
       | _ -> incompat "Select (field)" [field_typ] [] )
   | Exp.Match {exp; cases} -> (
@@ -2154,7 +2172,7 @@ let rec compile ctx e =
       let elements' =
         List.map elements ~f:(fun (k, v) ->
             Printf.sprintf "(\"%s\", [%s])" k
-              ( List.map v ~f:(fun v -> Printf.sprintf "\"%s\"" v)
+              ( List.map v ~f:(fun v -> Printf.sprintf "H.Str \"%s\"" v)
               |> String.concat ~sep:"; " ))
         |> String.concat ~sep:"; " |> Printf.sprintf "[%s]"
       in
@@ -2198,11 +2216,39 @@ let rec compile ctx e =
              begin match Map.find lan.hints (%s) with
              | None -> []
              | Some h -> Map.to_alist h.elements
+               |> List.filter_map ~f:(fun (k, v) ->
+                  let v =
+                    List.filter_map v ~f:(function
+                       | H.Str s -> Some s | H.Strs _ -> None)
+                  in
+                  if List.is_empty v then None else Some (k, v))
              end
              |}
               e'
           in
           (e', Type.(List (Tuple [String; List String])), ctx)
+      | _ -> incompat "Lookup_hint" [typ] Type.[String] )
+  | Exp.Lookup_hint_list name -> (
+      let e', typ, _ = compile ctx name in
+      match typ with
+      | Type.String ->
+          let e' =
+            Printf.sprintf
+              {|
+             begin match Map.find lan.hints (%s) with
+             | None -> []
+             | Some h -> Map.to_alist h.elements
+               |> List.filter_map ~f:(fun (k, v) ->
+                  let v =
+                    List.filter_map v ~f:(function
+                       | H.Str _ -> None | H.Strs s -> Some s)
+                  in
+                  if List.is_empty v then None else Some (k, v))
+             end
+             |}
+              e'
+          in
+          (e', Type.(List (Tuple [String; List (List String)])), ctx)
       | _ -> incompat "Lookup_hint" [typ] Type.[String] )
 
 and compile_bool ctx b =

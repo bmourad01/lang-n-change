@@ -48,7 +48,7 @@ Gamma |- e2 : (times T T)
 Gamma |- (app3 e1 e2) : (times (arrow T (bool.)) (arrow T (bool.))).
 
 [T-APP4]
-Gamma |- e1 : (arrow T1 (times (arrow T1 (bool.)) (arrow T1 (arrow T2 (bool.))))),
+Gamma |- e1 : (arrow T1 (times (arrow T1 (bool.)) (arrow T2 (arrow T2 (bool.))))),
 Gamma |- e2 : (times T1 T1),
 Gamma |- e3 : (times T2 T2)
 --------------------------------

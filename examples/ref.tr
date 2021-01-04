@@ -34,11 +34,9 @@ set_rules(rules(keep)[|<[e1, _]> --> <[e2, _]>|]:
 
   [rule_name(self)] {
     premises(self)(keep)[|<[e1, _]> --> <[e2, _]>|]:
-      let m1 = get(assoc(self, smap1)) in
-      let m2 = get(assoc(self, smap2)) in
-      <[e1, m1]> --> <[e2, m2]>
+      <[e1, assoc!(self, smap1)]> --> <[e2, assoc!(self, smap2)]>
     ---------------------------------------------------------
-    <[e1, head(stores)]> --> <[e2, get(assoc(concl, smap1))]>
+    <[e1, head(stores)]> --> <[e2, assoc!(concl, smap1)]>
   }
 );
 

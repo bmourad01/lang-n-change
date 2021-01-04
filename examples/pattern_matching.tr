@@ -46,7 +46,7 @@ add_rules(rules >> gamma |- (op es) : t >>
         match prem with
         | gamma |- e : t ->
           (match assoc(prem, prems_map) with
-           | some(g) -> &("typeof_pattern" [gamma, get(assoc(e, es_to_ps)), t, g])
+           | some(g) -> &("typeof_pattern" [gamma, assoc!(e, es_to_ps), t, g])
            | _ -> self)
         | _ -> self,
       (match new_gammas with
@@ -87,7 +87,7 @@ add_rules(syntax("Value") >> (op vs) >>
     some(["MATCH-" ^ uppercase(op)] {
       subs >> (v, s) >>
         if var?(v) && var_kind?(v, "Value")
-        then some(&("match_pattern" [get(assoc(v, vs_to_ps)), v, ("match_subst" [s.])]))
+        then some(&("match_pattern" [assoc!(v, vs_to_ps), v, ("match_subst" [s.])]))
         else none,
       (match subs_un with
        | [] -> none

@@ -105,6 +105,7 @@ rule token = parse
   | "last" {LAST}
   | "diff" {DIFF}
   | "intersect" {INTERSECT}
+  | "assoc!" {GETASSOC}
   | "assoc" {ASSOC}
   | "length" {LENGTH}
   | "append" {APPEND}

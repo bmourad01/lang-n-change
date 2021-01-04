@@ -58,7 +58,7 @@ add_rules(concat(
         
         some(["R-VALUE-" ^ uppercase(op)] {
           pmvs >> e >>
-            let ee = get(assoc(e, emap)) in
+            let ee = assoc!(e, emap) in
             if (var?(e) && var_kind?(e, "Type"))
                || (var?(ee) && var_kind?(ee, "Type"))
             then none

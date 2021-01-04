@@ -169,10 +169,10 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
     dedup(concat(tmap_inverse[|(t1, t2)|]: (
       let tfinal =
         match assoc(t1, final_type_by_user) with
-        | none -> get(assoc(t2, final_type))
+        | none -> assoc!(t2, final_type)
         | some(t) -> t
       in
-      let tcons = var_overlap(get(assoc(t2, tmap)), consumers) in
+      let tcons = var_overlap(assoc!(t2, tmap), consumers) in
       let flowfinal = &("flows" [t1, tfinal]) in
       let flowcons = match tcons with
         | [] -> []

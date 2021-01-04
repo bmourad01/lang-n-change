@@ -452,7 +452,7 @@ module Exp = struct
     | Let {recursive; names; args; ret; exp; body} ->
         let args_str =
           match args with
-          | [] -> " "
+          | [] -> ""
           | _ ->
               List.map args ~f:(fun (a, t) ->
                   Printf.sprintf "(%s: %s)" a (Type.to_string t))
@@ -496,9 +496,9 @@ module Exp = struct
               let wstr =
                 match w with
                 | None -> ""
-                | Some w -> " " ^ to_string w
+                | Some w -> " when " ^ to_string w
               in
-              Printf.sprintf "%s%s -> (%s)" (Pattern.to_string p) wstr
+              Printf.sprintf "%s%s -> %s" (Pattern.to_string p) wstr
                 (to_string e))
           |> String.concat ~sep:" | "
         in

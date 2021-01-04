@@ -1,0 +1,83 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (tuple e e e e) | (select1 e) | (select2 e) | (select3 e) | (select4 e)
+Value v ::= (abs T (x)e) | (tuple v v v v)
+Type T ::= (arrow T T) | (tupleT T T T T)
+Context E ::= (hole.) | (app E e) | (app v E) | (tuple E e e e) | (tuple v E e e) | (tuple v v E e) | (tuple v v v E) | (select1 E) | (select2 E) | (select3 E) | (select4 E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-TUPLE]
+Gamma |- e1 : T1,
+Gamma |- e2 : T2,
+Gamma |- e3 : T3,
+Gamma |- e4 : T4
+--------------------------------
+Gamma |- (tuple e1 e2 e3 e4) : (tupleT T1 T2 T3 T4).
+
+[T-SELECT1]
+Gamma |- e : (tupleT T1 T2 T3 T4)
+--------------------------------
+Gamma |- (select1 e) : T1.
+
+[T-SELECT2]
+Gamma |- e : (tupleT T1 T2 T3 T4)
+--------------------------------
+Gamma |- (select2 e) : T2.
+
+[T-SELECT3]
+Gamma |- e : (tupleT T1 T2 T3 T4)
+--------------------------------
+Gamma |- (select3 e) : T3.
+
+[T-SELECT4]
+Gamma |- e : (tupleT T1 T2 T3 T4)
+--------------------------------
+Gamma |- (select4 e) : T4.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-SELECT1]
+--------------------------------
+(select1 (tuple v1 v2 v3 v4)) --> v1.
+
+[R-SELECT2]
+--------------------------------
+(select2 (tuple v1 v2 v3 v4)) --> v2.
+
+[R-SELECT3]
+--------------------------------
+(select3 (tuple v1 v2 v3 v4)) --> v3.
+
+[R-SELECT4]
+--------------------------------
+(select4 (tuple v1 v2 v3 v4)) --> v4.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov | tupleT => cov cov cov cov.
+eliminationform: app => 0 | select1 => 0 | select2 => 0 | select3 => 0 | select4 => 0.

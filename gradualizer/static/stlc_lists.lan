@@ -1,0 +1,88 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (tt.) | (ff.) | (nill T) | (is_nil T e) | (cons T e e) | (head T e) | (tail T e)
+Value v ::= (abs T (x)e) | (tt.) | (ff.) | (nill T) | (cons T v v)
+Type T ::= (arrow T T) | (bool.) | (list T)
+Context E ::= (hole.) | (app E e) | (app v E) | (is_nil T E) | (cons T E e) | (cons T v E) | (head T E) | (tail T E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-TRUE]
+--------------------------------
+Gamma |- (tt.) : (bool.).
+ 
+[T-FALSE]
+--------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-NIL]
+--------------------------------
+Gamma |- (nill T) : (list T).
+
+[T-IS-NIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (is_nil T e) : (bool.).
+
+[T-CONS]
+Gamma |- e1 : T,
+Gamma |- e2 : (list T)
+--------------------------------
+Gamma |- (cons T e1 e2) : (list T).
+ 
+[T-HEAD]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (head T e) : T.
+
+[T-TAIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (tail T e) : (list T).
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-IS-NIL-TRUE]
+--------------------------------
+(is_nil T (nill T)) --> (tt.).
+
+[R-IS-NIL-FALSE]
+--------------------------------
+(is_nil T (cons T v1 v2)) --> (ff.).
+
+[R-HEAD-CONS]
+--------------------------------
+(head T (cons T v1 v2)) --> v1.
+
+[R-TAIL-CONS]
+--------------------------------
+(tail T (cons T v1 v2)) --> v2.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov | list => cov.
+eliminationform: app => 0 | is_nil => 1 | head => 1 | tail => 1.

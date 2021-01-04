@@ -1,0 +1,68 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (case e (x)e (x)e) | (inl T e) | (inr T e)
+Value v ::= (abs T (x)e) | (zero.) | (inl T v) | (inr T v)
+Type T ::= (arrow T T) | (nat.) | (plus T T)
+Context E ::= (hole.) | (app E e) | (app v E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-CASE]
+Gamma |- e1 : (sum T1 T2),
+[x1 => T1]Gamma |- e2 : T,
+[x2 => T2]Gamma |- e3 : T
+--------------------------------
+Gamma |- (case e1 (x1)e2 (x2)e3) : T.
+
+[T-INL]
+Gamma |- e : T1
+--------------------------------
+Gamma |- (inl T2 e) : (sum T1 T2).
+
+[T-INR]
+Gamma |- e : T2
+--------------------------------
+Gamma |- (inr T1 e) : (sum T1 T2).
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-CASE-INL]
+--------------------------------
+(case (inl T v) (x1)e1 (x2)e2) --> e1[v/x1].
+
+[R-CASE-INR]
+--------------------------------
+(case (inr T v) (x1)e1 (x2)e2) --> e2[v/x2].
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov | plus => cov cov.
+eliminationform: app => 0 | case => 0.

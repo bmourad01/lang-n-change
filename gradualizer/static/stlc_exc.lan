@@ -1,0 +1,59 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (raise T e) | (try e e)
+Error er ::= (raise T e)
+Value v ::= (abs T (x)e)
+Type T ::= (arrow T T) | (excT.)
+Context E ::= (hole.) | (app E e) | (app v E) | (raise T E) | (try E e)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-RAISE]
+Gamma |- e : (excT.)
+--------------------------------
+Gamma |- (raise T e) : T.
+
+[T-TRY]
+Gamma |- e1 : T,
+Gamma |- e2 : (arrow (excT.) T)
+--------------------------------
+Gamma |- (try e1 e2) : T.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-TRY-1]
+--------------------------------
+(try (raise T v) e) --> (app e v).
+
+[R-TRY-2]
+--------------------------------
+(try v e) --> v.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | try => 0.

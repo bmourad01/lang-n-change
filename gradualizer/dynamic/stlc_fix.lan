@@ -1,0 +1,52 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (fix e)
+Value v ::= (abs T (x)e) | (zero.)
+Type T ::= (arrow T T) | (nat.)
+Context E ::= (hole.) | (app E e) | (app v E) | (fix E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-FIX]
+Gamma |- e : (arrow T T)
+--------------------------------
+Gamma |- (fix e) : T.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-FIX]
+--------------------------------
+(fix (abs T (x)e)) --> e[(fix (abs T (x)e))/x].
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | fix => 0.

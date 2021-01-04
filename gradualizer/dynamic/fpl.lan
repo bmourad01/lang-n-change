@@ -1,0 +1,311 @@
+Expression e ::= x
+                 | (abs T (x)e) | (app e e)
+                 | (zero.) | (succ e) | (pred e) | (is_zero e)
+                 | (tt.) | (ff.) | (ite e e e)
+                 | (nill T) | (is_nil T e) | (cons T e e) | (head T e) | (tail T e)
+                 | (case e (x)e (x)e) | (inl T e) | (inr T e)
+                 | (pair e e) | (fst e) | (snd e)
+                 | (absT (Z)e) | (appT e T)
+                 | (fold e (Z)T) | (unfold e)
+                 | (fix e) | (let e (x)e) | (letrec T (x)e (x)e)
+                 | (try e e) | (raise T e)
+
+Value v ::= (abs T (x)e)
+            | (zero.) | (succ v)
+            | (tt.) | (ff.)
+            | (nill T) | (cons T v v)
+            | (inl T v) | (inr T v)
+            | (pair v v)
+            | (absT (Z)e)
+            | (fold v (Z)T)
+    
+Error er ::= (raise T v)
+
+Type T ::= Z
+           | (arrow T T)
+           | (nat.)
+           | (bool.)
+           | (list T)
+           | (plus T T)
+           | (times T T)
+           | (all (Z)T)
+           | (mu (Z)T)
+    
+Context E ::= (hole.)
+              | (app E e) | (app v E)
+              | (succ E) | (pred E) | (is_zero E)
+              | (ite E e e)
+              | (is_nil T E) | (cons T E e) | (cons T v E) | (head T E) | (tail T E)
+              | (inl T E) | (inr T E) | (case E (x)e (x)e)
+              | (pair E e) | (pair v E) | (fst E) | (snd E)
+              | (appT E T)
+              | (fold E (Z)T) | (unfold E)
+              | (try E e) | (raise T E)
+
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-SUCC]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (succ e) : (nat.).
+
+[T-PRED]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (pred e) : (nat.).
+
+[T-IS-ZERO]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (is_zero e) : (bool.).
+
+[T-TRUE]
+--------------------------------
+Gamma |- (tt.) : (bool.).
+ 
+[T-FALSE]
+--------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-IF]
+Gamma |- e1 : (bool.),
+Gamma |- e2 : T,
+Gamma |- e3 : T
+--------------------------------
+Gamma |- (ite e1 e2 e3) : T.
+
+[T-NIL]
+--------------------------------
+Gamma |- (nill T) : (list T).
+
+[T-IS-NIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (is_nil T e) : (bool.).
+
+[T-CONS]
+Gamma |- e1 : T,
+Gamma |- e2 : (list T)
+--------------------------------
+Gamma |- (cons T e1 e2) : (list T).
+ 
+[T-HEAD]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (head T e) : T.
+
+[T-TAIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (tail T e) : (list T).
+
+[T-CASE]
+Gamma |- e1 : (sum T1 T2),
+[x1 => T1]Gamma |- e2 : T,
+[x2 => T2]Gamma |- e3 : T
+--------------------------------
+Gamma |- (case e1 (x1)e2 (x2)e3) : T.
+
+[T-INL]
+Gamma |- e : T1
+--------------------------------
+Gamma |- (inl T2 e) : (sum T1 T2).
+
+[T-INR]
+Gamma |- e : T2
+--------------------------------
+Gamma |- (inr T1 e) : (sum T1 T2).
+
+[T-PAIR]
+Gamma |- e1 : T1,
+Gamma |- e2 : T2
+--------------------------------
+Gamma |- (pair e1 e2) : (times T1 T2).
+
+[T-FST]
+Gamma |- e : (times T1 T2)
+--------------------------------
+Gamma |- (fst e) : T1.
+
+[T-SND]
+Gamma |- e : (times T1 T2)
+--------------------------------
+Gamma |- (snd e) : T2.
+
+[T-ABST]
+Gamma |- e : T
+--------------------------------
+Gamma |- (absT (Z)e) : (all (Z)T).
+
+[T-APPT]
+Gamma |- e : (all (Z)T2)
+--------------------------------
+Gamma |- (appT e T1) : T2[T1/Z].
+
+[T-FOLD]
+Gamma |- e : T[(mu (Z)T)/Z]
+--------------------------------
+Gamma |- (fold e (Z)T) : (mu (Z)T).
+
+[T-UNFOLD]
+Gamma |- e : (mu (Z)T)
+--------------------------------
+Gamma |- (unfold e) : T[(mu (Z)T)/Z].
+
+[T-FIX]
+Gamma |- e : (arrow T T)
+--------------------------------
+Gamma |- (fix e) : T.
+
+[T-LET]
+Gamma |- e1 : T1,
+[x => T1]Gamma |- e2 : T2
+--------------------------------
+Gamma |- (let e1 (x)e2) : T2.
+
+[T-LETREC]
+[x => T1]Gamma |- e1 : T1,
+[x => T1]Gamma |- e2 : T2
+--------------------------------
+Gamma |- (letrec T1 (x)e1 (x)e2) : T2.
+
+[T-TRY]
+Gamma |- e1 : T,
+Gamma |- e2 : (arrow (int.) T)
+--------------------------------
+Gamma |- (try e1 e2) : T.
+
+[T-RAISE]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (raise T e) : T.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-PRED-ZERO]
+--------------------------------
+(pred (zero.)) --> (raise (nat.) (zero.)).
+
+[R-PRED-SUCC]
+--------------------------------
+(pred (succ v)) --> v.
+
+[R-IS-ZERO-TRUE]
+--------------------------------
+(is_zero (zero.)) --> (tt.).
+
+[R-IS-ZERO-FALSE]
+--------------------------------
+(is_zero (succ v)) --> (ff.).
+
+[R-IF-TRUE]
+--------------------------------
+(ite (tt.) e1 e2) --> e1.
+
+[R-IF-FALSE]
+--------------------------------
+(ite (ff.) e1 e2) --> e2.
+
+[R-IS-NIL-TRUE]
+--------------------------------
+(is_nil (nill T)) --> (tt.).
+
+[R-IS-NIL-FALSE]
+--------------------------------
+(is_nil (cons T v1 v2)) --> (ff.).
+
+[R-HEAD-NIL]
+--------------------------------
+(head T (nill T')) --> (raise T (zero.)).
+
+[R-HEAD-CONS]
+--------------------------------
+(head T (cons T v1 v2)) --> v1.
+
+[R-TAIL-NIL]
+--------------------------------
+(tail T (nill T')) --> (raise (list T) (succ (zero.))).
+
+[R-TAIL-CONS]
+--------------------------------
+(tail T (cons T v1 v2)) --> v2.
+
+[R-CASE-INL]
+--------------------------------
+(case (inl T v) (x1)e1 (x2)e2) --> e1[v/x1].
+
+[R-CASE-INR]
+--------------------------------
+(case (inr T v) (x1)e1 (x2)e2) --> e2[v/x2].
+
+[R-FST]
+--------------------------------
+(fst (pair v1 v2)) --> v1.
+
+[R-SND]
+--------------------------------
+(snd (pair v1 v2)) --> v2.
+
+[R-ALPHA]
+--------------------------------
+(appT (absT (Z)e) T) --> e[T/Z].
+
+[R-UNFOLD]
+--------------------------------
+(unfold (fold v (Z)T)) --> v.
+
+[R-FIX]
+--------------------------------
+(fix (abs T (x)e)) --> e[(fix (abs T (x)e))/x].
+
+[R-LET]
+--------------------------------
+(let v (x)e) --> e[v/x].
+
+[R-LETREC]
+--------------------------------
+(letrec T (x)e1 (x)e2) --> (let (fix (abs T (x)e1)) (x)e2).
+
+[R-TRY-1]
+--------------------------------
+(try (raise T v) e) --> (app e v).
+
+[R-TRY-2]
+--------------------------------
+(try v e) --> v.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov | list => cov | plus => cov cov | times => cov cov.
+eliminationform: app => 0 | pred => 0 | is_zero => 0 | ite => 0 | is_nil => 1 | head => 1 | tail => 1 | case => 0 | fst => 0 | snd => 0 | appT => 0 | unfold => 0 | try => 0.

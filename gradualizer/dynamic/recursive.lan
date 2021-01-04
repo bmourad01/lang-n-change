@@ -1,0 +1,57 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (fold e (Z)T) | (unfold e)
+Value v ::= (abs T (x)e) | (zero.) | (fold v (Z)T)
+Type T ::= Z | (arrow T T) | (nat.) | (mu (Z)T)
+Context E ::= (hole.) | (app E e) | (app v E) | (fold E (Z)T) | (unfold E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-FOLD]
+Gamma |- e : T[(mu (Z)T)/Z]
+--------------------------------
+Gamma |- (fold e (Z)T) : (mu (Z)T).
+
+[T-UNFOLD]
+Gamma |- e : (mu (Z)T)
+--------------------------------
+Gamma |- (unfold e) : T[(mu (Z)T)/Z].
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-UNFOLD]
+--------------------------------
+(unfold (fold v (Z)T)) --> v.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | unfold => 0.

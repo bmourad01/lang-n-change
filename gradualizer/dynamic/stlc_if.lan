@@ -1,0 +1,66 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (tt.) | (ff.) | (ite e e e)
+Value v ::= (abs T (x)e) | (zero.) | (tt.) | (ff.)
+Type T ::= (arrow T T) | (nat.) | (bool.)
+Context E ::= (hole.) | (app E e) | (app v E) | (if E e e)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-TRUE]
+--------------------------------
+Gamma |- (tt.) : (bool.).
+ 
+[T-FALSE]
+--------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-IF]
+Gamma |- e1 : (bool.),
+Gamma |- e2 : T,
+Gamma |- e3 : T
+--------------------------------
+Gamma |- (ite e1 e2 e3) : T.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-IF-TRUE]
+--------------------------------
+(ite (tt.) e1 e2) --> e1.
+
+[R-IF-FALSE]
+--------------------------------
+(ite (ff.) e1 e2) --> e2.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | ite => 0.

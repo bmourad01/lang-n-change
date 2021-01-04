@@ -1,0 +1,59 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (let e (x)e) | (letrec T (x)e (x)e)
+Value v ::= (abs T (x)e)
+Type T ::= (arrow T T)
+Context E ::= (hole.) | (app E e) | (app v E) | (let E (x)e)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-LET]
+Gamma |- e1 : T1,
+[x => T1]Gamma |- e2 : T2
+--------------------------------
+Gamma |- (let e1 (x)e2) : T2.
+
+[T-LETREC]
+[x => T1]Gamma |- e1 : T1,
+[x => T1]Gamma |- e2 : T2
+--------------------------------
+Gamma |- (letrec T1 (x)e1 (x)e2) : T2.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e[v/x].
+
+[R-LET]
+--------------------------------
+(let v (x)e) --> e[v/x].
+
+[R-LETREC]
+--------------------------------
+(letrec T (x)e1 (x)e2) --> (let (fix (abs T (x)e1)) (x)e2).
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0.

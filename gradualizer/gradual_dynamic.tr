@@ -1,0 +1,112 @@
+Type T ::= ... | ("dyn" []).;
+Expression e ::= ... | ("cast" [$e, $T, $T]).;
+Context E ::= ... | ("cast" [$E, $T, $T]).;
+
+Value v ::= {
+  let casts = syntax("Type")[|(c ts)|]:
+    if empty?(ts) then none
+    else some(("cast" [$v, (c ts), (c ts)]))
+  in
+  syntax("Value") @ casts @ [("cast" [$v, $G, ("dyn" [])]).]
+};
+
+Ground G ::= {
+  syntax("Type")[|(c ts)|]:
+    if c = "dyn" then none
+    else
+      let dyns = ts >> t >> if binding?(t) then t else ("dyn" []) in
+      some((c dyns))
+};
+
+add_rule(["T-CAST"] {
+  $Gamma |- $e : $T1,
+  $T1 ~ $T2
+  ---------------------------------------
+  $Gamma |- ("cast" [$e, $T1, $T2]) : $T2
+});
+
+add_relation($T ~ $T);
+
+# mode: ... | consistent => inp inp;
+# principal: ... | consistent => yes yes;
+
+add_rules(syntax("Type")[|(c ts)|]:
+  if not(empty?(ts)) then none
+  else
+    some(["R-CAST-" ^ uppercase(c)] {
+      ------------------------------------
+      ("cast" [$v, (c ts), (c ts)]) --> $v
+    })
+);
+
+add_rule(["R-CAST-CAST-OK"] {
+  --------------------------------------------------------------
+  ("cast" [("cast" [$v, $G, ("dyn" [])]), ("dyn" []), $G]) --> $v
+});
+
+add_rule(["R-CAST-CAST-ERROR"] {
+  &($G1 =/= $G2)
+  -------------------------------------------------------------------------
+  ("cast" [("cast" [$v, $G1, ("dyn" [])]), ("dyn" []), $G2]) --> ("err" [])
+});
+
+add_rule(["R-CAST-T-TO-DYN"] {
+  &($T =/= $G),
+  &($T =/= ("dyn" [])),
+  $T ~ $G
+  ----------------------------------------------------------------------------------
+  ("cast" [$v, $T, ("dyn" [])]) --> ("cast" [("cast" [$v, $T, $G]), $G, ("dyn" [])])
+});
+
+add_rule(["R-CAST-DYN-TO-T"] {
+  &($T =/= $G),
+  &($T =/= ("dyn" [])),
+  $T ~ $G
+  ----------------------------------------------------------------------------------
+  ("cast" [$v, ("dyn" []), $T]) --> ("cast" [("cast" [$v, ("dyn" []), $G]), $G, $T])
+});
+
+let typing_rule_of_op (op: string) =
+  head(rules[|gamma |- (opp _) : _|]:
+    if op = opp then some(self) else none)
+in
+
+let filter_ts (ts: term list) =
+  ts[|t|]: if var?(t) && var_kind?(t, "Type") then some(t) else none
+in
+
+add_rules(hint("eliminationform")[|(op, pa)|]:
+  let r = typing_rule_of_op(op) in
+  let idx = str_int(head(pa)) in
+  let typing_prems = premises(r)[|gamma |- e : t|]: self in
+  match conclusion(r) with gamma |- (op es) : t ->
+  match head(typing_prems) with gamma |- e : (c ts) ->
+  if empty?(ts) then none      
+  else
+    let pa_type = (c ts) in
+    let cast_map = typing_prems[|gamma |- ee : t|]:
+      if e = ee then none else some((e, t))
+    in
+    let siblings = cast_map[|(e, t)|]: ("cast" [e, t, t']) in
+    let add_subs = premises(r)[|([$!x => t1]gamma) |- e : t2|]:
+      (e, e[("cast" [$!x, t1'|vars(pa_type), t1])/x])
+    in
+    let tas = filter_ts(vars(es)) in
+    let tas_p = tas'|vars(pa_type) in
+    let siblings = substitute(siblings, add_subs) in
+    let turn_to_value = concat(rules[|(opp ts) --> _|]:
+      if not(op = opp) then none
+      else some(zip(es, ts)[|(t1, t2)|]:
+        if var?(t2) && var_kind?(t2, "Value")
+        then some((t1, t2)) else none))
+    in
+    let siblings = substitute(siblings, turn_to_value) in
+    let t_p = t'|vars(pa_type) in
+    let target = 
+      let e = (op (tas_p @ [$v.] @ siblings)) in
+      if t = t_p then e else ("cast" [e, t_p, t])
+    in
+    some(["R-ELIM-CAST-" ^ uppercase(op)] {
+       ----------------------------------------------------------------------
+       (op (tas @ [("cast" [$v, pa_type', pa_type]).] @ siblings)) --> target
+    }))

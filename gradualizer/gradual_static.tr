@@ -217,28 +217,25 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
         let tsub = substitute(t, dests) in
         if t = tsub then e else ("cast" [e, t, tsub])
   in
+
+  match conclusion(r) with gamma |- ("ci" [e, _]) : t ->
+
   let r = [name] {
     premises(r)
     ------------------------------------------------------------
-    match conclusion(r) with gamma |- ("ci" [e, _]) : t ->
-      gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
+    gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
   } in
   
   let r = [name] {
-    premises(r)(keep)[|&("join" [_, _, t])|]:
-      if member?(t, vars(conclusion(r))) then some(self) else none
+    premises(r)(keep)[|&("join" [_, _, t3])|]:
+      if t3 = t then some(self) else none
     ----------------------------------
     conclusion(r)
   } in
 
-  let in_join (t: term) =
-    not(empty?(premises(r)[|&("join" [_, _, t3])|]:
-      if t = t3 then some(self) else none))
-  in
-
   let r = [name] {
     premises(r)(keep)[|&("flows" [t1, t2])|]:
-      if in_join(t2) || t1 = t2 then none else some(t1 ~ t2)
+      if (t2 = t) || (t1 = t2) then none else some(t1 ~ t2)
     --------------------------------------------------------
     conclusion(r)
   } in

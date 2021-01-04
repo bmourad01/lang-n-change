@@ -1,7 +1,7 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (absT (Z)e) | (appT e T)
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (absT (Z)e) | (appT T e)
 Value v ::= (abs T (x)e) | (zero.) | (absT (Z)e)
 Type T ::= Z | (arrow T T) | (nat.) | (all (Z)T)
-Context E ::= (hole.) | (app E e) | (app v E) | (appT E T)
+Context E ::= (hole.) | (app E e) | (app v E) | (appT T E)
 Environment Gamma ::= [<x, T>...]
 
 %
@@ -39,7 +39,7 @@ Gamma |- (absT (Z)e) : (all (Z)T).
 [T-APPT]
 Gamma |- e : (all (Z)T2)
 --------------------------------
-Gamma |- (appT e T1) : T2[T1/Z].
+Gamma |- (appT T1 e) : T2[T1/Z].
 
 [R-BETA]
 --------------------------------
@@ -47,11 +47,11 @@ Gamma |- (appT e T1) : T2[T1/Z].
 
 [R-ALPHA]
 --------------------------------
-(appT (absT (Z)e) T) --> e[T/Z].
+(appT T (absT (Z)e)) --> e[T/Z].
 
 %
 
 mode: typeof => inp inp out | step => inp out.
 principal: typeof => no yes no | step => yes no.
 variance: arrow => contra cov.
-eliminationform: app => 0 | appT => 0.
+eliminationform: app => 0 | appT => 1.

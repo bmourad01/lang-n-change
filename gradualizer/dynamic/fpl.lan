@@ -5,7 +5,7 @@ Expression e ::= x
                  | (nill T) | (is_nil T e) | (cons T e e) | (head T e) | (tail T e)
                  | (case e (x)e (x)e) | (inl T e) | (inr T e)
                  | (pair e e) | (fst e) | (snd e)
-                 | (absT (Z)e) | (appT e T)
+                 | (absT (Z)e) | (appT T e)
                  | (fold e (Z)T) | (unfold e)
                  | (fix e) | (let e (x)e) | (letrec T (x)e (x)e)
                  | (try e e) | (raise T e)
@@ -38,7 +38,7 @@ Context E ::= (hole.)
               | (is_nil T E) | (cons T E e) | (cons T v E) | (head T E) | (tail T E)
               | (inl T E) | (inr T E) | (case E (x)e (x)e)
               | (pair E e) | (pair v E) | (fst E) | (snd E)
-              | (appT E T)
+              | (appT T E)
               | (fold E (Z)T) | (unfold E)
               | (try E e) | (raise T E)
 
@@ -167,7 +167,7 @@ Gamma |- (absT (Z)e) : (all (Z)T).
 [T-APPT]
 Gamma |- e : (all (Z)T2)
 --------------------------------
-Gamma |- (appT e T1) : T2[T1/Z].
+Gamma |- (appT T1 e) : T2[T1/Z].
 
 [T-FOLD]
 Gamma |- e : T[(mu (Z)T)/Z]
@@ -277,7 +277,7 @@ Gamma |- (raise T e) : T.
 
 [R-ALPHA]
 --------------------------------
-(appT (absT (Z)e) T) --> e[T/Z].
+(appT T (absT (Z)e)) --> e[T/Z].
 
 [R-UNFOLD]
 --------------------------------
@@ -308,4 +308,4 @@ Gamma |- (raise T e) : T.
 mode: typeof => inp inp out | step => inp out.
 principal: typeof => no yes no | step => yes no.
 variance: arrow => contra cov | list => cov | plus => cov cov | times => cov cov.
-eliminationform: app => 0 | pred => 0 | is_zero => 0 | ite => 0 | is_nil => 1 | head => 1 | tail => 1 | case => 0 | fst => 0 | snd => 0 | appT => 0 | unfold => 0 | try => 0.
+eliminationform: app => 0 | pred => 0 | is_zero => 0 | ite => 0 | is_nil => 1 | head => 1 | tail => 1 | case => 0 | fst => 0 | snd => 0 | appT => 1 | unfold => 0 | try => 0.

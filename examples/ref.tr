@@ -24,30 +24,16 @@ set_relations(relations >>! ("step", [t1, t2]) >>
 );
 
 (* modify all typing judgements in rules to have the new shape *)
-set_rules(rules >>! gamma |- e : t >>
-  let do_gamma (g: term) : term = match g with
-    | <ts> -> <ts @ [$Sigma.]>
-    | _ -> <[g, $Sigma]>
-  in
-
-  [rule_name(self)] {
-    premises(self) >>! gamma |- e : t >>
-      do_gamma(gamma) |- e : t
-    ---------------------------
-    do_gamma(gamma) |- e : t
-  }
-);
+lift (gamma |- e : t) to (<[gamma, $Sigma]> |- e : t).;
 
 (* modify the shape of reduction rules *)
-set_rules(rules >>! e1 --> e2 >>
-  let do_config (c: term) (m: term) : term = match c with
-    | <ts> -> <ts @ [m.]>
-    | _ -> <[c, m]>
-  in
-  
+lift (e1 --> e2) to (<[e1, $m]> --> <[e2, $m]>).;
+
+(* modify the shape of reduction rules *)
+set_rules(rules >>! <[e1, _]> --> <[e2, _]> >>
   (* any steps that appear in the premises must produce
    * a fresh memory which is then used in the next step *)
-  let step_prems = premises(self) >> e1 --> e2 >> self in
+  let step_prems = premises(self) >> _ --> _ >> self in
   let concl = conclusion(self) in
   let steps = step_prems @ [concl.] in
   let stores = steps >> _ >> fresh_var("m") in
@@ -55,14 +41,12 @@ set_rules(rules >>! e1 --> e2 >>
   let smap2 = zip(step_prems, tail(stores)) in 
 
   [rule_name(self)] {
-    premises(self) >>! e1 --> e2 >>
-      (let c1 = do_config(e1, get(assoc(self, smap1))) in
-       let c2 = do_config(e2, get(assoc(self, smap2))) in
-       c1 --> c2)
-    ---------------------------------------------------
-    let c1 = do_config(e1, head(stores)) in
-    let c2 = do_config(e2, get(assoc(concl, smap1))) in
-    c1 --> c2
+    premises(self) >>! <[e1, _]> --> <[e2, _]> >>
+      let m1 = get(assoc(self, smap1)) in
+      let m2 = get(assoc(self, smap2)) in
+      <[e1, m1]> --> <[e2, m2]>
+    ---------------------------------------------------------
+    <[e1, head(stores)]> --> <[e2, get(assoc(concl, smap1))]>
   }
 );
 
@@ -109,54 +93,28 @@ add_rule(["T-SEQ"] {
 
 (* add the reduction rules for the new top-level operators *)
 
-let config = head(relations >> ("step", a :: _) >> a) in
+add_rule(["R-REFV"] {
+  &($a = $fresh($dom($m)))
+  ------------------------------------------------------------
+  <[("ref" [$v.]), $m]> --> <[("address" [$a.]), [$a => $v]$m]>
+});
 
-let do_config (t: term) (m: term) =
-  match config with <ts> ->
-    let ts = tail(diff(ts, [$m.])) in
-    <t :: (ts @ [m.])>
-in
+add_rule(["R-DEREF"] {
+  &member <[$a, $v]> $m
+  -----------------------------------------------------
+  <[("deref" [("address" [$a.]).]), $m]> --> <[$v, $m]>
+});
 
-add_rule(
-  let lhs = ("ref" [$v.]) in
-  let rhs = ("address" [$a.]) in
+add_rule(["R-ASSIGN"] {
+  &member $a $dom($m)
+  ----------------------------------------------------------------------------
+  <[("assign" [("address" [$a.]), $v]), $m]> --> <[("unit" []), [$a => $v]$m]>
+});
 
-  ["R-REFV"] {
-    &($a = $fresh($dom($m)))
-    ---------------------------------------------------
-    do_config(lhs, $m) --> do_config(rhs, [$a => $v]$m)
-  }
-);
-
-add_rule(
-  let lhs = ("deref" [("address" [$a.]).]) in
-
-  ["R-DEREF"] {
-    &member <[$a, $v]> $m
-    ----------------------------------------
-    do_config(lhs, $m) --> do_config($v, $m)
-  }
-);
-
-add_rule(
-  let lhs = ("assign" [("address" [$a.]), $v]) in
-  let rhs = ("unit" []) in
-
-  ["R-ASSIGN"] {
-    &member $a $dom($m)
-    ---------------------------------------------------
-    do_config(lhs, $m) --> do_config(rhs, [$a => $v]$m)
-  }
-);
-
-add_rule(
-  let lhs = ("seq" [("unit" []), $e]) in  
-
-  ["R-SEQ"] {
-    ----------------------------------------
-    do_config(lhs, $m) --> do_config($e, $m)
-  }
-);
+add_rule(["R-SEQ"] {
+  ------------------------------------------------
+  <[("seq" [("unit" []), $e]), $m]> --> <[$e, $m]>
+});
 
 (* add the relation to check the memory for well-formedness *)
 
@@ -166,7 +124,7 @@ add_relation("memory_ok", [$Sigma, $m]);
 # principal: ... | memory_ok => no yes;
 
 add_rule(["MEMORY-OK-NIL"] {
-  ---------------------------
+  ----------------------------
   &("memory_ok" [$Sigma, $nil])
 });
 

@@ -482,7 +482,7 @@ module Exp = struct
           (to_string e2)
     | Seq (e1, e2) -> Printf.sprintf "%s; %s" (to_string e1) (to_string e2)
     | Lift (p, e) ->
-        Printf.sprintf "lift %s to %s" (Pattern.to_string p) (to_string e)
+        Printf.sprintf "lift %s to %s." (Pattern.to_string p) (to_string e)
     | Lift_in_rule (p, e, r) ->
         Printf.sprintf "lift %s to %s in %s" (Pattern.to_string p)
           (to_string e) (to_string r)

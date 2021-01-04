@@ -174,7 +174,7 @@ exp:
     { Exp.Ite ($2, $4, $6) }
   | exp SEMI exp
     { Exp.Seq ($1, $3) }
-  | LIFT pattern TO exp 
+  | LIFT pattern TO exp DOT
     { Exp.Lift ($2, $4) }
   | LIFT pattern TO exp IN exp
     { Exp.Lift_in_rule ($2, $4, $6) }

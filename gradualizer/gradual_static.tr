@@ -28,6 +28,75 @@ add_relation("static", [$T.]);
 # mode: ... | consistent => inp inp | matches => inp out | flows => inp out | join => inp inp out | static => inp;
 # principal: ... | consistent => yes yes | matches => yes no | flows => yes no | join => yes yes no | static => yes;
 
+add_rules(syntax("Type")[|(c ts)|]:
+  ["C-" ^ uppercase(c)] {
+    ts[|t|]: unbind(t) ~ unbind(t)'
+    -------------------------------
+    (c ts) ~ (c ts')
+  }
+);
+
+add_rule(["C-T-DYN"] {
+  ----------------
+  $T ~ ("dyn" [])
+});
+    
+add_rule(["C-DYN-T"] {
+  ----------------
+  ("dyn" []) ~ $T
+});
+
+add_rules(syntax("Type")[|(c ts)|]: 
+  if c = "dyn" then none
+  else
+    let ts = ts[|t|]: if binding?(t) then $(bound(t))("dyn" []) else ("dyn" []) in
+    some(["MATCHES-DYN-" ^ uppercase(c)] {
+      ---------------------------------
+      &("matches" [("dyn" []), (c ts)])
+    })
+);
+
+add_rules(syntax("Type")[|(c ts)|]:
+  if c = "dyn" then none
+  else
+    some(["MATCHES-" ^ uppercase(c)] {
+      -----------------------------
+      &("matches" [(c ts), (c ts)])
+    })
+);
+
+add_rules(syntax("Type")[|(c ts)|]:
+  if c = "dyn" then none
+  else
+    some(["STATIC-" ^ uppercase(c)] {
+      ts[|t|]: &("static" [t.])
+      ----------------------------
+      &("static" [(c ts).])
+    })
+);
+
+add_rules(syntax("Type")[|(c ts)|]:
+  if c = "dyn" then none
+  else
+    some(["JOIN-" ^ uppercase(c)] {
+      ts[|t|]:
+        let t = unbind(t) in
+        &("join" [t, t', t''])
+      -------------------------------------
+      &("join" [(c ts), (c ts'), (c ts'')])
+    })
+);
+
+add_rule(["JOIN-T-DYN"] {
+  ------------------------------
+  &("join" [$T, ("dyn" []), $T])
+});
+    
+add_rule(["JOIN-DYN-T"] {
+  ------------------------------
+  &("join" [("dyn" []), $T, $T])
+});
+
 let seek
     (m: (string, string list) tuple list)
     (key: string)
@@ -40,6 +109,8 @@ let seek
 in
 
 set_rules(rules(keep)[|gamma |- e : t|]: (
+  let name = rule_name(self) in    
+
   (* split equal types in the outputs *)
   let (new_premises, tmap) =
     let ignored = premises(self)[|_|]:
@@ -49,7 +120,7 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
     in
     uniquify(premises(self), ignored, hint("mode"), "out")
   in
-  let r = [rule_name(self)] {
+  let r = [name] {
     new_premises
     ------------------
     conclusion(self)
@@ -79,7 +150,7 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   
   (* mark each producer as flowing to consumers through their final type *)
   let tmap_inverse = concat(tmap[|(t, ts)|]: ts[|_|]: (self, t)) in
-  let r = [rule_name(r)] {
+  let r = [name] {
     premises(r),
     tmap[|(t, ts)|]: &("join" (ts @ [t'.])),
     dedup(concat(tmap_inverse[|(t1, t2)|]: (
@@ -109,7 +180,7 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
       (typ, &("matches" [typ, (c new_ts)]) :: fs)
     | _ -> (t, [])
   in 
-  let r = [rule_name(r)] {
+  let r = [name] {
     premises(r)(keep)[|gamma |- e : t|]:
       let (t, fs) = make_match(t) in
       (gamma |- e : t) :: fs,
@@ -147,14 +218,14 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
         let tsub = substitute(t, dests) in
         if t = tsub then e else ("cast" [e, t, tsub])
   in
-  let r = [rule_name(r)] {
+  let r = [name] {
     premises(r)
     ------------------------------------------------------------
     gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
   } in
 
   (*    
-  let r = [rule_name(r)] {
+  let r = [name] {
     premises(r)(keep)[|&("join" [t1, t2, t3])|]:
       if member?(t3, vars(conclusion(r))) then self
       else t1 ~ t2
@@ -167,7 +238,7 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
       if t = t3 then some(self) else none))
   in
 
-  let r = [rule_name(r)] {
+  let r = [name] {
     premises(r)(keep)[|&("flows" [t1, t2])|]:
       if in_join(t2) || t1 = t2 then none else some(self)
     --------------------------------

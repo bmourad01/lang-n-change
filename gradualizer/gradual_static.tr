@@ -108,7 +108,8 @@ let seek
 in
 
 set_rules(rules(keep)[|gamma |- e : t|]: (
-  let name = rule_name(self) in    
+  let name = rule_name(self) in
+  let op = match e with (op _) -> op | _ -> "" in
 
   (* split equal types in the outputs *)
   let (new_premises, tmap) =
@@ -146,6 +147,19 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   in
   let producers = concat(premises(r)[|_ |- _ : (c ts)|]: diff(vars(ts), consumers)) in
   let lone_inputs = filter_ts(diff(vars(e), consumers @ producers)) in
+    
+  let extract_type_by_index (e: term) (n: int) =
+    head(premises(r)[|_ |- ee : t when e = ee|]: nth(filter_ts(vars(t)), n))
+  in
+  let final_type_by_user =
+    match assoc(op, hint_list("flows")) with
+    | none -> []
+    | some(flows) ->
+      flows[|[e1, n1, e2, n2]|]:
+        let t1 = extract_type_by_index($!e1, str_int(n1)) in
+        let t2 = extract_type_by_index($!e2, str_int(n2)) in
+        (t1, t2)
+  in
   
   (* mark each producer as flowing to consumers through their final type *)
   let tmap_inverse = concat(tmap[|(t, ts)|]: ts[|_|]: (self, t)) in
@@ -153,7 +167,11 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
     premises(r),
     tmap[|(t, ts)|]: &("join" (ts @ [t'.])),
     dedup(concat(tmap_inverse[|(t1, t2)|]: (
-      let tfinal = get(assoc(t2, final_type)) in
+      let tfinal =
+        match assoc(t1, final_type_by_user) with
+        | none -> get(assoc(t2, final_type))
+        | some(t) -> t
+      in
       let tcons = var_overlap(get(assoc(t2, tmap)), consumers) in
       let flowfinal = &("flows" [t1, tfinal]) in
       let flowcons = match tcons with
@@ -227,18 +245,20 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   } in
   
   let r = [name] {
-    premises(r)(keep)[|&("join" [_, _, t3])|]:
-      if t3 = t then some(self) else none
+    premises(r)(keep)[|&("join" ts)|]:
+      if t = last(ts) then some(self) else none
     ----------------------------------
     conclusion(r)
   } in
 
+  (*
   let r = [name] {
     premises(r)(keep)[|&("flows" [t1, t2])|]:
       if (t2 = t) || (t1 = t2) then none else some(t1 ~ t2)
     --------------------------------------------------------
     conclusion(r)
   } in
+  *)
 
   r
 ))

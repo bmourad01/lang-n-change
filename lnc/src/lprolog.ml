@@ -1036,12 +1036,8 @@ let of_language (lan : L.t) =
     let rec aux_formula ?(depth = 0) f =
       match f with
       | F.Not f ->
-          let ps = aux_formula f ~depth:1 in
-          if List.length ps > 1 then
-            invalid_arg
-              (Printf.sprintf "invalid 'not' formula %s of rule %s"
-                 (F.to_string f) rule_name)
-          else Syntax.[!(List.hd_exn ps)]
+          let ps = aux_formula f ~depth:1 |> List.rev in
+          Syntax.(!(List.hd_exn ps)) :: List.tl_exn ps
       | F.Eq (t1, t2) ->
           let t1', ps1 = aux_term wildcard vars rule_name depth t1 in
           if List.length t1' > 1 then

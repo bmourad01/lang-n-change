@@ -536,6 +536,8 @@ formula:
     { Exp.Formula_not $4 }
   | AMPERSAND LPAREN exp EQ exp RPAREN
     { Exp.Formula_eq ($3, $5) }
+  | AMPERSAND LPAREN exp EQ FSLASH EQ exp RPAREN
+    { Exp.(Formula_not (New_formula (Formula_eq ($3, $7)))) }
   | AMPERSAND LPAREN exp exp RPAREN
     { Exp.Formula_prop ($3, $4) }
   | AMPERSAND MEMBER exp exp

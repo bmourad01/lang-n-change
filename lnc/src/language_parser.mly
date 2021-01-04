@@ -198,6 +198,8 @@ formula:
     { Formula.Not f }
   | term EQ term
     { Formula.Eq ($1, $3) }
+  | term EQ FSLASH EQ term
+    { Formula.(Not (Eq ($1, $5))) }
   | MEMBER element = term collection = term
     { Formula.Member {element; collection} }
   | SUBSET sub = term super = term

@@ -58,6 +58,7 @@ rule token = parse
   | ">" {RANGLE}
   | "-" {DASH}
   | "/" {FSLASH}
+  | "==>" {BIGARROW}
   | "=>" {MAPSTO}
   | "=" {EQ}
   | "lift" {LIFT}

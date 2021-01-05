@@ -68,6 +68,7 @@
 %token DASH
 %token LSQUARE RSQUARE LBRACE RBRACE LPAREN RPAREN LANGLE RANGLE
 %token FSLASH
+%token BIGARROW
 %token MAPSTO
 %token EQ
 %token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP FRESH
@@ -154,10 +155,14 @@ rule:
 sugared_relation:
   | term TURNSTILE term COLON term DOT
     { (Predicate.Builtin.typeof, [$1; $3; $5]) }
+  | term TURNSTILE term COLON term BIGARROW term DOT
+    { (Predicate.Builtin.typeof_match, [$1; $3; $5; $7]) }
   | term STEP term DOT
     { (Predicate.Builtin.step, [$1; $3]) }
   | term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3]) }
+  | term TURNSTILE term SUBTYPE term BIGARROW term DOT
+    { (Predicate.Builtin.subtype_flow, [$1; $3; $5]) }
   | term TURNSTILE term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3; $5]) }
   | term TILDE term DOT
@@ -176,6 +181,12 @@ sugared_formula:
       let args = [$1; $3; $5] in
       Formula.Prop {predicate; args}
     }
+  | term TURNSTILE term COLON term BIGARROW term
+    {
+      let predicate = Predicate.Builtin.typeof_match in
+      let args = [$1; $3; $5; $7] in
+      Formula.Prop {predicate; args}
+    }
   | term STEP term
     {
       let predicate = Predicate.Builtin.step in
@@ -186,6 +197,12 @@ sugared_formula:
     {
       let predicate = Predicate.Builtin.subtype in
       let args = [$1; $3] in
+      Formula.Prop {predicate; args}
+    }
+  | term SUBTYPE term BIGARROW term
+    {
+      let predicate = Predicate.Builtin.subtype_flow in
+      let args = [$1; $3; $5] in
       Formula.Prop {predicate; args}
     }
   | term TURNSTILE term SUBTYPE term

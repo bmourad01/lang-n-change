@@ -115,9 +115,13 @@ module Predicate : sig
   module Builtin : sig
     val typeof : t
 
+    val typeof_match : t
+
     val step : t
 
     val subtype : t
+
+    val subtype_flow : t
 
     val consistent : t
   end

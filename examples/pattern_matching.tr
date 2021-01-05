@@ -14,10 +14,10 @@ Pattern p ::= ... | ("pattern_var" [$x, $T]).;
 Context E ::= ... | ("pmatch" [$E, [<[$p, $e]>...]]).;
 MatchResult MR ::= ("match_error" []) | ("match_subst" [[<[$v, $x]>...].]).;
     
-add_relation("typeof_pattern", [$Gamma, $p, $T, $Gamma]);
+add_relation($Gamma |- $p : $T ==> $Gamma);
 
-# mode: ... | typeof_pattern => inp inp out out;
-# principal: ... | typeof_pattern => no yes no no;
+# mode: ... | typeof_match => inp inp out out;
+# principal: ... | typeof_match => no yes no no;
     
 let can_be_pattern (op: string) : bool =
   not(empty?(syntax("Pattern")[`(op_p _)` when op_p = op]: self))
@@ -42,20 +42,20 @@ add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
         match prem with
         | gamma |- e : t ->
           (match assoc(prem, prems_map) with
-           | some(g) -> &("typeof_pattern" [gamma, assoc!(e, es_to_ps), t, g])
+           | some(g) -> gamma |- assoc!(e, es_to_ps) : t ==> g
            | _ -> self)
         | _ -> self,
       (match new_gammas with
        | [] -> none
        | _ -> some(&($Gamma' = $map_union(gamma :: new_gammas))))
       ---------------------------------------------------------------
-      &("typeof_pattern" [gamma, (p_op args_with_ps), t, result])
+      gamma |- (p_op args_with_ps) : t ==> result
     })
 );
 
 add_rule(["T-MATCH-VAR"] {
   ----------------------------------------------------------------------------
-  &("typeof_pattern" [$Gamma, ("pattern_var" [$x, $T]), $T, [$x => $T]$Gamma])
+  $Gamma |- ("pattern_var" [$x, $T]) : $T ==> [$x => $T]$Gamma
 });
 
 add_relation("match_pattern", [$p, $v, $MR]);
@@ -129,27 +129,27 @@ add_rule(["TYPES-EQUAL"] {
   &("types_equal" [$($T :: $typs), $T])
 });
 
-add_relation("typeof_match", [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
+add_relation("typeof_pmatch", [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
 
-# mode: ... | typeof_match => inp inp inp out;
-# principal: ... | typeof_match => no no yes no;
+# mode: ... | typeof_pmatch => inp inp inp out;
+# principal: ... | typeof_pmatch => no no yes no;
 
-add_rule(["TYPEOF-MATCH-NIL"] {
+add_rule(["TYPEOF-PMATCH-NIL"] {
   ------------------------------------------
-  &("typeof_match" [$Gamma, $T, $nil, $nil])
+  &("typeof_pmatch" [$Gamma, $T, $nil, $nil])
 });
 
-add_rule(["TYPEOF-MATCH"] {
-  &("typeof_pattern" [$Gamma, $p, $T, $Gamma']),
+add_rule(["TYPEOF-PMATCH"] {
+  $Gamma |- $p : $T ==> $Gamma',
   $Gamma' |- $e : $T',
-  &("typeof_match" [$Gamma, $T, $M, $typs])
+  &("typeof_pmatch" [$Gamma, $T, $M, $typs])
   ----------------------------------------------------
-  &("typeof_match" [$Gamma, $T, $(<[$p, $e]> :: $M), $($T' :: $typs)])
+  &("typeof_pmatch" [$Gamma, $T, $(<[$p, $e]> :: $M), $($T' :: $typs)])
 });
 
 add_rule(["T-PMATCH"] {
   $Gamma |- $e : $T,
-  &("typeof_match" [$Gamma, $T, $($branch :: $M), $typs]),
+  &("typeof_pmatch" [$Gamma, $T, $($branch :: $M), $typs]),
   &("types_equal" [$typs, $T'])
   ------------------------------------
   $Gamma |- ("pmatch" [$e, $($branch :: $M)]) : $T'

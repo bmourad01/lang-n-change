@@ -32,6 +32,7 @@
 %token DASH
 %token LSQUARE RSQUARE LPAREN RPAREN LBRACE RBRACE LANGLE RANGLE
 %token FSLASH
+%token BIGARROW
 %token MAPSTO
 %token EQ
 %token QLESS QGREATER QMEMBER QNOTHING QSOMETHING QEMPTY QVAR QCONSTVAR QSTR QCONSTRUCTOR QBINDING QSUBST QLIST QTUPLE QVARKIND QOPKIND QSYNTAX QSTARTSWITH QENDSWITH
@@ -392,10 +393,14 @@ hint_element:
 sugared_relation:
   | exp TURNSTILE exp COLON exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.typeof, Exp.List [$1; $3; $5]) }
+  | exp TURNSTILE exp COLON exp BIGARROW exp
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.typeof_match, Exp.List [$1; $3; $5; $7]) }
   | exp STEP exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.step, Exp.List [$1; $3]) }
   | exp SUBTYPE exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3]) }
+  | exp SUBTYPE exp BIGARROW exp
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype_flow, Exp.List [$1; $3; $5]) }
   | exp TURNSTILE exp SUBTYPE exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3; $5]) }
   | exp TILDE exp
@@ -508,6 +513,12 @@ sugared_formula:
       let args = Exp.List [$1; $3; $5] in
       Exp.Formula_prop (predicate, args)
     }
+  | exp TURNSTILE exp COLON exp BIGARROW exp
+    {
+      let predicate = Exp.Str Language.Predicate.Builtin.typeof_match in
+      let args = Exp.List [$1; $3; $5; $7] in
+      Exp.Formula_prop (predicate, args)
+    }
   | exp STEP exp
     {
       let predicate = Exp.Str Language.Predicate.Builtin.step in
@@ -518,6 +529,12 @@ sugared_formula:
     {
       let predicate = Exp.Str Language.Predicate.Builtin.subtype in
       let args = Exp.List [$1; $3] in
+      Exp.Formula_prop (predicate, args)
+    }
+  | exp SUBTYPE exp BIGARROW exp
+    {
+      let predicate = Exp.Str Language.Predicate.Builtin.subtype_flow in
+      let args = Exp.List [$1; $3; $5] in
       Exp.Formula_prop (predicate, args)
     }
   | exp TURNSTILE exp SUBTYPE exp
@@ -624,6 +641,12 @@ sugared_pattern_formula:
       let args = Exp.Pattern.List [$1; $3; $5] in
       Exp.Pattern.Formula_prop (predicate, args)
     }
+  | pattern TURNSTILE pattern COLON pattern BIGARROW pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.typeof_match in
+      let args = Exp.Pattern.List [$1; $3; $5; $7] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
   | pattern STEP pattern
     {
       let predicate = Exp.Pattern.Str Language.Predicate.Builtin.step in
@@ -634,6 +657,12 @@ sugared_pattern_formula:
     {
       let predicate = Exp.Pattern.Str Language.Predicate.Builtin.subtype in
       let args = Exp.Pattern.List [$1; $3] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+  | pattern SUBTYPE pattern BIGARROW pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.subtype_flow in
+      let args = Exp.Pattern.List [$1; $3; $5] in
       Exp.Pattern.Formula_prop (predicate, args)
     }
   | pattern TURNSTILE pattern SUBTYPE pattern

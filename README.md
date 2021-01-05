@@ -83,6 +83,6 @@ Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the
 
 [2] Mourad B., Cimini M. (2020) System Description: Lang-n-Change - A Tool for Transforming Languages. In: Nakano K., Sagonas K. (eds) Functional and Logic Programming. FLOPS 2020. Lecture Notes in Computer Science, vol 12073. Springer, Cham. https://doi.org/10.1007/978-3-030-59025-3_12
 
-[3] Matteo Cimini and Jeremy G. Siek. 2016. The gradualizer: a methodology and algorithm for generating gradual type systems. SIGPLAN Not. 51, 1 (January 2016), 443–455. DOI:https://doi.org/10.1145/2914770.2837632 
-
-[4] Matteo Cimini and Jeremy G. Siek. 2017. Automatically generating the dynamic semantics of gradually typed languages. SIGPLAN Not. 52, 1 (January 2017), 789–803. DOI:https://doi.org/10.1145/3093333.3009863 
+[3] Matteo Cimini and Jeremy G. Siek. 2016. The gradualizer: a methodology and algorithm for generating gradual type systems. In Proceedings of the 43rd Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL '16). Association for Computing Machinery, New York, NY, USA, 443–455. DOI:https://doi.org/10.1145/2837614.2837632
+ 
+[4] Matteo Cimini and Jeremy G. Siek. 2017. Automatically generating the dynamic semantics of gradually typed languages. In Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages (POPL 2017). Association for Computing Machinery, New York, NY, USA, 789–803. DOI:https://doi.org/10.1145/3009837.3009863 

@@ -35,6 +35,8 @@ rule token = parse
   | "|" {MID}
   | "[" {LSQUARE}
   | "]" {RSQUARE}
+  | "{" {LBRACE}
+  | "}" {RBRACE}
   | "(" {LPAREN}
   | ")" {RPAREN}
   | "<" {LANGLE}

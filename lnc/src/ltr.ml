@@ -241,7 +241,7 @@ module Exp = struct
       | Term_binding (p1, p2) ->
           Printf.sprintf "(%s)%s" (to_string p1) (to_string p2)
       | Term_subst (p, subst) ->
-          Printf.sprintf "%s[%s]" (to_string p) (string_of_subst subst)
+          Printf.sprintf "%s{%s}" (to_string p) (string_of_subst subst)
       | Term_map_update (key, value, map) ->
           Printf.sprintf "[%s => %s]%s" (to_string key) (to_string value)
             (to_string map)
@@ -647,7 +647,7 @@ module Exp = struct
     | Term_binding (var, e) ->
         Printf.sprintf "(%s)%s" (to_string var) (to_string e)
     | Term_subst (e, subst) ->
-        Printf.sprintf "%s[%s]" (to_string e) (string_of_subst subst)
+        Printf.sprintf "%s{%s}" (to_string e) (string_of_subst subst)
     | Term_map_update (key, value, map) ->
         Printf.sprintf "[%s => %s]%s" (to_string key) (to_string value)
           (to_string map)

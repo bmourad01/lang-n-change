@@ -44,9 +44,9 @@ module Term = struct
         Printf.sprintf "(%s%s)" name args_str
     | Binding {var; body} -> Printf.sprintf "(%s)%s" var (to_string body)
     | Subst {body; subst= Subst_pair (term, var)} ->
-        Printf.sprintf "%s[%s/%s]" (to_string body) (to_string term) var
+        Printf.sprintf "%s{%s/%s}" (to_string body) (to_string term) var
     | Subst {body; subst= Subst_var (var, kind)} ->
-        Printf.sprintf "%s[%s: %s]" (to_string body) var kind
+        Printf.sprintf "%s{%s: %s}" (to_string body) var kind
     | Map_update {key; value; map} ->
         Printf.sprintf "[%s => %s]%s" (to_string key) (to_string value)
           (to_string map)

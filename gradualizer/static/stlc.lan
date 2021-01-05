@@ -29,7 +29,7 @@ Gamma |- (app e1 e2) : T2.
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 %
 

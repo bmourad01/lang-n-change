@@ -66,7 +66,7 @@
 %token COLON
 %token DOT
 %token DASH
-%token LSQUARE RSQUARE LPAREN RPAREN LANGLE RANGLE
+%token LSQUARE RSQUARE LBRACE RBRACE LPAREN RPAREN LANGLE RANGLE
 %token FSLASH
 %token MAPSTO
 %token EQ
@@ -261,7 +261,7 @@ term:
     { Term.Var $1 }
   | LPAREN var = NAME RPAREN body = term
     { Term.Binding {var; body} }
-  | body = term LSQUARE subst = subst RSQUARE
+  | body = term LBRACE subst = subst RBRACE
     { Term.Subst {body; subst} }
   | LSQUARE key = term MAPSTO value = term RSQUARE map = term
     { Term.Map_update {map; key; value} }

@@ -81,7 +81,7 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
     let cast_map = typing_prems[`gamma |- ee : t` when not(e = ee)]: (e, t) in
     let siblings = cast_map[`(e, t)`]: ("cast" [e, t, t']) in
     let add_subs = premises(r)[`([$!x => t1]gamma) |- e : t2`]:
-      (e, e[("cast" [$!x, t1'|vars(pa_type), t1])/x])
+      (e, e{("cast" [$!x, t1'|vars(pa_type), t1])/x})
     in
     let tas = filter_ts(vars(es)) in
     let tas_p = tas'|vars(pa_type) in

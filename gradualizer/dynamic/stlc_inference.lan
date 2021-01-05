@@ -33,7 +33,7 @@ Gamma |- (zero.) : (nat.).
 
 [R-BETA]
 --------------------------------
-(app (abs_inf (x)e) v) --> e[v/x].
+(app (abs_inf (x)e) v) --> e{v/x}.
 
 %
 

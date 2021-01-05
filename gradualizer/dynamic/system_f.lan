@@ -39,15 +39,15 @@ Gamma |- (absT (Z)e) : (all (Z)T).
 [T-APPT]
 Gamma |- e : (all (Z)T2)
 --------------------------------
-Gamma |- (appT T1 e) : T2[T1/Z].
+Gamma |- (appT T1 e) : T2{T1/Z}.
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 [R-ALPHA]
 --------------------------------
-(appT T (absT (Z)e)) --> e[T/Z].
+(appT T (absT (Z)e)) --> e{T/Z}.
 
 %
 

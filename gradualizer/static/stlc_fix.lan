@@ -34,11 +34,11 @@ Gamma |- (fix e) : T.
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 [R-FIX]
 --------------------------------
-(fix (abs T (x)e)) --> e[(fix (abs T (x)e))/x].
+(fix (abs T (x)e)) --> e{(fix (abs T (x)e))/x}.
 
 %
 

@@ -197,7 +197,7 @@ add_rule(["R-PMATCH-SUCCESS"] {
   &("do_match" [$v, $M, $result]),
   &("first_non_error" [$result, ("match_subst" [$S.]), $e])
   ----------------------------------------------------------
-  ("pmatch" [$v, $M]) --> $e[S: Expression]
+  ("pmatch" [$v, $M]) --> $e{S: Expression}
 });
 
 add_rule(["R-PMATCH-ERROR"] {

@@ -33,7 +33,7 @@ Gamma |- (zero.) : (nat.).
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e1) e2) --> e1[e2/x].
+(app (abs T (x)e1) e2) --> e1{e2/x}.
 
 %
 

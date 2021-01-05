@@ -167,17 +167,17 @@ Gamma |- (absT (Z)e) : (all (Z)T).
 [T-APPT]
 Gamma |- e : (all (Z)T2)
 --------------------------------
-Gamma |- (appT T1 e) : T2[T1/Z].
+Gamma |- (appT T1 e) : T2{T1/Z}.
 
 [T-FOLD]
-Gamma |- e : T[(mu (Z)T)/Z]
+Gamma |- e : T{(mu (Z)T)/Z}
 --------------------------------
 Gamma |- (fold e (Z)T) : (mu (Z)T).
 
 [T-UNFOLD]
 Gamma |- e : (mu (Z)T)
 --------------------------------
-Gamma |- (unfold e) : T[(mu (Z)T)/Z].
+Gamma |- (unfold e) : T{(mu (Z)T)/Z}.
 
 [T-FIX]
 Gamma |- e : (arrow T T)
@@ -209,7 +209,7 @@ Gamma |- (raise T e) : T.
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 [R-PRED-ZERO]
 --------------------------------
@@ -261,11 +261,11 @@ Gamma |- (raise T e) : T.
 
 [R-CASE-INL]
 --------------------------------
-(case (inl T v) (x1)e1 (x2)e2) --> e1[v/x1].
+(case (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
 
 [R-CASE-INR]
 --------------------------------
-(case (inr T v) (x1)e1 (x2)e2) --> e2[v/x2].
+(case (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
 
 [R-FST]
 --------------------------------
@@ -277,7 +277,7 @@ Gamma |- (raise T e) : T.
 
 [R-ALPHA]
 --------------------------------
-(appT T (absT (Z)e)) --> e[T/Z].
+(appT T (absT (Z)e)) --> e{T/Z}.
 
 [R-UNFOLD]
 --------------------------------
@@ -285,11 +285,11 @@ Gamma |- (raise T e) : T.
 
 [R-FIX]
 --------------------------------
-(fix (abs T (x)e)) --> e[(fix (abs T (x)e))/x].
+(fix (abs T (x)e)) --> e{(fix (abs T (x)e))/x}.
 
 [R-LET]
 --------------------------------
-(let v (x)e) --> e[v/x].
+(let v (x)e) --> e{v/x}.
 
 [R-LETREC]
 --------------------------------

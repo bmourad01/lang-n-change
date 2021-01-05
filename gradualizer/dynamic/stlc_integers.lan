@@ -44,7 +44,7 @@ Gamma |- (pred e) : (nat.).
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 [R-PRED-ZERO]
 --------------------------------

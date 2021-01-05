@@ -32,18 +32,18 @@ Gamma |- (app e1 e2) : T2.
 Gamma |- (zero.) : (nat.).
 
 [T-FOLD]
-Gamma |- e : T[(mu (Z)T)/Z]
+Gamma |- e : T{(mu (Z)T)/Z}
 --------------------------------
 Gamma |- (fold e (Z)T) : (mu (Z)T).
 
 [T-UNFOLD]
 Gamma |- e : (mu (Z)T)
 --------------------------------
-Gamma |- (unfold e) : T[(mu (Z)T)/Z].
+Gamma |- (unfold e) : T{(mu (Z)T)/Z}.
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 [R-UNFOLD]
 --------------------------------

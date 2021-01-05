@@ -298,7 +298,7 @@ member <f, v> zip(dom(P), v_args)
 lookup_method N q D (method_result (method_decl T q Gamma e)),
 S = zip(v_args2, dom(Gamma))
 --------------------------------------
-<(invoke (new N v_args1) q v_args2), D, m> --> <e[S: Expression][(new N v_args1)/this], D, m>.
+<(invoke (new N v_args1) q v_args2), D, m> --> <e{S: Expression}{(new N v_args1)/this}, D, m>.
 
 [R-INVOKE-NULL]
 --------------------------------------
@@ -341,7 +341,7 @@ member <a, (null.)> m
 [R-DECL]
 a = fresh(dom(m))
 --------------------------------------
-<(decl N (x)e), D, m> --> <e[(address a)/x], D, [a => (null.)]m>.
+<(decl N (x)e), D, m> --> <e{(address a)/x}, D, [a => (null.)]m>.
 
 [MEMORY-OK-NIL]
 --------------------------------------

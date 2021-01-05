@@ -98,7 +98,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   let (new_premises, tmap) =
     let ignored = premises(self)[`_`]:
       match self with
-      | _ |- _ : _[_/x] -> some(self)
+      | _ |- _ : _{_/x} -> some(self)
       | _ -> none
     in
     uniquify(premises(self), ignored, hint("mode"), "out")

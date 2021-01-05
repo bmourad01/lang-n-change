@@ -50,15 +50,15 @@ Gamma |- (inr T1 e) : (sum T1 T2).
 
 [R-BETA]
 --------------------------------
-(app (abs T (x)e) v) --> e[v/x].
+(app (abs T (x)e) v) --> e{v/x}.
 
 [R-CASE-INL]
 --------------------------------
-(case (inl T v) (x1)e1 (x2)e2) --> e1[v/x1].
+(case (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
 
 [R-CASE-INR]
 --------------------------------
-(case (inr T v) (x1)e1 (x2)e2) --> e2[v/x2].
+(case (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
 
 %
 

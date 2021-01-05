@@ -8,15 +8,15 @@ It provides a domain-specific language, *L-Tr* (pronounced "Elter"), for express
 Given a language definition expressed in the style of operational semantics (`.lan` file) and an algorithm (`.tr` file), the algorithm is applied to the language definition, producing a new language definition.
 Algorithms expressed in *L-Tr* are compiled to an OCaml program (`support/transform.ml`) which is then run with the language definition as the sole argument.
 
-Additionally, language definitions can be compiled to executable λProlog logic programs.
-This feature can be used to run queries on the generated languages in order to test their behavior.
-
 ## Why use it?
 
 *L-Tr* allows algorithms to be expressed in a concise, declarative style.
 It provides considerable syntactic sugar for, but not limted to, generating pen-and-paper formulations found in operational sematics.
 Thus, it can save language designers considerable time and effort for automatically adding new features to entire classes of languages.
 On average, *L-Tr* algorithms are roughly 1/3 the size of the (rather idiomatic) generated OCaml code for said algorithms.
+
+Additionally, language definitions can be compiled to executable λProlog logic programs.
+This feature can be used to run queries on the generated languages in order to test their behavior.
 
 ## Any publications?
 

@@ -11,8 +11,8 @@ Algorithms expressed in *L-Tr* are compiled to an OCaml program (`support/transf
 ## Why use it?
 
 *L-Tr* allows language transformations to be expressed in a concise, declarative style, and in a way that resembles pen-and-paper notation.
-It provides first-class datatypes which represent components of language definitions, which can be passed around and manipulated at a fine-grained level.
-Thus, it can save language designers considerable time and effort for automatically adding new features to entire classes of languages.
+It provides first-class datatypes representing components of language definitions, which can be passed around and manipulated at a fine-grained level.
+Thus, it can save language designers considerable time and effort for automatically adding features to entire classes of languages.
 On average, *L-Tr* algorithms are roughly 1/3 the size of the (rather idiomatic) generated OCaml code for said algorithms.
 
 Additionally, language definitions can be compiled to executable λProlog logic programs.

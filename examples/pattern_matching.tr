@@ -5,8 +5,8 @@ let has_binding (ts: term list) : bool =
 in
     
 Pattern p ::= {
-  syntax("Value")[`(op es)` when not(has_binding(es))]:
-    let ps = es[`e`]: if var?(e) && var_kind?(e, "Value") then $p else e in
+  syntax("Value")[`(op vs)` when not(has_binding(vs))]:
+    let ps = vs(keep)[`v` when var?(v) && var_kind?(v, "Value")]: $p in
     ((op ^ "_p") ps)
 };
 

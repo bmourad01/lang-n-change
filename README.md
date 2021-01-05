@@ -21,7 +21,7 @@ On average, *L-Tr* algorithms are roughly 1/3 the size of the (rather idiomatic)
 ## Any publications?
 
 *L-Tr* is based on a calculus of the same name, described in [1].
-A prototype of lang-n-change is presented in [2].
+A prototype of *lang-n-change* is presented in [2].
 The current tool is a new and improved version of the prototype.
 
 ## Requirements

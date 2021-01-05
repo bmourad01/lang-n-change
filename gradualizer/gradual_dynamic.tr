@@ -3,19 +3,16 @@ Expression e ::= ... | ("cast" [$e, $T, $T]).;
 Context E ::= ... | ("cast" [$E, $T, $T]).;
 
 Value v ::= {
-  let casts = syntax("Type")[`(c ts)`]:
-    if empty?(ts) then none
-    else some(("cast" [$v, (c ts), (c ts)]))
+  let casts = syntax("Type")[`(c ts)` when not(empty?(ts))]:
+    ("cast" [$v, (c ts), (c ts)])
   in
   syntax("Value") @ casts @ [("cast" [$v, $G, ("dyn" [])]).]
 };
 
 Ground G ::= {
-  syntax("Type")[`(c ts)`]:
-    if c = "dyn" then none
-    else
-      let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
-      some((c dyns))
+  syntax("Type")[`(c ts)` when not(c = "dyn")]:
+    let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
+    (c dyns)
 };
 
 add_rule(["T-CAST"] {
@@ -30,13 +27,11 @@ add_relation($T ~ $T);
 # mode: ... | consistent => inp inp;
 # principal: ... | consistent => yes yes;
 
-add_rules(syntax("Type")[`(c ts)`]:
-  if not(empty?(ts)) then none
-  else
-    some(["R-CAST-" ^ uppercase(c)] {
-      ------------------------------------
-      ("cast" [$v, (c ts), (c ts)]) --> $v
-    })
+add_rules(syntax("Type")[`(c ts)` when not(empty?(ts))]:
+  ["R-CAST-" ^ uppercase(c)] {
+    ------------------------------------
+    ("cast" [$v, (c ts), (c ts)]) --> $v
+  }
 );
 
 add_rule(["R-CAST-CAST-OK"] {
@@ -67,12 +62,11 @@ add_rule(["R-CAST-DYN-TO-T"] {
 });
 
 let typing_rule_of_op (op: string) =
-  head(rules[`gamma |- (opp _) : _`]:
-    if op = opp then some(self) else none)
+  head(rules[`gamma |- (opp _) : _` when op = opp]: self)
 in
 
 let filter_ts (ts: term list) =
-  ts[`t`]: if var?(t) && var_kind?(t, "Type") then some(t) else none
+  ts[`t` when var?(t) && var_kind?(t, "Type")]: self
 in
 
 add_rules(hint("eliminationform")[`(op, pa)`]:
@@ -84,9 +78,7 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
   if empty?(ts) then none      
   else
     let pa_type = (c ts) in
-    let cast_map = typing_prems[`gamma |- ee : t`]:
-      if e = ee then none else some((e, t))
-    in
+    let cast_map = typing_prems[`gamma |- ee : t` when not(e = ee)]: (e, t) in
     let siblings = cast_map[`(e, t)`]: ("cast" [e, t, t']) in
     let add_subs = premises(r)[`([$!x => t1]gamma) |- e : t2`]:
       (e, e[("cast" [$!x, t1'|vars(pa_type), t1])/x])
@@ -94,11 +86,8 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
     let tas = filter_ts(vars(es)) in
     let tas_p = tas'|vars(pa_type) in
     let siblings = substitute(siblings, add_subs) in
-    let turn_to_value = concat(rules[`(opp ts) --> _`]:
-      if not(op = opp) then none
-      else some(zip(es, ts)[`(t1, t2)`]:
-        if var?(t2) && var_kind?(t2, "Value")
-        then some((t1, t2)) else none))
+    let turn_to_value = concat(rules[`(opp ts) --> _` when op = opp]:
+      zip(es, ts)[`(t1, t2)` when var?(t2) && var_kind?(t2, "Value")]: (t1, t2))
     in
     let siblings = substitute(siblings, turn_to_value) in
     let t_p = t'|vars(pa_type) in

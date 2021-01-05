@@ -1,23 +1,15 @@
 Type T ::= ... | ("dyn" []).;
 
 Ground G ::= {
-  syntax("Type")[`(c ts)`]:
-    if c = "dyn" then none
-    else
-      let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
-      some((c dyns))
+  syntax("Type")[`(c ts)` when not(c = "dyn")]:
+    let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
+    some((c dyns))
 };
     
 let is_typ_var (t: term) = var?(t) && var_kind?(t, "Type") in
 let is_exp_var (t: term) = var?(t) && var_kind?(t, "Expression") in
-
-let filter_ts (ts: term list) =
-  ts[`t`]: if is_typ_var(t) then some(t) else none
-in
-
-let filter_es (ts: term list) =
-  ts[`t`]: if is_exp_var(t) then some(t) else none
-in
+let filter_ts (ts: term list) = ts[`t` when is_typ_var(t)]: t in
+let filter_es (ts: term list) = ts[`t` when is_exp_var(t)]: t in
 
 add_relation($T ~ $T);
 add_relation("matches", [$T, $T]);
@@ -45,45 +37,37 @@ add_rule(["C-DYN-T"] {
   ("dyn" []) ~ $T
 });
 
-add_rules(syntax("Type")[`(c ts)`]: 
-  if c = "dyn" then none
-  else
-    let ts = ts[`t`]: if binding?(t) then $(bound(t))("dyn" []) else ("dyn" []) in
-    some(["MATCHES-DYN-" ^ uppercase(c)] {
-      ---------------------------------
-      &("matches" [("dyn" []), (c ts)])
-    })
+add_rules(syntax("Type")[`(c ts)` when not(c = "dyn")]: 
+  let ts = ts[`t`]: if binding?(t) then $(bound(t))("dyn" []) else ("dyn" []) in
+  ["MATCHES-DYN-" ^ uppercase(c)] {
+    ---------------------------------
+    &("matches" [("dyn" []), (c ts)])
+  }
 );
 
-add_rules(syntax("Type")[`(c ts)`]:
-  if c = "dyn" then none
-  else
-    some(["MATCHES-" ^ uppercase(c)] {
-      -----------------------------
-      &("matches" [(c ts), (c ts)])
-    })
+add_rules(syntax("Type")[`(c ts)` when not(c = "dyn")]:
+  ["MATCHES-" ^ uppercase(c)] {
+    -----------------------------
+    &("matches" [(c ts), (c ts)])
+  }
 );
 
-add_rules(syntax("Type")[`(c ts)`]:
-  if c = "dyn" then none
-  else
-    some(["STATIC-" ^ uppercase(c)] {
-      ts[`t`]: &("static" [t.])
-      ----------------------------
-      &("static" [(c ts).])
-    })
+add_rules(syntax("Type")[`(c ts)` when not(c = "dyn")]:
+  ["STATIC-" ^ uppercase(c)] {
+    ts[`t`]: &("static" [t.])
+    ----------------------------
+    &("static" [(c ts).])
+  }
 );
 
-add_rules(syntax("Type")[`(c ts)`]:
-  if c = "dyn" then none
-  else
-    some(["JOIN-" ^ uppercase(c)] {
-      ts[`t`]:
-        let t = unbind(t) in
-        &("join" [t, t', t''])
-      -------------------------------------
-      &("join" [(c ts), (c ts'), (c ts'')])
-    })
+add_rules(syntax("Type")[`(c ts)` when not(c = "dyn")]:
+  ["JOIN-" ^ uppercase(c)] {
+    ts[`t`]:
+      let t = unbind(t) in
+      &("join" [t, t', t''])
+    -------------------------------------
+    &("join" [(c ts), (c ts'), (c ts'')])
+  }
 );
 
 add_rule(["JOIN-T-DYN"] {
@@ -103,8 +87,7 @@ let seek
     (tag: string) =
   match assoc(key, m) with
   | none -> []
-  | some(m) ->
-    zip(m, data)[`(x, t)`]: if x = tag then some(t) else none
+  | some(m) -> zip(m, data)[`(x, t)` when x = tag]: t
 in
 
 set_rules(rules(keep)[`gamma |- e : t`]: (
@@ -245,9 +228,8 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   } in
   
   let r = [name] {
-    premises(r)(keep)[`&("join" ts)`]:
-      if t = last(ts) then some(self) else none
-    ----------------------------------
+    premises(r)(keep)[`&("join" ts)` when t = last(ts)]: self
+    ---------------------------------------------------------
     conclusion(r)
   } in
 

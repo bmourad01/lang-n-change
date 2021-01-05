@@ -16,7 +16,7 @@ let seek
   match assoc(key, m) with
   | none -> []
   | some(m) ->
-    zip(m, data)[`(x, t)`]: if x = tag then some(t) else none
+    zip(m, data)[`(x, t)` when x = tag]: t
 in
 
 let rec extract_variance (t: term) (v: string) : term list =
@@ -28,7 +28,7 @@ let rec extract_variance (t: term) (v: string) : term list =
 in
 
 let filter_ts (ts: term list) =
-  ts[`t`]: if var?(t) && var_kind?(t, "Type") then some(t) else none
+  ts[`t` when var?(t) && var_kind?(t, "Type")]: self
 in
 
 (* modify all typing rules *)

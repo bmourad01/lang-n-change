@@ -107,7 +107,7 @@ let orig_name (p_op: string) : string option =
 in
 
 add_rules(concat(syntax("Pattern")[`(p_op ps)`]: (
-  syntax("Value")[`(op vs)` when p_op = (op ^ "_p")]:
+  syntax("Value")[`(op vs)` when not(p_op = (op ^ "_p"))]:
     match orig_name(p_op) with
     | none -> none
     | some(op2) ->

@@ -1,12 +1,12 @@
 Type T ::= ... | ("dyn" []).;
-Expression e ::= ... | ("cast" [$e, $T, $T]).;
-Context E ::= ... | ("cast" [$E, $T, $T]).;
+Expression e ::= ... | ("gcast" [$e, $T, $T]).;
+Context E ::= ... | ("gcast" [$E, $T, $T]).;
 
 Value v ::= {
   let casts = syntax("Type")[`(c ts)` when not(empty?(ts))]:
-    ("cast" [$v, (c ts), (c ts)])
+    ("gcast" [$v, (c ts), (c ts)])
   in
-  syntax("Value") @ casts @ [("cast" [$v, $G, ("dyn" [])]).]
+  syntax("Value") @ casts @ [("gcast" [$v, $G, ("dyn" [])]).]
 };
 
 Ground G ::= {
@@ -15,11 +15,11 @@ Ground G ::= {
     (c dyns)
 };
 
-add_rule(["T-CAST"] {
+add_rule(["T-GCAST"] {
   $Gamma |- $e : $T1,
   $T1 ~ $T2
   ---------------------------------------
-  $Gamma |- ("cast" [$e, $T1, $T2]) : $T2
+  $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
 });
 
 add_relation($T ~ $T);
@@ -46,37 +46,37 @@ add_rule(["C-DYN-T"] {
 });
 
 add_rules(syntax("Type")[`(c ts)` when not(empty?(ts))]:
-  ["R-CAST-" ^ uppercase(c)] {
+  ["R-GCAST-" ^ uppercase(c)] {
     ------------------------------------
-    ("cast" [$v, (c ts), (c ts)]) --> $v
+    ("gcast" [$v, (c ts), (c ts)]) --> $v
   }
 );
 
-add_rule(["R-CAST-CAST-OK"] {
+add_rule(["R-GCAST-GCAST-OK"] {
   --------------------------------------------------------------
-  ("cast" [("cast" [$v, $G, ("dyn" [])]), ("dyn" []), $G]) --> $v
+  ("gcast" [("gcast" [$v, $G, ("dyn" [])]), ("dyn" []), $G]) --> $v
 });
 
-add_rule(["R-CAST-CAST-ERROR"] {
+add_rule(["R-GCAST-GCAST-ERROR"] {
   &($G1 =/= $G2)
   -------------------------------------------------------------------------
-  ("cast" [("cast" [$v, $G1, ("dyn" [])]), ("dyn" []), $G2]) --> ("err" [])
+  ("gcast" [("gcast" [$v, $G1, ("dyn" [])]), ("dyn" []), $G2]) --> ("err" [])
 });
 
-add_rule(["R-CAST-T-TO-DYN"] {
+add_rule(["R-GCAST-T-TO-DYN"] {
   &($T =/= $G),
   &($T =/= ("dyn" [])),
   $T ~ $G
   ----------------------------------------------------------------------------------
-  ("cast" [$v, $T, ("dyn" [])]) --> ("cast" [("cast" [$v, $T, $G]), $G, ("dyn" [])])
+  ("gcast" [$v, $T, ("dyn" [])]) --> ("gcast" [("gcast" [$v, $T, $G]), $G, ("dyn" [])])
 });
 
-add_rule(["R-CAST-DYN-TO-T"] {
+add_rule(["R-GCAST-DYN-TO-T"] {
   &($T =/= $G),
   &($T =/= ("dyn" [])),
   $T ~ $G
   ----------------------------------------------------------------------------------
-  ("cast" [$v, ("dyn" []), $T]) --> ("cast" [("cast" [$v, ("dyn" []), $G]), $G, $T])
+  ("gcast" [$v, ("dyn" []), $T]) --> ("gcast" [("gcast" [$v, ("dyn" []), $G]), $G, $T])
 });
 
 let typing_rule_of_op (op: string) =
@@ -97,9 +97,9 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
   else
     let pa_type = (c ts) in
     let cast_map = typing_prems[`gamma |- ee : t` when not(e = ee)]: (e, t) in
-    let siblings = cast_map[`(e, t)`]: ("cast" [e, t, t']) in
+    let siblings = cast_map[`(e, t)`]: ("gcast" [e, t, t']) in
     let add_subs = premises(r)[`([$!x => t1]gamma) |- e : t2`]:
-      (e, e{("cast" [$!x, t1'|vars(pa_type), t1])/x})
+      (e, e{("gcast" [$!x, t1'|vars(pa_type), t1])/x})
     in
     let tas = filter_ts(vars(es)) in
     let tas_p = tas'|vars(pa_type) in
@@ -111,9 +111,9 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
     let t_p = t'|vars(pa_type) in
     let target = 
       let e = (op (tas_p @ [$v.] @ siblings)) in
-      if t = t_p then e else ("cast" [e, t_p, t])
+      if t = t_p then e else ("gcast" [e, t_p, t])
     in
-    some(["R-ELIM-CAST-" ^ uppercase(op)] {
+    some(["R-ELIM-GCAST-" ^ uppercase(op)] {
        ----------------------------------------------------------------------
-       (op (tas @ [("cast" [$v, pa_type', pa_type]).] @ siblings)) --> target
+       (op (tas @ [("gcast" [$v, pa_type', pa_type]).] @ siblings)) --> target
     }))

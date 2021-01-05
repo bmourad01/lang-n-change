@@ -1,10 +1,26 @@
+Expression e ::= ... | ("gcast" [$e, $T, $T]).;
+Context E ::= ... | ("gcast" [$E, $T, $T]).;
 Type T ::= ... | ("dyn" []).;
+
+Value v ::= {
+  let casts = syntax("Type")[`(c ts)` when not(empty?(ts))]:
+    ("cast" [$v, (c ts), (c ts)])
+  in
+  syntax("Value") @ casts @ [("cast" [$v, $G, ("dyn" [])]).]
+};
 
 Ground G ::= {
   syntax("Type")[`(c ts)` when not(c = "dyn")]:
     let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
     some((c dyns))
 };
+
+add_rule(["T-GCAST"] {
+  $Gamma |- $e : $T1,
+  $T1 ~ $T2
+  ---------------------------------------
+  $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
+});
     
 let is_typ_var (t: term) = var?(t) && var_kind?(t, "Type") in
 let is_exp_var (t: term) = var?(t) && var_kind?(t, "Expression") in
@@ -29,7 +45,7 @@ let has_subtyping =
   && has_relation("meet")
 in
 
-if has_subtyping then (
+(if has_subtyping then (
   remove_relation("subtype");
     
   lift t1 <: t2 to t1 <: t2 ==> t1'.;
@@ -83,8 +99,7 @@ if has_subtyping then (
     ---------------------------------------------------------
     &("meet" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
   })
-
-) else skip;
+) else skip);
     
 add_rules(syntax("Type")[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
@@ -286,7 +301,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
       | none -> e
       | some(t) ->
         let tsub = substitute(t, dests) in
-        if t = tsub then e else ("cast" [e, t, tsub])
+        if t = tsub then e else ("gcast" [e, t, tsub])
   in
 
   match conclusion(r) with gamma |- ("ci" [e, _]) : t ->
@@ -304,14 +319,12 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     conclusion(r)
   } in
 
-  (*
   let r = [name] {
     premises(r)(keep)[`&("flows" [t1, t2])`]:
-      if (t2 = t) || (t1 = t2) then none else some(t1 ~ t2)
-    --------------------------------------------------------
+      if member?(t2, vars(t)) || (t1 = t2) then none else some(t1 ~ t2)
+    -------------------------------------------------------------------
     conclusion(r)
   } in
-  *)
 
   r
 ))

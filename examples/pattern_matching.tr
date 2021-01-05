@@ -27,9 +27,9 @@ let can_be_pattern (op: string) : bool =
   not(empty?(syntax("Pattern")[`(op_p _)` when op_p = op]: self))
 in
 
-add_rules(rules[`gamma |- (op es) : t`]:
+add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
   let p_op = op ^ "_p" in
-  if not(op_kind?(op, "Value") && can_be_pattern(p_op)) then none
+  if not(can_be_pattern(p_op)) then none
   else
     let es_to_ps = zip(es, es[`_`]: fresh_var("p")) in
     let prems = premises(self)[`_ |- e : _`]:
@@ -100,24 +100,21 @@ add_rules(syntax("Value")[`(op vs)`]:
 );
 
 let orig_name (p_op: string) : string option =
-  let res = syntax("Value")[`(op _)`]:
-    if p_op = (op ^ "_p") then some(op) else none
-  in
+  let res = syntax("Value")[`(op _)` when p_op = (op ^ "_p")]: op in
   match res with
   | [] -> none
   | op :: _ -> some(op)
 in
 
 add_rules(concat(syntax("Pattern")[`(p_op ps)`]: (
-  syntax("Value")[`(op vs)`]:
-    if p_op = (op ^ "_p") then none else
-      match orig_name(p_op) with
-      | none -> none
-      | some(op2) ->
-        some(["MATCH-ERROR-" ^ uppercase(op2) ^ "-" ^ uppercase(op)] {
-          -----------------------------------------------------------
-          &("match_pattern" [(p_op ps), (op vs), ("match_error" [])])
-        })
+  syntax("Value")[`(op vs)` when p_op = (op ^ "_p")]:
+    match orig_name(p_op) with
+    | none -> none
+    | some(op2) ->
+      some(["MATCH-ERROR-" ^ uppercase(op2) ^ "-" ^ uppercase(op)] {
+        -----------------------------------------------------------
+        &("match_pattern" [(p_op ps), (op vs), ("match_error" [])])
+      })
 )));
 
 add_rule(["MATCH-VAR"] {

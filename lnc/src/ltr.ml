@@ -364,12 +364,17 @@ module Exp = struct
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of
-        {formulae: t; ignored_formulae: t; hint_map: t; hint_var: t}
+        { formulae: t
+        ; ignored_formulae: t
+        ; hint_map: t
+        ; hint_var: t
+        ; prev_vars: t option }
     (* rule operations *)
     | New_rule of {name: t; premises: t list; conclusion: t}
     | Rule_name of t
     | Rule_premises of t
     | Rule_conclusion of t
+    | Set_conclusion of t * t
     | Rules_of
     | Add_rule of t
     | Add_rules of t
@@ -577,10 +582,16 @@ module Exp = struct
     | Remove_relation predicate ->
         Printf.sprintf "remove_relation(%s)" (to_string predicate)
     | New_formula f -> string_of_formula f
-    | Uniquify_formulae {formulae; ignored_formulae; hint_map; hint_var} ->
-        Printf.sprintf "uniquify(%s, %s, %s, %s)" (to_string formulae)
+    | Uniquify_formulae
+        {formulae; ignored_formulae; hint_map; hint_var; prev_vars} ->
+        let prev_str =
+          match prev_vars with
+          | None -> ""
+          | Some p -> Printf.sprintf ", %s" (to_string p)
+        in
+        Printf.sprintf "uniquify(%s, %s, %s, %s%s)" (to_string formulae)
           (to_string ignored_formulae)
-          (to_string hint_map) (to_string hint_var)
+          (to_string hint_map) (to_string hint_var) prev_str
     | New_rule {name; premises; conclusion} ->
         Printf.sprintf "[%s] {%s---------------------%s}" (to_string name)
           (List.map premises ~f:to_string |> String.concat ~sep:", ")
@@ -588,6 +599,8 @@ module Exp = struct
     | Rule_name e -> Printf.sprintf "rule_name(%s)" (to_string e)
     | Rule_premises e -> Printf.sprintf "premises(%s)" (to_string e)
     | Rule_conclusion e -> Printf.sprintf "conclusion(%s)" (to_string e)
+    | Set_conclusion (e1, e2) ->
+        Printf.sprintf "set_conclusion(%s, %s)" (to_string e1) (to_string e2)
     | Rules_of -> "rules"
     | Add_rule e -> Printf.sprintf "add_rule(%s)" (to_string e)
     | Add_rules e -> Printf.sprintf "add_rules(%s)" (to_string e)
@@ -1737,11 +1750,11 @@ let rec compile ctx e =
       let e', typ, _ = compile ctx e in
       let e' =
         match typ with
-        | Type.Term -> Printf.sprintf "(T.vars %s)" e'
+        | Type.Term -> Printf.sprintf "(T.vars_dup %s)" e'
         | Type.(List Term) ->
             Printf.sprintf
               "(Aux.dedup_list_stable ~compare:T.compare List.(concat (map \
-               (%s) ~f:(fun t -> T.vars t))))"
+               (%s) ~f:(fun t -> T.vars_dup t))))"
               e'
         | Type.Formula -> Printf.sprintf "(F.vars %s)" e'
         | Type.Rule -> Printf.sprintf "(R.vars %s)" e'
@@ -2014,14 +2027,19 @@ let rec compile ctx e =
           (e', Type.Lan, ctx)
       | _ -> incompat "Remove_relation" [e_typ] Type.[String] )
   | Exp.New_formula f -> compile_formula ctx f
-  | Exp.Uniquify_formulae {formulae; ignored_formulae; hint_map; hint_var}
-    -> (
+  | Exp.Uniquify_formulae
+      {formulae; ignored_formulae; hint_map; hint_var; prev_vars} -> (
       let formulae', formulae_typ, _ = compile ctx formulae in
       let ignored_formulae', ignored_formulae_typ, _ =
         compile ctx ignored_formulae
       in
       let hint_map', hint_map_typ, _ = compile ctx hint_map in
       let hint_var', hint_var_typ, _ = compile ctx hint_var in
+      let prev_vars', prev_vars_typ, _ =
+        match prev_vars with
+        | None -> ("[]", Type.(List Term), ctx)
+        | Some p -> compile ctx p
+      in
       let f_typ = Type.(List Formula) in
       match Type_unify.run [f_typ; formulae_typ] with
       | None -> incompat "Uniquify_formulae (formulae)" [formulae_typ] [f_typ]
@@ -2037,23 +2055,30 @@ let rec compile ctx e =
                 incompat "Uniquify_formulae (hint_map)" [hint_map_typ] [h_typ]
             | Some _ -> (
               match hint_var_typ with
-              | Type.String ->
-                  let e' =
-                    Printf.sprintf
-                      {|
-                      (L.uniquify_formulae
-                      (%s)
-                      ~ignored:(%s)
-                      ~hint_map:(%s)
-                      ~hint_var:(%s))
-                      |}
-                      formulae' ignored_formulae' hint_map' hint_var'
-                  in
-                  let typ' =
-                    Type.(
-                      Tuple [List Formula; List (Tuple [Term; List Term])])
-                  in
-                  (e', typ', ctx)
+              | Type.String -> (
+                match Type_unify.run [Type.(List Term); prev_vars_typ] with
+                | Some Type.(List Term) ->
+                    let e' =
+                      Printf.sprintf
+                        {|
+                         (L.uniquify_formulae
+                         (%s)
+                         ~prev_vars:(%s)
+                         ~ignored:(%s)
+                         ~hint_map:(%s)
+                         ~hint_var:(%s))
+                         |}
+                        formulae' prev_vars' ignored_formulae' hint_map'
+                        hint_var'
+                    in
+                    let typ' =
+                      Type.(
+                        Tuple [List Formula; List (Tuple [Term; List Term])])
+                    in
+                    (e', typ', ctx)
+                | _ ->
+                    incompat "Uniquify_formulae (prev_vars)" [prev_vars_typ]
+                      Type.[List Term] )
               | _ ->
                   incompat "Uniquify_formulae (hint_var)" [hint_var_typ]
                     Type.[String] ) ) ) )
@@ -2125,6 +2150,21 @@ let rec compile ctx e =
           let e' = Printf.sprintf "((fun (r: R.t) -> r.conclusion) %s)" e' in
           (e', Type.Formula, ctx)
       | _ -> incompat "Rule_conclusion" [typ] [Type.Rule] )
+  | Exp.Set_conclusion (e1, e2) -> (
+      let e1', typ1, _ = compile ctx e1 in
+      match typ1 with
+      | Type.Rule -> (
+          let e2', typ2, _ = compile ctx e2 in
+          match typ2 with
+          | Type.Formula ->
+              let e' =
+                Printf.sprintf
+                  "((fun (r: R.t) -> {r with conclusion = (%s)}) (%s))" e2'
+                  e1'
+              in
+              (e', Type.Rule, ctx)
+          | _ -> incompat "Set_conclusion (formula)" [typ2] [Type.Formula] )
+      | _ -> incompat "Set_conclusion (rule)" [typ1] [Type.Rule] )
   | Exp.Rules_of -> ("(Map.data lan.rules)", Type.(List Rule), ctx)
   | Exp.Add_rule e -> (
       let e', typ, _ = compile ctx e in

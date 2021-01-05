@@ -160,12 +160,17 @@ module Exp : sig
     (* formula operations *)
     | New_formula of formula
     | Uniquify_formulae of
-        {formulae: t; ignored_formulae: t; hint_map: t; hint_var: t}
+        { formulae: t
+        ; ignored_formulae: t
+        ; hint_map: t
+        ; hint_var: t
+        ; prev_vars: t option }
     (* rule operations *)
     | New_rule of {name: t; premises: t list; conclusion: t}
     | Rule_name of t
     | Rule_premises of t
     | Rule_conclusion of t
+    | Set_conclusion of t * t
     | Rules_of
     | Add_rule of t
     | Add_rules of t

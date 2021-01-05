@@ -706,31 +706,41 @@ let hint_vars_of_formulae fs ignored hint_map hint_var =
     (List.map formula_terms ~f:Term.vars_dup |> List.concat)
     (List.map constructor_terms ~f:Term.vars_dup |> List.concat)
 
-let uniquify_map_of_formulae ?(underscore = true) fs ignored hint_map
-    hint_var =
+let uniquify_map_of_formulae ?(minimum = 1) ?(prev_vars = [])
+    ?(underscore = true) fs ignored hint_map hint_var =
   let vars = hint_vars_of_formulae fs ignored hint_map hint_var in
   let vars' =
     List.fold vars ~init:[] ~f:(fun vars t ->
         if List.mem vars t ~equal:Term.equal then vars else t :: vars)
     |> List.rev
   in
-  let rec aux t n = function
-    | [] -> []
+  let rec aux t n n' = function
+    | [] -> ([], n')
     | (Term.Var v as x) :: xs when Term.equal x t ->
-        let v' =
-          if underscore then Printf.sprintf "%s_%d" v n
-          else Printf.sprintf "%s%d" v n
+        let rec aux2 n n' =
+          let v' =
+            if underscore then Printf.sprintf "%s_%d" v n
+            else Printf.sprintf "%s%d" v n
+          in
+          let v' = Term.Var v' in
+          if List.mem prev_vars v' ~equal:Term.equal then
+            aux2 (succ n) (succ n')
+          else (v', n, n')
         in
-        Term.Var v' :: aux t (succ n) xs
-    | _ :: xs -> aux t n xs
+        let v', n, n' = aux2 n n' in
+        let vs, n' = aux t (succ n) n' xs in
+        (v' :: vs, n')
+    | _ :: xs -> aux t n n' xs
   in
   List.filter_map vars' ~f:(fun t ->
-      let l = aux t 1 vars in
-      Option.some_if (List.length l > 1) (t, l))
+      let l, n' = aux t 1 0 vars in
+      Option.some_if (List.length l > minimum || n' > 0) (t, l))
 
-let uniquify_formulae ?(underscore = true) ?(ignored = []) fs ~hint_map
-    ~hint_var =
-  let m = uniquify_map_of_formulae fs ignored hint_map hint_var in
+let uniquify_formulae ?(minimum = 1) ?(prev_vars = []) ?(underscore = true)
+    ?(ignored = []) fs ~hint_map ~hint_var =
+  let m =
+    uniquify_map_of_formulae fs ignored hint_map hint_var ~minimum ~prev_vars
+  in
   let rec aux_ts ts m = function
     | [] -> (List.rev ts, m)
     | x :: xs ->

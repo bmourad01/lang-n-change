@@ -178,7 +178,9 @@ module Hint : sig
 end
 
 val uniquify_formulae :
-     ?underscore:bool
+     ?minimum:int
+  -> ?prev_vars:Term.t list
+  -> ?underscore:bool
   -> ?ignored:Formula.t list
   -> Formula.t list
   -> hint_map:(string, string list) List.Assoc.t

@@ -16,13 +16,6 @@ Ground G ::= {
     let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
     some((c dyns))
 };
-
-add_rule(["T-GCAST"] {
-  $Gamma |- $e : $T1,
-  $T1 ~ $T2
-  ---------------------------------------
-  $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
-});
     
 let is_typ_var (t: term) = var?(t) && var_kind?(t, "Type") in
 let is_exp_var (t: term) = var?(t) && var_kind?(t, "Expression") in
@@ -197,6 +190,16 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     conclusion(self)
   } in
 
+  let tmap =
+    let m = filter_ts(vars(e))[`t`]: t in
+    let tmap = tmap[`(t, ts)`]:
+      if member?(t, m) then (t, ts @ [t.]) else (t, ts) 
+    in
+    let ov = diff(m, tmap[`(t, _)`]: t) in
+    tmap @ (ov[`t`]: (t, [t.]))
+  in
+  let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
+
   (* find producers, consumers, and final types *)
   let rec extract_contra (t: term) : term list =
     match t with
@@ -206,7 +209,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     | _ -> []
   in
   let consumers = concat(premises(r)[`_ |- _ : t`]: extract_contra(t)) in
-  let final_type =
+  let final_type = 
     let evars = vars(e) in
     tmap[`(t, ts)`]:
       let ol = var_overlap(evars, ts) in
@@ -216,30 +219,30 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
         if not(empty?(ol)) then (t, head(ol))
         else (t, t')
   in
-  let producers = concat(premises(r)[`_ |- _ : (c ts)`]: diff(vars(ts), consumers)) in
-  let lone_inputs = filter_ts(diff(vars(e), consumers @ producers)) in
+  let producers = diff(tmap_inverse[`(t, _)`]: t, consumers) in
+  let lone_inputs = filter_ts(diff(vars(r), consumers @ producers)) in
     
   let extract_type_by_index (e: term) (n: int) =
     head(premises(r)[`_ |- ee : t` when e = ee]: nth(filter_ts(vars(t)), n))
   in
-  let final_type_by_user =
+  let consumer_type_by_user =
     match assoc(op, hint_list("flows")) with
     | none -> []
     | some(flows) ->
-      flows[`[e1, n1, e2, n2]`]:
+      concat(flows[`[e1, n1, e2, n2]`]:
         let t1 = extract_type_by_index($!e1, str_int(n1)) in
         let t2 = extract_type_by_index($!e2, str_int(n2)) in
-        (t1, t2)
+        [(t2, t1), (t1, t1)])
   in
   
   (* mark each producer as flowing to consumers through their final type *)
-  let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
   let r = [name] {
     premises(r),
     tmap[`(t, ts)`]: &("gjoin" (ts @ [t'.])),
     dedup(concat(tmap_inverse[`(t1, t2)`]: (
+      let tuser = assoc(t1, consumer_type_by_user) in
       let tfinal =
-        match assoc(t1, final_type_by_user) with
+        match tuser with
         | none -> assoc!(t2, final_type)
         | some(t) -> t
       in
@@ -247,7 +250,9 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
       let flowfinal = &("flows" [t1, tfinal]) in
       let flowcons = match tcons with
         | [] -> []
-        | t :: _ -> [&("flows" [tfinal, t]).]
+        | t :: _ ->
+          let t = if none?(tuser) then t else get(tuser) in
+          [&("flows" [tfinal, t]).]
       in
       flowfinal :: flowcons)))
     ---------------------------------------------------------
@@ -255,7 +260,26 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   } in
   
   (* replace each input by its final type *)
-  let r = substitute(r, final_type) in
+  let r =
+    let flowc =
+      match assoc(op, hint_list("flows")) with
+      | none -> []
+      | some(flows) -> flows[`[_, "c", _, _, _]`]: self
+    in
+    if empty?(flowc) then substitute(r, final_type)
+    else
+      let prev_vars = tmap_inverse[`(t, _)`]: t in
+      let (new_concl, tmap) = uniquify([conclusion(r).], [], hint("mode"), "out", prev_vars) in
+      let inputmap = flowc[`[t, _, n1, e, n2]`]:
+        let t1 = nth(assoc!($!t, tmap), str_int(n1)) in
+        let t2 = extract_type_by_index($!e, str_int(n2)) in
+        (t1, t2)
+      in
+      let lonemap = concat(tmap[`(t, ts)`]:
+        if member?(t, lone_inputs) then (ts[`_`]: (self, t)) else [])
+      in
+      set_conclusion(r, substitute(head(new_concl), lonemap @ inputmap))
+  in
   
   (* use pattern matching on type constructors in the outputs and
    * restrict lone input variables to range over static types only *)
@@ -264,7 +288,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     | (c ts) ->
       let (new_ts, fs) = unzip(ts[`t`]: make_match(t)) in
       let fs = concat(fs) in
-      let typ = fresh_var("T") in
+      let typ = fresh_var("M") in
       (typ, &("matches" [typ, (c new_ts)]) :: fs)
     | _ -> (t, [])
   in 
@@ -272,8 +296,9 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     premises(r)(keep)[`gamma |- e : t`]:
       let (t, fs) = make_match(t) in
       (gamma |- e : t) :: fs,
+    (* first check if the lone input was substituted *)
     lone_inputs[`t`]: &("static" [t.])
-    ----------------------------------
+    -----------------------------------------------------------------------
     conclusion(r)
   } in
   
@@ -325,12 +350,21 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     conclusion(r)
   } in
 
+  (*
   let r = [name] {
     premises(r)(keep)[`&("flows" [t1, t2])`]:
       if member?(t2, vars(t)) || (t1 = t2) then none else some(t1 ~ t2)
     -------------------------------------------------------------------
     conclusion(r)
   } in
+  *)
 
   r
-))
+));
+
+add_rule(["T-GCAST"] {
+  $Gamma |- $e : $T1,
+  $T1 ~ $T2
+  ---------------------------------------
+  $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
+})

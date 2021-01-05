@@ -228,8 +228,8 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   } in
   
   let r = [name] {
-    premises(r)(keep)[`&("join" ts)` when t = last(ts)]: self
-    ---------------------------------------------------------
+    premises(r)(keep)[`&("join" ts)`]: if t = last(ts) then some(self) else none
+    ----------------------------------------------------------------------------
     conclusion(r)
   } in
 

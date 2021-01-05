@@ -17,6 +17,8 @@ On average, *L-Tr* algorithms are roughly 1/3 the size of the (rather idiomatic)
 
 Additionally, language definitions can be compiled to executable λProlog logic programs.
 This feature can be used to run queries on the generated languages in order to test their behavior.
+Another useful feature of λProlog is that it is a statically-typed language.
+Language definitions that are ill-formed will fail to compile to λProlog programs, allowing for users to identify certain classes of errors in their language designs/transformations.
 
 ## Any publications?
 
@@ -73,9 +75,6 @@ The `gradualizer/` directory contains algorithms for adding gradual typing to a 
 ## Compiling to λProlog
 
 Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).
-
-A useful feature of λProlog is that it is a statically-typed language.
-Language definitions that are ill-formed will fail to compile to λProlog programs, allowing for users to identify certain classes of errors in their language designs/transformations.
 
 ## TODO
 

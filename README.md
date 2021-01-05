@@ -55,6 +55,13 @@ The following algorithms are found in the `examples/` directory:
 - `ref.tr` adds mutable references and other imperative-style features to a functional language.
 - `subtyping.tr` adds algorithmic subtyping for a functional language (excludes width/row-subtyping).
 
+### Gradualizer
+
+The `gradualizer/` directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4].
+
+- `gradual_static.tr` generates the static semantics (type system), including the Cast Calculus.
+- `gradual_dynamic.tr` generates the dynamic semantics with elimination forms for the `cast` operator.
+
 ## Compiling to λProlog
 
 Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).
@@ -75,3 +82,7 @@ Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the
 [1] Mourad B., Cimini M. (2020) A Calculus for Language Transformations. In: Chatzigeorgiou A. et al. (eds) SOFSEM 2020: Theory and Practice of Computer Science. SOFSEM 2020. Lecture Notes in Computer Science, vol 12011. Springer, Cham. https://doi.org/10.1007/978-3-030-38919-2_44
 
 [2] Mourad B., Cimini M. (2020) System Description: Lang-n-Change - A Tool for Transforming Languages. In: Nakano K., Sagonas K. (eds) Functional and Logic Programming. FLOPS 2020. Lecture Notes in Computer Science, vol 12073. Springer, Cham. https://doi.org/10.1007/978-3-030-59025-3_12
+
+[3] Matteo Cimini and Jeremy G. Siek. 2016. The gradualizer: a methodology and algorithm for generating gradual type systems. SIGPLAN Not. 51, 1 (January 2016), 443–455. DOI:https://doi.org/10.1145/2914770.2837632 
+
+[4] Matteo Cimini and Jeremy G. Siek. 2017. Automatically generating the dynamic semantics of gradually typed languages. SIGPLAN Not. 52, 1 (January 2017), 789–803. DOI:https://doi.org/10.1145/3093333.3009863 

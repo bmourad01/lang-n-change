@@ -21,10 +21,9 @@ set_rules(rules(keep)[`(op args) --> rhs`]:
     let new_args = emap[`(arg, expr)`]: if member?(arg, pmvs) then expr else arg in
     some([rule_name(self)] {
       pmvs[`e`]:
-        let lhs = assoc(e, emap) in
-        if some?(lhs)
-        then some(get(lhs) --> e)
-        else none,
+        match assoc(e, emap) with
+        | none -> none
+        | some(lhs) -> some(lhs --> e),
       rhs --> v_res,
       premises(self)
       -------------------------

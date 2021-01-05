@@ -161,7 +161,7 @@ sugared_relation:
     { (Predicate.Builtin.step, [$1; $3]) }
   | term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3]) }
-  | term TURNSTILE term SUBTYPE term BIGARROW term DOT
+  | term SUBTYPE term BIGARROW term DOT
     { (Predicate.Builtin.subtype_flow, [$1; $3; $5]) }
   | term TURNSTILE term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3; $5]) }

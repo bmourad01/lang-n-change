@@ -1,22 +1,22 @@
 let get_pm (es: term list) =
-  es[|e|]:
+  es[`e`]:
     if not(binding?(e)) && not(var?(e))
     then some(e)
     else none
 in
 
 let get_vs (es: term list) =
-  es[|e|]:
+  es[`e`]:
     if var?(e) && var_kind?(e, "Value")
     then some(e)
     else none
 in
 
 let es_of_op (op: string) : term list =
-  head(syntax("Expression")[|(opp es) when op = opp|]: es)
+  head(syntax("Expression")[`(opp es)` when op = opp]: es)
 in
 
-set_rules(rules(keep)[|(op args) --> rhs|]:
+set_rules(rules(keep)[`(op args) --> rhs`]:
   let exprs = es_of_op(op)' in
   if empty?(exprs) then none
   else
@@ -25,9 +25,9 @@ set_rules(rules(keep)[|(op args) --> rhs|]:
     let pm = get_pm(args) in
     let vs = get_vs(args) in
     let pmvs = append(pm, vs) in
-    let new_args = emap[|(arg, expr)|]: if member?(arg, pmvs) then expr else arg in
+    let new_args = emap[`(arg, expr)`]: if member?(arg, pmvs) then expr else arg in
     some([rule_name(self)] {
-      pmvs[|e|]:
+      pmvs[`e`]:
         let lhs = assoc(e, emap) in
         if some?(lhs)
         then some(get(lhs) --> e)
@@ -40,15 +40,15 @@ set_rules(rules(keep)[|(op args) --> rhs|]:
 );
 
 
-add_rules(syntax("Value")[|(op vs)|]:
+add_rules(syntax("Value")[`(op vs)`]:
   let es = es_of_op(op) in
   let emap = zip(vs, es) in
   let pm = get_pm(vs) in
   let vvs = get_vs(vs) in
   let pmvs = append(pm, vvs) in
-  let args = emap[|(v, e)|]: if member?(v, pmvs) then e else v in
+  let args = emap[`(v, e)`]: if member?(v, pmvs) then e else v in
   some(["R-VALUE-" ^ uppercase(op)] {
-    pmvs[|e|]:
+    pmvs[`e`]:
       let ee = assoc!(e, emap) in
       if (var?(e) && var_kind?(e, "Type"))
          || (var?(ee) && var_kind?(ee, "Type"))

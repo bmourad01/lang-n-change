@@ -1,10 +1,10 @@
 Type T ::= ... | ("dyn" []).;
 
 Ground G ::= {
-  syntax("Type")[|(c ts)|]:
+  syntax("Type")[`(c ts)`]:
     if c = "dyn" then none
     else
-      let dyns = ts >> t >> if binding?(t) then t else ("dyn" []) in
+      let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
       some((c dyns))
 };
     
@@ -12,11 +12,11 @@ let is_typ_var (t: term) = var?(t) && var_kind?(t, "Type") in
 let is_exp_var (t: term) = var?(t) && var_kind?(t, "Expression") in
 
 let filter_ts (ts: term list) =
-  ts[|t|]: if is_typ_var(t) then some(t) else none
+  ts[`t`]: if is_typ_var(t) then some(t) else none
 in
 
 let filter_es (ts: term list) =
-  ts[|t|]: if is_exp_var(t) then some(t) else none
+  ts[`t`]: if is_exp_var(t) then some(t) else none
 in
 
 add_relation($T ~ $T);
@@ -27,9 +27,9 @@ add_relation("static", [$T.]);
 # mode: ... | consistent => inp inp | matches => inp out | join => inp inp out | static => inp;
 # principal: ... | consistent => yes yes | matches => yes no | join => yes yes no | static => yes;
 
-add_rules(syntax("Type")[|(c ts)|]:
+add_rules(syntax("Type")[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
-    ts[|t|]: unbind(t) ~ unbind(t)'
+    ts[`t`]: unbind(t) ~ unbind(t)'
     -------------------------------
     (c ts) ~ (c ts')
   }
@@ -45,17 +45,17 @@ add_rule(["C-DYN-T"] {
   ("dyn" []) ~ $T
 });
 
-add_rules(syntax("Type")[|(c ts)|]: 
+add_rules(syntax("Type")[`(c ts)`]: 
   if c = "dyn" then none
   else
-    let ts = ts[|t|]: if binding?(t) then $(bound(t))("dyn" []) else ("dyn" []) in
+    let ts = ts[`t`]: if binding?(t) then $(bound(t))("dyn" []) else ("dyn" []) in
     some(["MATCHES-DYN-" ^ uppercase(c)] {
       ---------------------------------
       &("matches" [("dyn" []), (c ts)])
     })
 );
 
-add_rules(syntax("Type")[|(c ts)|]:
+add_rules(syntax("Type")[`(c ts)`]:
   if c = "dyn" then none
   else
     some(["MATCHES-" ^ uppercase(c)] {
@@ -64,21 +64,21 @@ add_rules(syntax("Type")[|(c ts)|]:
     })
 );
 
-add_rules(syntax("Type")[|(c ts)|]:
+add_rules(syntax("Type")[`(c ts)`]:
   if c = "dyn" then none
   else
     some(["STATIC-" ^ uppercase(c)] {
-      ts[|t|]: &("static" [t.])
+      ts[`t`]: &("static" [t.])
       ----------------------------
       &("static" [(c ts).])
     })
 );
 
-add_rules(syntax("Type")[|(c ts)|]:
+add_rules(syntax("Type")[`(c ts)`]:
   if c = "dyn" then none
   else
     some(["JOIN-" ^ uppercase(c)] {
-      ts[|t|]:
+      ts[`t`]:
         let t = unbind(t) in
         &("join" [t, t', t''])
       -------------------------------------
@@ -104,16 +104,16 @@ let seek
   match assoc(key, m) with
   | none -> []
   | some(m) ->
-    zip(m, data)[|(x, t)|]: if x = tag then some(t) else none
+    zip(m, data)[`(x, t)`]: if x = tag then some(t) else none
 in
 
-set_rules(rules(keep)[|gamma |- e : t|]: (
+set_rules(rules(keep)[`gamma |- e : t`]: (
   let name = rule_name(self) in
   let op = match e with (op _) -> op | _ -> "" in
 
   (* split equal types in the outputs *)
   let (new_premises, tmap) =
-    let ignored = premises(self)[|_|]:
+    let ignored = premises(self)[`_`]:
       match self with
       | _ |- _ : _[_/x] -> some(self)
       | _ -> none
@@ -131,13 +131,13 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
     match t with
     | (c ts) ->
       let contras = seek(hint("variance"), c, ts, "contra") in
-      vars(contras) @ concat(diff(ts, contras)[|_|]: extract_contra(self))
+      vars(contras) @ concat(diff(ts, contras)[`_`]: extract_contra(self))
     | _ -> []
   in
-  let consumers = concat(premises(r)[|_ |- _ : t|]: extract_contra(t)) in
+  let consumers = concat(premises(r)[`_ |- _ : t`]: extract_contra(t)) in
   let final_type =
     let evars = vars(e) in
-    tmap[|(t, ts)|]:
+    tmap[`(t, ts)`]:
       let ol = var_overlap(evars, ts) in
       if not(empty?(ol)) then (t, head(ol))
       else
@@ -145,28 +145,28 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
         if not(empty?(ol)) then (t, head(ol))
         else (t, t')
   in
-  let producers = concat(premises(r)[|_ |- _ : (c ts)|]: diff(vars(ts), consumers)) in
+  let producers = concat(premises(r)[`_ |- _ : (c ts)`]: diff(vars(ts), consumers)) in
   let lone_inputs = filter_ts(diff(vars(e), consumers @ producers)) in
     
   let extract_type_by_index (e: term) (n: int) =
-    head(premises(r)[|_ |- ee : t when e = ee|]: nth(filter_ts(vars(t)), n))
+    head(premises(r)[`_ |- ee : t` when e = ee]: nth(filter_ts(vars(t)), n))
   in
   let final_type_by_user =
     match assoc(op, hint_list("flows")) with
     | none -> []
     | some(flows) ->
-      flows[|[e1, n1, e2, n2]|]:
+      flows[`[e1, n1, e2, n2]`]:
         let t1 = extract_type_by_index($!e1, str_int(n1)) in
         let t2 = extract_type_by_index($!e2, str_int(n2)) in
         (t1, t2)
   in
   
   (* mark each producer as flowing to consumers through their final type *)
-  let tmap_inverse = concat(tmap[|(t, ts)|]: ts[|_|]: (self, t)) in
+  let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
   let r = [name] {
     premises(r),
-    tmap[|(t, ts)|]: &("join" (ts @ [t'.])),
-    dedup(concat(tmap_inverse[|(t1, t2)|]: (
+    tmap[`(t, ts)`]: &("join" (ts @ [t'.])),
+    dedup(concat(tmap_inverse[`(t1, t2)`]: (
       let tfinal =
         match assoc(t1, final_type_by_user) with
         | none -> assoc!(t2, final_type)
@@ -191,17 +191,17 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   let rec make_match (t: term) : (term, formula list) tuple =
     match t with
     | (c ts) ->
-      let (new_ts, fs) = unzip(ts[|t|]: make_match(t)) in
+      let (new_ts, fs) = unzip(ts[`t`]: make_match(t)) in
       let fs = concat(fs) in
       let typ = fresh_var("T") in
       (typ, &("matches" [typ, (c new_ts)]) :: fs)
     | _ -> (t, [])
   in 
   let r = [name] {
-    premises(r)(keep)[|gamma |- e : t|]:
+    premises(r)(keep)[`gamma |- e : t`]:
       let (t, fs) = make_match(t) in
       (gamma |- e : t) :: fs,
-    lone_inputs[|t|]: &("static" [t.])
+    lone_inputs[`t`]: &("static" [t.])
     ----------------------------------
     conclusion(r)
   } in
@@ -209,10 +209,10 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   (* compile to the cast calculus *)
   let r = lift (gamma |- e : t) to (gamma |- ("ci" [e, e']) : t) in r in
   let rec destination_type (t: term) : term =
-    let typs = premises(r)[|f|]:
+    let typs = premises(r)[`f`]:
       match f with
       | &("matches" [t1, (c ts)]) when t1 = t ->
-         some((c (ts[|t|]: destination_type(t))))
+         some((c (ts[`t`]: destination_type(t))))
       | &("flows" [t1, t2]) when t2 = t ->
         if member?(t1, consumers) then some(t1) else some(t)
       | &("flows" [t1, t2]) when t1 = t -> some(t2)
@@ -222,12 +222,12 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   in
   let dests =
     if empty?(premises(r)) then []
-    else vars(r)[|t|]: (t, destination_type(t))
+    else vars(r)[`t`]: (t, destination_type(t))
   in
-  let emap = (e, t) :: premises(r)[|_ |- ("ci" [e, _]) : t|]: (e, t) in
+  let emap = (e, t) :: premises(r)[`_ |- ("ci" [e, _]) : t`]: (e, t) in
   let rec insert_cast (e: term) : term =
     match e with
-    | (op es) -> (op (es[|e|]: insert_cast(e)))
+    | (op es) -> (op (es[`e`]: insert_cast(e)))
     | _ ->
       match assoc(e, emap) with
       | none -> e
@@ -245,7 +245,7 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
   } in
   
   let r = [name] {
-    premises(r)(keep)[|&("join" ts)|]:
+    premises(r)(keep)[`&("join" ts)`]:
       if t = last(ts) then some(self) else none
     ----------------------------------
     conclusion(r)
@@ -253,7 +253,7 @@ set_rules(rules(keep)[|gamma |- e : t|]: (
 
   (*
   let r = [name] {
-    premises(r)(keep)[|&("flows" [t1, t2])|]:
+    premises(r)(keep)[`&("flows" [t1, t2])`]:
       if (t2 = t) || (t1 = t2) then none else some(t1 ~ t2)
     --------------------------------------------------------
     conclusion(r)

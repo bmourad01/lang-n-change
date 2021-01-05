@@ -1,14 +1,14 @@
 Expression e ::= ... | ("pmatch" [$e, [<[$p, $e]>...]]).;
 
 let has_binding (ts: term list) : bool =
-  not(empty?(ts[|t|]: if binding?(t) then some(t) else none))
+  not(empty?(ts[`t`]: if binding?(t) then some(t) else none))
 in
     
 Pattern p ::= {
-  syntax("Value")[|(op es)|]:
+  syntax("Value")[`(op es)`]:
     if has_binding(es) then none else
       let p_op = op ^ "_p" in
-      let ps = es[|e|]:
+      let ps = es[`e`]:
         if var?(e) && var_kind?(e, "Value") then $p else e
       in
       some((p_op ps))
@@ -24,25 +24,25 @@ add_relation("typeof_pattern", [$Gamma, $p, $T, $Gamma]);
 # principal: ... | typeof_pattern => no yes no no;
     
 let can_be_pattern (op: string) : bool =
-  not(empty?(syntax("Pattern")[|(op_p _) when op_p = op|]: self))
+  not(empty?(syntax("Pattern")[`(op_p _)` when op_p = op]: self))
 in
 
-add_rules(rules[|gamma |- (op es) : t|]:
+add_rules(rules[`gamma |- (op es) : t`]:
   let p_op = op ^ "_p" in
   if not(op_kind?(op, "Value") && can_be_pattern(p_op)) then none
   else
-    let es_to_ps = zip(es, es[|_|]: fresh_var("p")) in
-    let prems = premises(self)[|_ |- e : _|]:
+    let es_to_ps = zip(es, es[`_`]: fresh_var("p")) in
+    let prems = premises(self)[`_ |- e : _`]:
       if member?(e, es) then some(self) else none
     in
-    let prems_map = zip(prems, prems[|_|]: fresh_var("Gamma")) in
-    let args_with_ps = es_to_ps[|(e, p)|]:
+    let prems_map = zip(prems, prems[`_`]: fresh_var("Gamma")) in
+    let args_with_ps = es_to_ps[`(e, p)`]:
       if var?(e) && var_kind?(e, "Expression") then p else e
     in
-    let new_gammas = prems_map[|(_, g)|]: g in
+    let new_gammas = prems_map[`(_, g)`]: g in
     
     some(["T-MATCH-" ^ uppercase(op)] {
-      premises(self)[|prem|]:
+      premises(self)[`prem`]:
         match prem with
         | gamma |- e : t ->
           (match assoc(prem, prems_map) with
@@ -69,21 +69,21 @@ add_relation("match_pattern", [$p, $v, $MR]);
 # mode: ... | match_pattern => inp inp out;
 # principal: ... | match_pattern => yes yes no;
 
-add_rules(syntax("Value")[|(op vs)|]:
+add_rules(syntax("Value")[`(op vs)`]:
   let p_op = op ^ "_p" in
   if not(can_be_pattern(p_op)) then none else
-    let vs_to_ps = zip(vs, vs[|v|]:
+    let vs_to_ps = zip(vs, vs[`v`]:
       if not(var?(v) && var_kind?(v, "Value")) || binding?(v) then v
       else fresh_var("p"))
     in
-    let subs = zip(vs, vs[|_|]: fresh_var("S")) in  
-    let subs_un = subs[|(v, s)|]:
+    let subs = zip(vs, vs[`_`]: fresh_var("S")) in  
+    let subs_un = subs[`(v, s)`]:
       if var?(v) && var_kind?(v, "Value") then some(s) else none
     in
-    let ps = vs_to_ps[|(_, p)|]: p in
+    let ps = vs_to_ps[`(_, p)`]: p in
     
     some(["MATCH-" ^ uppercase(op)] {
-      subs[|(v, s)|]:
+      subs[`(v, s)`]:
         if var?(v) && var_kind?(v, "Value")
         then some(&("match_pattern" [assoc!(v, vs_to_ps), v, ("match_subst" [s.])]))
         else none,
@@ -100,7 +100,7 @@ add_rules(syntax("Value")[|(op vs)|]:
 );
 
 let orig_name (p_op: string) : string option =
-  let res = syntax("Value")[|(op _)|]:
+  let res = syntax("Value")[`(op _)`]:
     if p_op = (op ^ "_p") then some(op) else none
   in
   match res with
@@ -108,8 +108,8 @@ let orig_name (p_op: string) : string option =
   | op :: _ -> some(op)
 in
 
-add_rules(concat(syntax("Pattern")[|(p_op ps)|]: (
-  syntax("Value")[|(op vs)|]:
+add_rules(concat(syntax("Pattern")[`(p_op ps)`]: (
+  syntax("Value")[`(op vs)`]:
     if p_op = (op ^ "_p") then none else
       match orig_name(p_op) with
       | none -> none

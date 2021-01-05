@@ -46,6 +46,7 @@ rule token = parse
   | "->" {ARROW}
   | "<:" {SUBTYPE}
   | "~" {TILDE}
+  | "`" {BACKTICK}
   | "|" {MID}
   | "[" {LSQUARE}
   | "]" {RSQUARE}

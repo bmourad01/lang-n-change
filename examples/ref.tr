@@ -22,18 +22,18 @@ lift (gamma |- e : t) to (<[gamma, $Sigma]> |- e : t).;
 lift (e1 --> e2) to (<[e1, $m]> --> <[e2, $m]>).;
 
 (* modify the shape of reduction rules *)
-set_rules(rules(keep)[|<[e1, _]> --> <[e2, _]>|]:
+set_rules(rules(keep)[`<[e1, _]> --> <[e2, _]>`]:
   (* any steps that appear in the premises must produce
    * a fresh memory which is then used in the next step *)
-  let step_prems = premises(self)[|_ --> _|]: self in
+  let step_prems = premises(self)[`_ --> _`]: self in
   let concl = conclusion(self) in
   let steps = step_prems @ [concl.] in
-  let stores = steps[|_ |]: fresh_var("m") in
+  let stores = steps[`_`]: fresh_var("m") in
   let smap1 = zip(steps, stores) in
   let smap2 = zip(step_prems, tail(stores)) in 
 
   [rule_name(self)] {
-    premises(self)(keep)[|<[e1, _]> --> <[e2, _]>|]:
+    premises(self)(keep)[`<[e1, _]> --> <[e2, _]>`]:
       <[e1, assoc!(self, smap1)]> --> <[e2, assoc!(self, smap2)]>
     ---------------------------------------------------------
     <[e1, head(stores)]> --> <[e2, assoc!(concl, smap1)]>
@@ -42,7 +42,7 @@ set_rules(rules(keep)[|<[e1, _]> --> <[e2, _]>|]:
 
 (* add the typing rules for the new top-level operators *)
 
-let assume = head(relations[|("typeof", a :: _)|]: a) in
+let assume = head(relations[`("typeof", a :: _)`]: a) in
 
 add_rule(["T-ADDRESS"] {
   &member <[$a, $T]> $Sigma

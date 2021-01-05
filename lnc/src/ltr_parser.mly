@@ -17,6 +17,7 @@
 %token TURNSTILE
 %token SUBTYPE
 %token TILDE
+%token BACKTICK
 %token STEP
 %token ARROW
 %token MID
@@ -177,13 +178,13 @@ exp:
     { Exp.Lift ($2, $4) }
   | LIFT pattern TO exp IN exp
     { Exp.Lift_in_rule ($2, $4, $6) }
-  | field = exp LSQUARE MID pattern = pattern WHEN when_ = exp MID RSQUARE COLON body = exp
+  | field = exp LSQUARE BACKTICK pattern = pattern BACKTICK WHEN when_ = exp RSQUARE COLON body = exp
     { Exp.Select {keep = false; field; pattern; when_ = Some when_; body} }
-  | field = exp LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
+  | field = exp LSQUARE BACKTICK pattern = pattern BACKTICK RSQUARE COLON body = exp
     { Exp.Select {keep = false; field; pattern; when_ = None; body} }
-  | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern WHEN when_ = exp MID RSQUARE COLON body = exp
+  | field = exp LPAREN KEEP RPAREN LSQUARE BACKTICK pattern = pattern BACKTICK WHEN when_ = exp RSQUARE COLON body = exp
     { Exp.Select {keep = true; field; pattern; when_ = Some when_; body} }
-  | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
+  | field = exp LPAREN KEEP RPAREN LSQUARE BACKTICK pattern = pattern BACKTICK RSQUARE COLON body = exp
     { Exp.Select {keep = true; field; pattern; when_ = None; body} }
   | MATCH exp = exp WITH MID cases = separated_nonempty_list(MID, match_case)
     { Exp.Match {exp; cases} }

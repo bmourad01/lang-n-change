@@ -3,7 +3,7 @@ Expression e ::= ... | ("cast" [$e, $T, $T]).;
 Context E ::= ... | ("cast" [$E, $T, $T]).;
 
 Value v ::= {
-  let casts = syntax("Type")[|(c ts)|]:
+  let casts = syntax("Type")[`(c ts)`]:
     if empty?(ts) then none
     else some(("cast" [$v, (c ts), (c ts)]))
   in
@@ -11,10 +11,10 @@ Value v ::= {
 };
 
 Ground G ::= {
-  syntax("Type")[|(c ts)|]:
+  syntax("Type")[`(c ts)`]:
     if c = "dyn" then none
     else
-      let dyns = ts >> t >> if binding?(t) then t else ("dyn" []) in
+      let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
       some((c dyns))
 };
 
@@ -30,7 +30,7 @@ add_relation($T ~ $T);
 # mode: ... | consistent => inp inp;
 # principal: ... | consistent => yes yes;
 
-add_rules(syntax("Type")[|(c ts)|]:
+add_rules(syntax("Type")[`(c ts)`]:
   if not(empty?(ts)) then none
   else
     some(["R-CAST-" ^ uppercase(c)] {
@@ -67,36 +67,36 @@ add_rule(["R-CAST-DYN-TO-T"] {
 });
 
 let typing_rule_of_op (op: string) =
-  head(rules[|gamma |- (opp _) : _|]:
+  head(rules[`gamma |- (opp _) : _`]:
     if op = opp then some(self) else none)
 in
 
 let filter_ts (ts: term list) =
-  ts[|t|]: if var?(t) && var_kind?(t, "Type") then some(t) else none
+  ts[`t`]: if var?(t) && var_kind?(t, "Type") then some(t) else none
 in
 
-add_rules(hint("eliminationform")[|(op, pa)|]:
+add_rules(hint("eliminationform")[`(op, pa)`]:
   let r = typing_rule_of_op(op) in
   let idx = str_int(head(pa)) in
-  let typing_prems = premises(r)[|gamma |- e : t|]: self in
+  let typing_prems = premises(r)[`gamma |- e : t`]: self in
   match conclusion(r) with gamma |- (op es) : t ->
   match head(typing_prems) with gamma |- e : (c ts) ->
   if empty?(ts) then none      
   else
     let pa_type = (c ts) in
-    let cast_map = typing_prems[|gamma |- ee : t|]:
+    let cast_map = typing_prems[`gamma |- ee : t`]:
       if e = ee then none else some((e, t))
     in
-    let siblings = cast_map[|(e, t)|]: ("cast" [e, t, t']) in
-    let add_subs = premises(r)[|([$!x => t1]gamma) |- e : t2|]:
+    let siblings = cast_map[`(e, t)`]: ("cast" [e, t, t']) in
+    let add_subs = premises(r)[`([$!x => t1]gamma) |- e : t2`]:
       (e, e[("cast" [$!x, t1'|vars(pa_type), t1])/x])
     in
     let tas = filter_ts(vars(es)) in
     let tas_p = tas'|vars(pa_type) in
     let siblings = substitute(siblings, add_subs) in
-    let turn_to_value = concat(rules[|(opp ts) --> _|]:
+    let turn_to_value = concat(rules[`(opp ts) --> _`]:
       if not(op = opp) then none
-      else some(zip(es, ts)[|(t1, t2)|]:
+      else some(zip(es, ts)[`(t1, t2)`]:
         if var?(t2) && var_kind?(t2, "Value")
         then some((t1, t2)) else none))
     in

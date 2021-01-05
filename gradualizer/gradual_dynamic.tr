@@ -27,6 +27,24 @@ add_relation($T ~ $T);
 # mode: ... | consistent => inp inp;
 # principal: ... | consistent => yes yes;
 
+add_rules(syntax("Type")[`(c ts)`]:
+  ["C-" ^ uppercase(c)] {
+    ts[`t`]: unbind(t) ~ unbind(t)'
+    -------------------------------
+    (c ts) ~ (c ts')
+  }
+);
+
+add_rule(["C-T-DYN"] {
+  ----------------
+  $T ~ ("dyn" [])
+});
+    
+add_rule(["C-DYN-T"] {
+  ----------------
+  ("dyn" []) ~ $T
+});
+
 add_rules(syntax("Type")[`(c ts)` when not(empty?(ts))]:
   ["R-CAST-" ^ uppercase(c)] {
     ------------------------------------

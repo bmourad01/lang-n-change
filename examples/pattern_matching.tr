@@ -40,6 +40,7 @@ add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
       if var?(e) && var_kind?(e, "Expression") then p else e
     in
     let new_gammas = prems_map[`(_, g)`]: g in
+    let result = match new_gammas with [] -> gamma | _ -> $Gamma' in
     
     some(["T-MATCH-" ^ uppercase(op)] {
       premises(self)[`prem`]:
@@ -53,9 +54,7 @@ add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
        | [] -> none
        | _ -> some(&($Gamma' = $map_union(gamma :: new_gammas))))
       ---------------------------------------------------------------
-      (match new_gammas with
-       | [] -> &("typeof_pattern" [gamma, (p_op args_with_ps), t, gamma])
-       | _ -> &("typeof_pattern" [gamma, (p_op args_with_ps), t, $Gamma']))
+      &("typeof_pattern" [gamma, (p_op args_with_ps), t, result])
     })
 );
 
@@ -81,7 +80,7 @@ add_rules(syntax("Value")[`(op vs)`]:
       if var?(v) && var_kind?(v, "Value") then some(s) else none
     in
     let ps = vs_to_ps[`(_, p)`]: p in
-    
+    let result = match subs_un with [] -> $nil | s :: [] -> s | _ -> $S in
     some(["MATCH-" ^ uppercase(op)] {
       subs[`(v, s)`]:
         if var?(v) && var_kind?(v, "Value")
@@ -92,10 +91,7 @@ add_rules(syntax("Value")[`(op vs)`]:
        | _ :: [] -> none
        | _ -> some(&($S = $map_union(subs_un))))
       --------------------------------------------------------------------
-      (match subs_un with
-       | [] -> &("match_pattern" [(p_op ps), (op vs), ("match_subst" [$nil.])])
-       | s :: [] -> &("match_pattern" [(p_op ps), (op vs), ("match_subst" [s.])])
-       | _ -> &("match_pattern" [(p_op ps), (op vs), ("match_subst" [$S.])]))
+      &("match_pattern" [(p_op ps), (op vs), ("match_subst" [result.])])
     })
 );
 

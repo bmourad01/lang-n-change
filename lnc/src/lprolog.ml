@@ -252,18 +252,23 @@ module Sigs = struct
                 * have a tuple configuration then the first
                 * element is the actual "list" to evaluate *)
                if String.equal pred L.Predicate.Builtin.step then
-                 let t1 = List.hd_exn ts in
-                 let sub =
-                   match t1 with
-                   | T.Var _ -> [(t1, T.List t1)]
-                   | T.(Tuple (Var v :: _)) -> [(T.Var v, T.(List (Var v)))]
-                   | _ ->
-                       invalid_arg
-                         (Printf.sprintf
-                            "unsupported term %s for relation %s_list"
-                            (T.to_string t1) pred)
+                 let subs =
+                   List.map ts ~f:(fun t ->
+                       match t with
+                       | T.Var _ -> [(t, T.List t)]
+                       | T.(Tuple (Var v :: _)) ->
+                           [(T.Var v, T.(List (Var v)))]
+                       | _ ->
+                           invalid_arg
+                             (Printf.sprintf
+                                "unsupported term %s for relation %s_list"
+                                (T.to_string t) pred))
                  in
-                 let ts = List.map ts ~f:(fun t -> T.substitute t sub) in
+                 let ts =
+                   List.(
+                     map (zip_exn ts subs) ~f:(fun (t, sub) ->
+                         T.substitute t sub))
+                 in
                  let _, args = aux ts in
                  let prop =
                    Prop.{name= pred ^ "_list"; args= List.rev args}

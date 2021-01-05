@@ -48,7 +48,7 @@ Run `./transform <.lan> <.tr>`. The transformed language definition is printed t
 
 ### Examples
 
-The following algorithms are found in the `examples/` folder:
+The following algorithms are found in the `examples/` directory:
 
 - `big.tr` transforms a small-step functional language with evaluation contexts to use big-step semantics.
 - `pattern_matching.tr` adds pattern-matching to a functional language as a top-level operator.

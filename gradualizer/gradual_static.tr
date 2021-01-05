@@ -19,6 +19,73 @@ add_relation("static", [$T.]);
 # mode: ... | consistent => inp inp | matches => inp out | gjoin => inp inp out | static => inp;
 # principal: ... | consistent => yes yes | matches => yes no | gjoin => yes yes no | static => yes;
 
+let has_relation (r: string) =
+  not(empty?(relations[`(name, _)` when r = name]: self))
+in
+
+let has_subtyping =
+  has_relation("subtype")
+  && has_relation("join")
+  && has_relation("meet")
+in
+
+if has_subtyping then (
+  remove_relation("subtype");
+    
+  lift t1 <: t2 to t1 <: t2 ==> t1'.;
+  lift &("join" [t1, t2, t3]) to &("join" [t1, t2, t3, t3']).;
+  lift &("meet" [t1, t2, t3]) to &("meet" [t1, t2, t3, t3']).;
+
+  add_relation($T <: $T ==> $T);
+  add_relation("join", [$T, $T, $T, $T]);
+  add_relation("meet", [$T, $T, $T, $T]);
+
+  # mode: ... | subtype_flow => inp inp out | join => inp inp out out | meet => inp inp out out;
+  # principal: ... | subtype_flow => yes yes no | join => yes yes no no | meet => yes yes no no;
+
+  add_rules(concat(syntax("Type")[`(c [])` when not(c = "dyn")]:
+      [["S-DYN-" ^ uppercase(c)] {
+         ------------------------------
+         ("dyn" []) <: (c []) ==> (c [])
+       },
+       ["S-" ^ uppercase(c) ^ "-DYN"] {
+         ------------------------------
+         (c []) <: ("dyn" []) ==> (c [])
+       },
+       ["JOIN-DYN-" ^ uppercase(c)] {
+         ----------------------------------------------
+         &("join" [("dyn" []), (c []), (c []), (c [])])
+       },
+       ["JOIN-" ^ uppercase(c) ^ "-DYN"] {
+         ----------------------------------------------
+         &("join" [(c []), ("dyn" []), (c []), (c [])])
+       },
+       ["MEET-DYN-" ^ uppercase(c)] {
+         ----------------------------------------------
+         &("meet" [("dyn" []), (c []), (c []), ("dyn" [])])
+       },
+       ["MEET-" ^ uppercase(c) ^ "-DYN"] {
+         ----------------------------------------------
+         &("meet" [(c []), ("dyn" []), (c []), ("dyn" [])])
+       }]));
+
+  add_rule(["S-DYN"] {
+    ---------------------------------------
+    ("dyn" []) <: ("dyn" []) ==> ("dyn" [])
+  });
+
+  add_rule(["JOIN-DYN"] {
+    ---------------------------------------------------------
+    &("join" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
+  });
+
+  add_rule(["MEET-DYN"] {
+    ---------------------------------------------------------
+    &("meet" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
+  })
+
+) else skip;
+    
 add_rules(syntax("Type")[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
     ts[`t`]: unbind(t) ~ unbind(t)'
@@ -192,14 +259,17 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   (* compile to the cast calculus *)
   let r = lift (gamma |- e : t) to (gamma |- ("ci" [e, e']) : t) in r in
   let rec destination_type (t: term) : term =
-    let typs = premises(r)[`f`]:
+    let typs = concat(premises(r)[`f`]:
       match f with
+      | t1 <: t2 ==> t3 when t1 = t -> [t3.]
+      | &("join" [t1, t2, t3, t4]) when (t1 = t) || (t2 = t) -> [t4.]
+      | &("meet" [t1, t2, t3, t4]) when (t1 = t) || (t2 = t) -> [t4.]
       | &("matches" [t1, (c ts)]) when t1 = t ->
-         some((c (ts[`t`]: destination_type(t))))
+        [(c (ts[`t`]: destination_type(t))).]
       | &("flows" [t1, t2]) when t2 = t ->
-        if member?(t1, consumers) then some(t1) else some(t)
-      | &("flows" [t1, t2]) when t1 = t -> some(t2)
-      | _ -> none
+        if member?(t1, consumers) then [t1.] else [t.]
+      | &("flows" [t1, t2]) when t1 = t -> [t2.]
+      | _ -> [])
     in
     if empty?(typs) then t else head(typs)
   in

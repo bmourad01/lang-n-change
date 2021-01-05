@@ -103,6 +103,7 @@ module Exp : sig
     | Apply of t * t list
     | Ite of t * t * t
     | Seq of t * t
+    | Skip
     | Lift of Pattern.t * t
     | Lift_in_rule of Pattern.t * t * t
     | Select of

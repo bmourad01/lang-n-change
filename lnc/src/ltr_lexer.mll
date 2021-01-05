@@ -64,6 +64,7 @@ rule token = parse
   | "lift" {LIFT}
   | "to" {TO}
   | "keep" {KEEP}
+  | "skip" {SKIP}
   | "match" {MATCH}
   | "with" {WITH}
   | "when" {WHEN}

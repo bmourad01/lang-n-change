@@ -307,6 +307,7 @@ module Exp = struct
     | Apply of t * t list
     | Ite of t * t * t
     | Seq of t * t
+    | Skip
     | Lift of Pattern.t * t
     | Lift_in_rule of Pattern.t * t * t
     | Select of
@@ -481,6 +482,7 @@ module Exp = struct
         Printf.sprintf "if %s then %s else %s" (to_string b) (to_string e1)
           (to_string e2)
     | Seq (e1, e2) -> Printf.sprintf "%s; %s" (to_string e1) (to_string e2)
+    | Skip -> "skip"
     | Lift (p, e) ->
         Printf.sprintf "lift %s to %s." (Pattern.to_string p) (to_string e)
     | Lift_in_rule (p, e, r) ->
@@ -1378,6 +1380,7 @@ let rec compile ctx e =
           in
           (e', Type.Lan, ctx2)
       | _ -> incompat "Seq" [typ1; typ2] Type.[Lan; Lan] )
+  | Exp.Skip -> ("lan", Type.Lan, ctx)
   | Exp.Lift (p, e) -> (
       let pat_ctx = {ctx with type_env= String.Map.empty} in
       let pat', pat_typ, pat_ctx = compile_pattern pat_ctx Type.Formula p in

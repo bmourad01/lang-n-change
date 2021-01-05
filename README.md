@@ -67,7 +67,7 @@ The `gradualizer/` directory contains algorithms for adding gradual typing to a 
 Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).
 
 A useful feature of λProlog is that it is a statically-typed language.
-Language definitions that are ill-formed will fail to compile to λProlog programs, allowing for users to identify certain classes of errors in their language transformations.
+Language definitions that are ill-formed will fail to compile to λProlog programs, allowing for users to identify certain classes of errors in their language designs/transformations.
 
 ## TODO
 

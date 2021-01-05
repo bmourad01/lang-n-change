@@ -12,7 +12,6 @@
 %token DOLLAR
 %token AT
 %token AMPERSAND
-%token SELECT
 %token WILDCARD
 %token GRAMMARASSIGN
 %token TURNSTILE
@@ -185,10 +184,6 @@ exp:
   | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern WHEN when_ = exp MID RSQUARE COLON body = exp
     { Exp.Select {keep = true; field; pattern; when_ = Some when_; body} }
   | field = exp LPAREN KEEP RPAREN LSQUARE MID pattern = pattern MID RSQUARE COLON body = exp
-    { Exp.Select {keep = true; field; pattern; when_ = None; body} }
-  | field = exp SELECT pattern = pattern SELECT body = exp
-    { Exp.Select {keep = false; field; pattern; when_ = None; body} }
-  | field = exp SELECT EXCL pattern = pattern SELECT body = exp
     { Exp.Select {keep = true; field; pattern; when_ = None; body} }
   | MATCH exp = exp WITH MID cases = separated_nonempty_list(MID, match_case)
     { Exp.Match {exp; cases} }

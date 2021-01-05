@@ -488,13 +488,13 @@ module Exp = struct
           (to_string e) (to_string r)
     | Select {keep; field; pattern; when_; body} ->
         let field_str = to_string field in
-        let op_str = if keep then ">>!" else ">>" in
+        let keep_str = if keep then "(keep)" else "" in
         let when_str =
           match when_ with
           | None -> ""
           | Some w -> Printf.sprintf " when %s" (to_string w)
         in
-        Printf.sprintf "%s %s%s %s >> (%s)" field_str op_str
+        Printf.sprintf "%s%s[|%s%s|]: (%s)" field_str keep_str
           (Pattern.to_string pattern)
           when_str (to_string body)
     | Match {exp; cases} ->

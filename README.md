@@ -10,7 +10,7 @@ Algorithms expressed in *L-Tr* are compiled to an OCaml program (`support/transf
 
 ## Why use it?
 
-*L-Tr* allows algorithms to be expressed in a concise, declarative style.
+*L-Tr* allows language transformations to be expressed in a concise, declarative style.
 It provides considerable syntactic sugar for, but not limted to, generating pen-and-paper formulations found in operational sematics.
 Thus, it can save language designers considerable time and effort for automatically adding new features to entire classes of languages.
 On average, *L-Tr* algorithms are roughly 1/3 the size of the (rather idiomatic) generated OCaml code for said algorithms.

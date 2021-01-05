@@ -46,6 +46,15 @@ Run `dune build lnc` to build the project.
 
 Run `./transform <.lan> <.tr>`. The transformed language definition is printed to `stdout`.
 
+### Examples
+
+The following algorithms are found in the `examples/` folder:
+
+- `big.tr` transforms a small-step functional language with evaluation contexts to use big-step semantics.
+- `pattern_matching.tr` adds pattern-matching to a functional language as a top-level operator.
+- `ref.tr` adds mutable references and other imperative-style features to a functional language.
+- `subtyping.tr` adds algorithmic subtyping for a functional language (excludes width/row-subtyping).
+
 ## Compiling to λProlog
 
 Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).

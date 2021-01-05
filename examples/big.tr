@@ -1,30 +1,23 @@
 let get_pm (es: term list) =
-  es[`e`]:
-    if not(binding?(e)) && not(var?(e))
-    then some(e)
-    else none
+  es[`e` when not(binding?(e)) && not(var?(e))]: e
 in
 
 let get_vs (es: term list) =
-  es[`e`]:
-    if var?(e) && var_kind?(e, "Value")
-    then some(e)
-    else none
+  es[`e` when var?(e) && var_kind?(e, "Value")]: e
 in
 
-let es_of_op (op: string) : term list =
+let es_of_op (op: string) =
   head(syntax("Expression")[`(opp es)` when op = opp]: es)
 in
 
+(* transform elimination forms to big-step style *)
 set_rules(rules(keep)[`(op args) --> rhs`]:
   let exprs = es_of_op(op)' in
   if empty?(exprs) then none
   else
     let v_res = fresh_var("v") in
     let emap = zip(args, exprs) in
-    let pm = get_pm(args) in
-    let vs = get_vs(args) in
-    let pmvs = append(pm, vs) in
+    let pmvs = get_pm(args) @ get_vs(args) in
     let new_args = emap[`(arg, expr)`]: if member?(arg, pmvs) then expr else arg in
     some([rule_name(self)] {
       pmvs[`e`]:
@@ -39,13 +32,11 @@ set_rules(rules(keep)[`(op args) --> rhs`]:
     })
 );
 
-
+(* generate the contextual rules for intro forms *)
 add_rules(syntax("Value")[`(op vs)`]:
   let es = es_of_op(op) in
   let emap = zip(vs, es) in
-  let pm = get_pm(vs) in
-  let vvs = get_vs(vs) in
-  let pmvs = append(pm, vvs) in
+  let pmvs = get_pm(vs) @ get_vs(vs) in
   let args = emap[`(v, e)`]: if member?(v, pmvs) then e else v in
   some(["R-VALUE-" ^ uppercase(op)] {
     pmvs[`e`]:
@@ -59,5 +50,8 @@ add_rules(syntax("Value")[`(op vs)`]:
   })
 );
 
+(* all steps now explicitly result in a value *)
 add_relation($e --> $v);
+
+(* evaluation contexts are not needed anymore *)
 remove_syntax("Context")

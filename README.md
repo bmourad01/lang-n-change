@@ -57,7 +57,7 @@ The following algorithms are found in the `examples/` directory:
 
 ### Gradualizer
 
-The `gradualizer/` directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4].
+The `gradualizer/` directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4], and contains one-to-one translations of the language repositories for both papers (`gradualizer/static` and `gradualizer/dynamic`) respectively (see https://github.com/mcimini/Gradualizer and https://github.com/mcimini/GradualizerDynamicSemantics).
 
 - `gradual_static.tr` generates the static semantics (type system), including the Cast Calculus.
 - `gradual_dynamic.tr` generates the dynamic semantics with elimination forms for the `cast` operator.

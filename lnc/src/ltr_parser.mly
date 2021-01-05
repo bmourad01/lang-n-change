@@ -245,6 +245,8 @@ exp:
     { Exp.New_term $1 }
   | VARS LPAREN exp RPAREN
     { Exp.Vars_of $3 }
+  | VARS EXCL LPAREN exp RPAREN
+    { Exp.Vars_dup_of $4 }
   | FRESHVAR LPAREN exp RPAREN
     { Exp.Fresh_var $3 }
   | UNBIND LPAREN exp RPAREN

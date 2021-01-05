@@ -135,6 +135,7 @@ module Exp : sig
     (* term operations *)
     | New_term of term
     | Vars_of of t
+    | Vars_dup_of of t
     | Fresh_var of t
     | Unbind of t
     | Bound_of of t

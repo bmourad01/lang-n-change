@@ -150,6 +150,8 @@ module Formula : sig
 
   val vars : t -> Term.t list
 
+  val vars_dup : t -> Term.t list
+
   val substitute : t -> Term.subs -> t
 end
 
@@ -200,6 +202,8 @@ module Rule : sig
   val has_typing_premises : t -> bool
 
   val vars : t -> Term.t list
+
+  val vars_dup : t -> Term.t list
 
   val substitute : t -> Term.subs -> t
 

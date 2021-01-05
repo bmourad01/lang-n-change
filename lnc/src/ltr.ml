@@ -339,6 +339,7 @@ module Exp = struct
     (* term operations *)
     | New_term of term
     | Vars_of of t
+    | Vars_dup_of of t
     | Fresh_var of t
     | Unbind of t
     | Bound_of of t
@@ -551,6 +552,7 @@ module Exp = struct
     | Option_get e -> Printf.sprintf "get(%s)" (to_string e)
     | New_term t -> string_of_term t
     | Vars_of e -> Printf.sprintf "vars(%s)" (to_string e)
+    | Vars_dup_of e -> Printf.sprintf "vars!(%s)" (to_string e)
     | Fresh_var v -> Printf.sprintf "fresh_var(%s)" (to_string v)
     | Unbind e -> Printf.sprintf "unbind(%s)" (to_string e)
     | Bound_of e -> Printf.sprintf "bound(%s)" (to_string e)
@@ -1750,14 +1752,27 @@ let rec compile ctx e =
       let e', typ, _ = compile ctx e in
       let e' =
         match typ with
-        | Type.Term -> Printf.sprintf "(T.vars_dup %s)" e'
+        | Type.Term -> Printf.sprintf "(T.vars %s)" e'
         | Type.(List Term) ->
             Printf.sprintf
               "(Aux.dedup_list_stable ~compare:T.compare List.(concat (map \
-               (%s) ~f:(fun t -> T.vars_dup t))))"
+               (%s) ~f:(fun t -> T.vars t))))"
               e'
         | Type.Formula -> Printf.sprintf "(F.vars %s)" e'
         | Type.Rule -> Printf.sprintf "(R.vars %s)" e'
+        | _ -> incompat "Vars_of" [typ] []
+      in
+      (e', Type.(List Term), ctx)
+  | Exp.Vars_dup_of e ->
+      let e', typ, _ = compile ctx e in
+      let e' =
+        match typ with
+        | Type.Term -> Printf.sprintf "(T.vars_dup %s)" e'
+        | Type.(List Term) ->
+            Printf.sprintf
+              "List.(concat (map (%s) ~f:(fun t -> T.vars_dup t)))" e'
+        | Type.Formula -> Printf.sprintf "(F.vars_dup %s)" e'
+        | Type.Rule -> Printf.sprintf "(R.vars_dup %s)" e'
         | _ -> incompat "Vars_of" [typ] []
       in
       (e', Type.(List Term), ctx)

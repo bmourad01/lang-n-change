@@ -600,6 +600,14 @@ module Formula = struct
         Term.vars sub @ Term.vars super
         |> List.dedup_and_sort ~compare:Term.compare
 
+  let rec vars_dup = function
+    | Not f -> vars f
+    | Eq (t1, t2) -> Term.vars_dup t1 @ Term.vars_dup t2
+    | Prop {predicate; args} -> List.map args ~f:Term.vars_dup |> List.concat
+    | Member {element; collection} ->
+        Term.vars_dup element @ Term.vars_dup collection
+    | Subset {sub; super} -> Term.vars_dup sub @ Term.vars_dup super
+
   let rec substitute f sub =
     match f with
     | Not f -> Not (substitute f sub)
@@ -815,6 +823,11 @@ module Rule = struct
     |> List.concat
     |> List.append (Formula.vars r.conclusion)
     |> List.dedup_and_sort ~compare:Term.compare
+
+  let vars_dup r =
+    List.map r.premises ~f:Formula.vars_dup
+    |> List.concat
+    |> List.append (Formula.vars_dup r.conclusion)
 
   let substitute r sub =
     let premises =

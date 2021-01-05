@@ -192,11 +192,13 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
 
   let tmap =
     let m = filter_ts(vars(e))[`t`]: t in
-    let tmap = tmap[`(t, ts)`]:
-      if member?(t, m) then (t, ts @ [t.]) else (t, ts) 
-    in
-    let ov = diff(m, tmap[`(t, _)`]: t) in
-    tmap @ (ov[`t`]: (t, [t.]))
+    if empty?(m) then tmap
+    else
+      let tmap = tmap[`(t, ts)`]:
+        if member?(t, m) then (t, ts @ [t.]) else (t, ts) 
+      in
+      let ov = diff(m, tmap[`(t, _)`]: t) in
+      tmap @ (ov[`t`]: (t, [t.]))
   in
   let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
 
@@ -220,10 +222,10 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
         else (t, t')
   in
   let producers = diff(tmap_inverse[`(t, _)`]: t, consumers) in
-  let lone_inputs = filter_ts(diff(vars(r), consumers @ producers)) in
-    
+  let lone_inputs = filter_ts(diff(vars(e), consumers @ producers)) in
+   
   let extract_type_by_index (e: term) (n: int) =
-    head(premises(r)[`_ |- ee : t` when e = ee]: nth(filter_ts(vars(t)), n))
+    head(premises(r)[`_ |- ee : t` when e = ee]: nth(filter_ts(vars!(t)), n))
   in
   let consumer_type_by_user =
     match assoc(op, hint_list("flows")) with

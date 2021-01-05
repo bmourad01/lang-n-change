@@ -41,7 +41,6 @@ add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
     in
     let new_gammas = prems_map[`(_, g)`]: g in
     let result = match new_gammas with [] -> gamma | _ -> $Gamma' in
-    
     some(["T-MATCH-" ^ uppercase(op)] {
       premises(self)[`prem`]:
         match prem with

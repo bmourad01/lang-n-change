@@ -13,11 +13,11 @@ let filter_es (ts: term list) = ts[`t` when is_exp_var(t)]: t in
 
 add_relation($T ~ $T);
 add_relation("matches", [$T, $T]);
-add_relation("join", [$T, $T, $T]);
+add_relation("gjoin", [$T, $T, $T]);
 add_relation("static", [$T.]);
 
-# mode: ... | consistent => inp inp | matches => inp out | join => inp inp out | static => inp;
-# principal: ... | consistent => yes yes | matches => yes no | join => yes yes no | static => yes;
+# mode: ... | consistent => inp inp | matches => inp out | gjoin => inp inp out | static => inp;
+# principal: ... | consistent => yes yes | matches => yes no | gjoin => yes yes no | static => yes;
 
 add_rules(syntax("Type")[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
@@ -61,23 +61,23 @@ add_rules(syntax("Type")[`(c ts)` when not(c = "dyn")]:
 );
 
 add_rules(syntax("Type")[`(c ts)` when not(c = "dyn")]:
-  ["JOIN-" ^ uppercase(c)] {
+  ["GJOIN-" ^ uppercase(c)] {
     ts[`t`]:
       let t = unbind(t) in
-      &("join" [t, t', t''])
+      &("gjoin" [t, t', t''])
     -------------------------------------
-    &("join" [(c ts), (c ts'), (c ts'')])
+    &("gjoin" [(c ts), (c ts'), (c ts'')])
   }
 );
 
-add_rule(["JOIN-T-DYN"] {
+add_rule(["GJOIN-T-DYN"] {
   ------------------------------
-  &("join" [$T, ("dyn" []), $T])
+  &("gjoin" [$T, ("dyn" []), $T])
 });
     
-add_rule(["JOIN-DYN-T"] {
+add_rule(["GJOIN-DYN-T"] {
   ------------------------------
-  &("join" [("dyn" []), $T, $T])
+  &("gjoin" [("dyn" []), $T, $T])
 });
 
 let seek
@@ -148,7 +148,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
   let r = [name] {
     premises(r),
-    tmap[`(t, ts)`]: &("join" (ts @ [t'.])),
+    tmap[`(t, ts)`]: &("gjoin" (ts @ [t'.])),
     dedup(concat(tmap_inverse[`(t1, t2)`]: (
       let tfinal =
         match assoc(t1, final_type_by_user) with
@@ -228,8 +228,9 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   } in
   
   let r = [name] {
-    premises(r)(keep)[`&("join" ts)`]: if t = last(ts) then some(self) else none
-    ----------------------------------------------------------------------------
+    premises(r)(keep)[`&("gjoin" ts)`]:
+      if member?(last(ts), vars(t)) then some(self) else none
+    ---------------------------------------------------------
     conclusion(r)
   } in
 

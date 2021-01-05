@@ -1,5 +1,5 @@
-(* extend the grammar for references *)
-Expression e ::= ... | ("address" [$a.]) | ("unit" []) | ("ref" [$e.]) | ("deref" [$e.]) | ("assign" [$e, $e]) | ("seq" [$e, $e]).;
+(* extend the grammar for references (assume that booleans are present in the source language) *)
+Expression e ::= ... | ("address" [$a.]) | ("unit" []) | ("ref" [$e.]) | ("deref" [$e.]) | ("assign" [$e, $e]) | ("seq" [$e, $e]) | ("while" [$e, $e]).;
 Value v ::= ... | ("address" [$a.]) | ("unit" []).;
 Type T ::= ... | ("unitT" []) | ("refT" [$T.]).;
 Context E ::= ... | ("ref" [$E.]) | ("deref" [$E.]) | ("assign" [$E, $e]) | ("assign" [$v, $E]) | ("seq" [$E, $e]).;
@@ -81,6 +81,13 @@ add_rule(["T-SEQ"] {
   assume |- ("seq" [$e1, $e2]) : $T
 });
 
+add_rule(["T-WHILE"] {
+  assume |- $e1 : ("bool" []),
+  assume |- $e2 : ("unit" [])
+  ---------------------------------
+  assume |- ("while" [$e1, $e2]) : ("unit" [])
+});
+
 (* add the reduction rules for the new top-level operators *)
 
 add_rule(["R-REFV"] {
@@ -104,6 +111,11 @@ add_rule(["R-ASSIGN"] {
 add_rule(["R-SEQ"] {
   ------------------------------------------------
   <[("seq" [("unit" []), $e]), $m]> --> <[$e, $m]>
+});
+
+add_rule(["R-WHILE"] {
+  --------------------------------------------------------------------------------------------------------
+  <[("while" [$e1, $e2]), $m]> --> <[("ite" [$e1, ("seq" [$e2, ("while" [$e1, $e2])]), ("unit" [])]), $m]>
 });
 
 (* add the relation to check the memory for well-formedness *)

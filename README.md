@@ -44,7 +44,7 @@ Run `dune build lnc` to build the project.
 
 ## Transforming languages
 
-Run `./transform <.lan> <.tr>`. The transformed language definition is printed to `stdout`.
+Run `./transform <.tr> <.lan>`. The transformed language definition is printed to `stdout`.
 
 ### Examples
 

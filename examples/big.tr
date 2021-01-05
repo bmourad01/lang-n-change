@@ -1,9 +1,8 @@
+let is_val_var (v: term) = var?(v) && var_kind?(v, "Value") in
+let get_vs (es: term list) = es[`e` when is_val_var(e)]: e in
+
 let get_pm (es: term list) =
   es[`e` when not(binding?(e)) && not(var?(e))]: e
-in
-
-let get_vs (es: term list) =
-  es[`e` when var?(e) && var_kind?(e, "Value")]: e
 in
 
 let es_of_op (op: string) =
@@ -15,7 +14,7 @@ set_rules(rules(keep)[`(op args) --> rhs`]:
   let exprs = es_of_op(op)' in
   if empty?(exprs) then none
   else
-    let v_res = fresh_var("v") in
+    let v_res = if is_val_var(rhs) then rhs else fresh_var("v") in
     let emap = zip(args, exprs) in
     let pmvs = get_pm(args) @ get_vs(args) in
     let new_args = emap[`(arg, expr)`]: if member?(arg, pmvs) then expr else arg in
@@ -24,7 +23,7 @@ set_rules(rules(keep)[`(op args) --> rhs`]:
         match assoc(e, emap) with
         | none -> none
         | some(lhs) -> some(lhs --> e),
-      rhs --> v_res,
+      (if rhs = v_res then none else some(rhs --> v_res)),
       premises(self)
       -------------------------
       (op new_args) --> v_res

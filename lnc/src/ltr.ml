@@ -1767,6 +1767,11 @@ let rec compile ctx e =
                (%s) ~f:(fun t -> T.vars t))))"
               e'
         | Type.Formula -> Printf.sprintf "(F.vars %s)" e'
+        | Type.(List Formula) ->
+            Printf.sprintf
+              "(Aux.dedup_list_stable ~compare:T.compare List.(concat (map \
+               (%s) ~f:(fun f -> F.vars f))))"
+              e'
         | Type.Rule -> Printf.sprintf "(R.vars %s)" e'
         | _ -> incompat "Vars_of" [typ] []
       in

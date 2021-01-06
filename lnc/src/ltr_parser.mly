@@ -411,8 +411,8 @@ sugared_relation:
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.step, Exp.List [$1; $3]) }
   | exp SUBTYPE exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3]) }
-  | exp SUBTYPE exp BIGARROW exp
-    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype_flow, Exp.List [$1; $3; $5]) }
+  | exp SUBTYPE exp BIGARROW exp exp
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype_flow, Exp.List [$1; $3; $5; $6]) }
   | exp TURNSTILE exp SUBTYPE exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.subtype, Exp.List [$1; $3; $5]) }
   | exp TILDE exp
@@ -545,10 +545,10 @@ sugared_formula:
       let args = Exp.List [$1; $3] in
       Exp.Formula_prop (predicate, args)
     }
-  | exp SUBTYPE exp BIGARROW exp
+  | exp SUBTYPE exp BIGARROW exp exp
     {
       let predicate = Exp.Str Language.Predicate.Builtin.subtype_flow in
-      let args = Exp.List [$1; $3; $5] in
+      let args = Exp.List [$1; $3; $5; $6] in
       Exp.Formula_prop (predicate, args)
     }
   | exp TURNSTILE exp SUBTYPE exp
@@ -673,10 +673,10 @@ sugared_pattern_formula:
       let args = Exp.Pattern.List [$1; $3] in
       Exp.Pattern.Formula_prop (predicate, args)
     }
-  | pattern SUBTYPE pattern BIGARROW pattern
+  | pattern SUBTYPE pattern BIGARROW pattern pattern
     {
       let predicate = Exp.Pattern.Str Language.Predicate.Builtin.subtype_flow in
-      let args = Exp.Pattern.List [$1; $3; $5] in
+      let args = Exp.Pattern.List [$1; $3; $5; $6] in
       Exp.Pattern.Formula_prop (predicate, args)
     }
   | pattern TURNSTILE pattern SUBTYPE pattern

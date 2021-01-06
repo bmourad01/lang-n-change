@@ -162,15 +162,29 @@ add_rules(syntax("Type")[`(c ts)`]:
     | none -> []
     | some(variance) -> zip(ts, variance)
   in
+  let ts2 = ts[`t`]:
+    let new_t = fresh_var("T") in
+    if binding?(t) then $(bound(t))new_t else new_t
+  in
+  let ts3 = ts[`t`]:
+    let new_t = fresh_var("T") in
+    if binding?(t) then $(bound(t))new_t else new_t
+  in
+  let m2 = zip(ts, ts2) in
+  let m3 = zip(ts, ts3) in
   ["JOIN-" ^ uppercase(c)] {
     concat(ts[`t`]:
+      let t2 = assoc!(t, m2) in
+      let t3 = assoc!(t, m3) in
       let tu = unbind(t) in
+      let tu2 = unbind(t2) in
+      let tu3 = unbind(t3) in
       match assoc(t, vmap) with
-      | some("contra") -> [&("meet" [tu, tu', tu'']).]
-      | some("inv") -> [&(tu = tu'), &(tu'' = tu)]
-      | _ -> [&("join" [tu, tu', tu'']).])
+      | some("contra") -> [&("meet" [tu, tu2, tu3]).]
+      | some("inv") -> [&(tu = tu2), &(tu3 = tu)]
+      | _ -> [&("join" [tu, tu2, tu3]).])
     ---------------------------------------
-    &("join" [(c ts), (c ts'), (c ts'')])
+    &("join" [(c ts), (c ts2), (c ts3)])
   }
 );
 
@@ -193,21 +207,45 @@ add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
    }]
 ));
 
+add_rule(["JOIN-TOP-BOT"] {
+  ----------------------------------------------
+  &("join" [("top" []), ("bot" []), ("top" [])])
+});
+
+add_rule(["JOIN-BOT-TOP"] {
+  ----------------------------------------------
+  &("join" [("bot" []), ("top" []), ("top" [])])
+});
+
 (* add the relation for the meet of types *)
 add_rules(syntax("Type")[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)
   in
+  let ts2 = ts[`t`]:
+    let new_t = fresh_var("T") in
+    if binding?(t) then $(bound(t))new_t else new_t
+  in
+  let ts3 = ts[`t`]:
+    let new_t = fresh_var("T") in
+    if binding?(t) then $(bound(t))new_t else new_t
+  in
+  let m2 = zip(ts, ts2) in
+  let m3 = zip(ts, ts3) in
   ["MEET-" ^ uppercase(c)] {
     concat(ts[`t`]:
+      let t2 = assoc!(t, m2) in
+      let t3 = assoc!(t, m3) in
       let tu = unbind(t) in
+      let tu2 = unbind(t2) in
+      let tu3 = unbind(t3) in
       match assoc(t, vmap) with
-      | some("contra") -> [&("join" [tu, tu', tu'']).]
-      | some("inv") -> [&(tu = tu'), &(tu'' = tu)]
-      | _ -> [&("meet" [tu, tu', tu'']).])
+      | some("contra") -> [&("join" [tu, tu2, tu3]).]
+      | some("inv") -> [&(tu = tu2), &(tu3 = tu)]
+      | _ -> [&("meet" [tu, tu2, tu3]).])
     ---------------------------------------
-    &("meet" [(c ts), (c ts'), (c ts'')])
+    &("meet" [(c ts), (c ts2), (c ts3)])
   }
 );
 
@@ -230,6 +268,15 @@ add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
    }]
 ));
 
+add_rule(["MEET-TOP-BOT"] {
+  ----------------------------------------------
+  &("meet" [("top" []), ("bot" []), ("bot" [])])
+});
+
+add_rule(["MEET-BOT-TOP"] {
+  ----------------------------------------------
+  &("meet" [("bot" []), ("top" []), ("bot" [])])
+});
 
 (* add the relation for subtyping *)
 add_rules(syntax("Type")[`(c ts)`]:
@@ -237,19 +284,26 @@ add_rules(syntax("Type")[`(c ts)`]:
     | none -> []
     | some(variance) -> zip(ts, variance)
   in
+  let ts2 = ts[`t`]:
+    let new_t = fresh_var("T") in
+    if binding?(t) then $(bound(t))new_t else new_t
+  in
+  let m2 = zip(ts, ts2) in
   ["S-" ^ uppercase(c)] {
     ts[`t`]:
+      let t2 = assoc!(t, m2) in
       let tu = unbind(t) in
+      let tu2 = unbind(t2) in
       match assoc(t, vmap) with
-      | some("contra") -> tu' <: tu
-      | some("inv") -> &(tu = tu')
-      | _ -> tu <: tu'
+      | some("contra") -> tu2 <: tu
+      | some("inv") -> &(tu = tu2)
+      | _ -> tu <: tu2
     ----------------------------
-    (c ts) <: (c ts')
+    (c ts) <: (c ts2)
   }
 );
 
-add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
+add_rules(concat(syntax("Type")[`(c ts)`]:
   [["S-TOP-" ^ uppercase(c)] {
      --------------------
      (c ts) <: ("top" [])
@@ -275,10 +329,10 @@ Context E ::= ... | ("cast" [$E, $T]).;
 add_rule(
   let assume = head(relations[`("typeof", a :: _)`]: a) in
   ["T-CAST"] {
-    assume |- $e : $T',
-    $T' <: $T
-    ---------------------------------
-    assume |- ("cast" [$e, $T]) : $T
+    assume |- $e : $T1,
+    $T1 <: $T2
+    ----------------------------------
+    assume |- ("cast" [$e, $T2]) : $T2
   }
 );
 

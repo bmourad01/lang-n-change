@@ -161,8 +161,8 @@ sugared_relation:
     { (Predicate.Builtin.step, [$1; $3]) }
   | term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3]) }
-  | term SUBTYPE term BIGARROW term DOT
-    { (Predicate.Builtin.subtype_flow, [$1; $3; $5]) }
+  | term SUBTYPE term BIGARROW term term DOT
+    { (Predicate.Builtin.subtype_flow, [$1; $3; $5; $6]) }
   | term TURNSTILE term SUBTYPE term DOT
     { (Predicate.Builtin.subtype, [$1; $3; $5]) }
   | term TILDE term DOT
@@ -199,10 +199,10 @@ sugared_formula:
       let args = [$1; $3] in
       Formula.Prop {predicate; args}
     }
-  | term SUBTYPE term BIGARROW term
+  | term SUBTYPE term BIGARROW term term
     {
       let predicate = Predicate.Builtin.subtype_flow in
-      let args = [$1; $3; $5] in
+      let args = [$1; $3; $5; $6] in
       Formula.Prop {predicate; args}
     }
   | term TURNSTILE term SUBTYPE term

@@ -170,6 +170,19 @@ let seek
   | some(m) -> zip(m, data)[`(x, t)` when x = tag]: t
 in
 
+let map_merge
+    (m1: (term, term list) tuple list)
+    (m2: (term, term list) tuple list) =
+  let m = m1[`(t, ts)`]:
+    match assoc(t, m2) with
+    | none -> (t, ts)
+    | some(tts) -> (t, ts @ tts)
+  in
+  let ov = diff(m2[`(t, _)`]: t, m1[`(t, _)`]: t) in
+  let rest = ov[`t`]: (t, assoc!(t, m2)) in
+  m @ rest
+in
+
 (* gradualize the typing rules *)
 set_rules(rules(keep)[`gamma |- e : t`]: (
   let name = rule_name(self) in
@@ -184,22 +197,19 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     in
     uniquify(premises(self), ignored, hint("mode"), "out")
   in
+
+  let not_uniquified = dedup(concat(premises(self)[`_ |- _ : t`]:
+    filter_ts(vars(t))[`t` when not(assoc?(t, tmap))]: self))
+  in
+  let tmap = map_merge(tmap, not_uniquified[`t`]: (t, [t.])) in
+
   let r = [name] {
     new_premises
     ------------------
     conclusion(self)
   } in
-
-  let tmap =
-    let m = filter_ts(vars(e))[`t`]: t in
-    if empty?(m) then tmap
-    else
-      let tmap = tmap[`(t, ts)`]:
-        if member?(t, m) then (t, ts @ [t.]) else (t, ts) 
-      in
-      let ov = diff(m, tmap[`(t, _)`]: t) in
-      tmap @ (ov[`t`]: (t, [t.]))
-  in
+    
+  let tmap = map_merge(tmap, filter_ts(vars(e))[`t`]: (t, [t.])) in
   let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
 
   (* find producers, consumers, and final types *)
@@ -214,15 +224,17 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   let final_type = 
     let evars = vars(e) in
     tmap[`(t, ts)`]:
-      let ol = var_overlap(evars, ts) in
-      if not(empty?(ol)) then (t, head(ol))
+      if less?(length(ts), 2) then (t, t)
       else
-        let ol = var_overlap(consumers, ts) in
+        let ol = var_overlap(evars, ts) in
         if not(empty?(ol)) then (t, head(ol))
-        else (t, t')
+        else
+          let ol = var_overlap(consumers, ts) in
+          if not(empty?(ol)) then (t, head(ol))
+          else (t, t')
   in
   let producers = diff(tmap_inverse[`(t, _)`]: t, consumers) in
-  let lone_inputs = filter_ts(diff(vars(e), consumers @ producers)) in
+  let lone_inputs = filter_ts(diff(vars(r), consumers @ producers)) in
    
   let extract_type_by_index (e: term) (n: int) =
     head(premises(r)[`_ |- ee : t` when e = ee]: nth(filter_ts(vars!(t)), n))
@@ -240,7 +252,9 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   (* mark each producer as flowing to consumers through their final type *)
   let r = [name] {
     premises(r),
-    tmap[`(t, ts)`]: &("gjoin" (ts @ [t'.])),
+    tmap[`(t, ts)`]:
+      if less?(length(ts), 2) then none
+      else some(&("gjoin" (ts @ [t'.]))),
     dedup(concat(tmap_inverse[`(t1, t2)`]: (
       let tuser = assoc(t1, consumer_type_by_user) in
       let tfinal =
@@ -271,7 +285,9 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     if empty?(flowc) then substitute(r, final_type)
     else
       let prev_vars = tmap_inverse[`(t, _)`]: t in
-      let (new_concl, tmap) = uniquify([conclusion(r).], [], hint("mode"), "out", prev_vars) in
+      let (new_concl, tmap) = 
+        uniquify([conclusion(r).], [], hint("mode"), "out", prev_vars)
+      in
       let inputmap = flowc[`[t, _, n1, e, n2]`]:
         let t1 = nth(assoc!($!t, tmap), str_int(n1)) in
         let t2 = extract_type_by_index($!e, str_int(n2)) in
@@ -299,8 +315,8 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
       let (t, fs) = make_match(t) in
       (gamma |- e : t) :: fs,
     (* first check if the lone input was substituted *)
-    lone_inputs[`t`]: &("static" [t.])
-    -----------------------------------------------------------------------
+    lone_inputs[`t` when member?(t, vars(r)) && constructor?(e)]: &("static" [t.])
+    ------------------------------------------------------------------------------
     conclusion(r)
   } in
   
@@ -352,14 +368,14 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     conclusion(r)
   } in
 
-  (*
+  let join_ts = premises(r)[`&("gjoin" ts)`]: last(ts) in
+
   let r = [name] {
     premises(r)(keep)[`&("flows" [t1, t2])`]:
-      if member?(t2, vars(t)) || (t1 = t2) then none else some(t1 ~ t2)
+      if member?(t2, join_ts) || (t1 = t2) then none else some(t1 ~ t2)
     -------------------------------------------------------------------
     conclusion(r)
   } in
-  *)
 
   r
 ));

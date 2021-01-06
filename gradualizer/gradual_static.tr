@@ -198,8 +198,9 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
     uniquify(premises(self), ignored, hint("mode"), "out")
   in
 
-  let not_uniquified = dedup(concat(premises(self)[`_ |- _ : t`]:
-    filter_ts(vars(t))[`t` when not(assoc?(t, tmap))]: self))
+  let not_uniquified = dedup(concat(premises(self)[`&(pred ts)`]:
+    let outs = seek(hint("mode"), pred, ts, "out") in
+    filter_ts(vars(outs))[`t` when not(assoc?(t, tmap))]: self))
   in
   let tmap = map_merge(tmap, not_uniquified[`t`]: (t, [t.])) in
 

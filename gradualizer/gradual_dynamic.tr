@@ -111,7 +111,7 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
     let siblings = substitute(siblings, turn_to_value) in
     let t_p = t'|vars(pa_type) in
     let target = 
-      let e = (op (tas @ [$v.] @ siblings)) in
+      let e = (op (tas_p @ [$v.] @ siblings)) in
       if t = t_p then e else ("gcast" [e, t_p, t])
     in
     some(["R-ELIM-GCAST-" ^ uppercase(op)] {

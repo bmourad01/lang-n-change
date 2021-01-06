@@ -181,6 +181,8 @@ module Exp : sig
         {extend: bool; name: string; elements: (string * string list) list}
     | Lookup_hint of t
     | Lookup_hint_list of t
+    | Remove_hint of t
+    | Remove_hint_key of t * t
 
   and boolean =
     | Bool of bool

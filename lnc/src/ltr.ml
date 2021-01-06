@@ -385,6 +385,8 @@ module Exp = struct
         {extend: bool; name: string; elements: (string * string list) list}
     | Lookup_hint of t
     | Lookup_hint_list of t
+    | Remove_hint of t
+    | Remove_hint_key of t * t
 
   and boolean =
     | Bool of bool
@@ -619,6 +621,9 @@ module Exp = struct
     | Lookup_hint hint -> Printf.sprintf "hint(%s)" (to_string hint)
     | Lookup_hint_list hint ->
         Printf.sprintf "hint_list(%s)" (to_string hint)
+    | Remove_hint h -> Printf.sprintf "remove_hint(%s)" (to_string h)
+    | Remove_hint_key (h, k) ->
+        Printf.sprintf "remove_hint(%s, %s)" (to_string h) (to_string k)
 
   and string_of_boolean = function
     | Bool b -> Bool.to_string b
@@ -2311,6 +2316,32 @@ let rec compile ctx e =
           in
           (e', Type.(List (Tuple [String; List (List String)])), ctx)
       | _ -> incompat "Lookup_hint" [typ] Type.[String] )
+  | Exp.Remove_hint h -> (
+      let e', typ, _ = compile ctx h in
+      match typ with
+      | Type.String ->
+          let e' =
+            Printf.sprintf "{lan with hints = Map.remove lan.hints (%s)}" e'
+          in
+          (e', Type.Lan, ctx)
+      | _ -> incompat "Remove_hint" [typ] [Type.String] )
+  | Exp.Remove_hint_key (h, k) -> (
+      let h', h_typ, _ = compile ctx h in
+      let k', k_typ, _ = compile ctx k in
+      match h_typ with
+      | Type.String -> (
+        match k_typ with
+        | Type.String ->
+            let e' =
+              Printf.sprintf
+                "{lan with hints = (match Map.find lan.hints (%s) with None \
+                 -> lan.hints | Some m -> Map.set lan.hints (%s) ({m with \
+                 elements = Map.remove m.elements (%s)}))}"
+                h' h' k'
+            in
+            (e', Type.Lan, ctx)
+        | _ -> incompat "Remove_hint_key (key)" [k_typ] [Type.String] )
+      | _ -> incompat "Remove_hint_key (hint)" [h_typ] [Type.String] )
 
 and compile_bool ctx b =
   match b with

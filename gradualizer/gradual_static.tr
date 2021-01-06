@@ -105,6 +105,8 @@ in
 (if has_subtyping then (
   (* we use the 'subtype_flow' relation instead *)
   remove_relation("subtype");
+  remove_hint("mode", "subtype");
+  remove_hint("principal", "subtype");
   
   (* change the shape of subtype/join/meet relations *)
   lift t1 <: t2 to t1 <: t2 ==> t1'.;

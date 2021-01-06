@@ -154,6 +154,7 @@ rule token = parse
   | "set_rules" {SETRULES}
   | "hint" {HINT}
   | "hint_list" {HINTLIST}
+  | "remove_hint" {REMOVEHINT}
   | "lan" {LAN}
   | "rule" {RULE}
   | "formula" {FORMULA}

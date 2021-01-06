@@ -165,8 +165,7 @@ let seek
     (key: string)
     (data: term list)
     (tag: string) =
-  let m = hint(h) in
-  match assoc(key, m) with
+  match assoc(key, hint(h)) with
   | none -> []
   | some(m) -> zip(m, data)[`(x, t)` when x = tag]: t
 in

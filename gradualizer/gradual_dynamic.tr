@@ -92,11 +92,12 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
   let idx = str_int(head(pa)) in
   let typing_prems = premises(r)[`gamma |- e : t`]: self in
   match conclusion(r) with gamma |- (op es) : t ->
-  match head(typing_prems) with gamma |- e : (c ts) ->
+  let elim_e = nth(es, idx) in
+  let pa_type = head(typing_prems[`_ |- e : (c ts)` when e = elim_e]: (c ts)) in
+  match pa_type with (c ts) ->
   if empty?(ts) then none      
   else
-    let pa_type = (c ts) in
-    let cast_map = typing_prems[`gamma |- ee : t` when not(e = ee)]: (e, t) in
+    let cast_map = typing_prems[`gamma |- e : t` when not(e = elim_e)]: (elim_e, t) in
     let siblings = cast_map[`(e, t)`]: ("gcast" [e, t, t']) in
     let add_subs = premises(r)[`([$!x => t1]gamma) |- e : t2`]:
       (e, e{("gcast" [$!x, t1'|vars(pa_type), t1])/x})

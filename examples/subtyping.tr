@@ -1,3 +1,6 @@
+(* add 'top' and 'bottom' types *)
+Type T ::= ... | ("top" []) | ("bot" []).;
+
 let interleave_pairs (l: term list) =
   let rec loop (l: term list) : (term, term) tuple list =
     match l with
@@ -9,11 +12,11 @@ let interleave_pairs (l: term list) =
 in
 
 let seek
-    (m: (string, string list) tuple list)
+    (h: string)
     (key: string)
     (data: term list)
     (tag: string) =
-  match assoc(key, m) with
+  match assoc(key, hint(h)) with
   | none -> []
   | some(m) ->
     zip(m, data)[`(x, t)` when x = tag]: t
@@ -22,7 +25,7 @@ in
 let rec extract_variance (t: term) (v: string) : term list =
   match t with
   | (c ts) ->
-    let vs = seek(hint("variance"), c, ts, v) in
+    let vs = seek("variance", c, ts, v) in
     vars(vs) @ concat(diff(ts, vs)[`_`]: extract_variance(self, v))
   | _ -> []
 in
@@ -171,6 +174,25 @@ add_rules(syntax("Type")[`(c ts)`]:
   }
 );
 
+add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
+  [["JOIN-TOP-" ^ uppercase(c)] {
+     ---------------------------------------
+     &("join" [("top" []), (c ts), ("top" [])])
+   },
+   ["JOIN-" ^ uppercase(c) ^ "-TOP"] {
+     ---------------------------------------
+     &("join" [(c ts), ("top" []), ("top" [])])
+   },
+   ["JOIN-BOT-" ^ uppercase(c)] {
+     ---------------------------------------
+     &("join" [("bot" []), (c ts), (c ts)])
+   },
+   ["JOIN-" ^ uppercase(c) ^ "-BOT"] {
+     ---------------------------------------
+     &("join" [(c ts), ("bot" []), (c ts)])
+   }]
+));
+
 (* add the relation for the meet of types *)
 add_rules(syntax("Type")[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
@@ -189,6 +211,26 @@ add_rules(syntax("Type")[`(c ts)`]:
   }
 );
 
+add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
+  [["MEET-TOP-" ^ uppercase(c)] {
+     ---------------------------------------
+     &("meet" [("top" []), (c ts), (c ts)])
+   },
+   ["MEET-" ^ uppercase(c) ^ "-TOP"] {
+     ---------------------------------------
+     &("meet" [(c ts), ("top" []), (c ts)])
+   },
+   ["MEET-BOT-" ^ uppercase(c)] {
+     ---------------------------------------
+     &("meet" [("bot" []), (c ts), ("bot" [])])
+   },
+   ["MEET-" ^ uppercase(c) ^ "-BOT"] {
+     ---------------------------------------
+     &("meet" [(c ts), ("bot" []), ("bot" [])])
+   }]
+));
+
+
 (* add the relation for subtyping *)
 add_rules(syntax("Type")[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
@@ -206,6 +248,17 @@ add_rules(syntax("Type")[`(c ts)`]:
     (c ts) <: (c ts')
   }
 );
+
+add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
+  [["S-TOP-" ^ uppercase(c)] {
+     --------------------
+     (c ts) <: ("top" [])
+   },
+   ["S-BOT-" ^ uppercase(c)] {
+     --------------------
+     ("bot" []) <: (c ts)
+   }]
+));
 
 add_relation("join", [$T, $T, $T]);
 add_relation("meet", [$T, $T, $T]);

@@ -97,9 +97,9 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
   match pa_type with (c ts) ->
   if empty?(ts) then none      
   else
-    let cast_map = typing_prems[`gamma |- e : t` when not(e = elim_e)]: (elim_e, t) in
+    let cast_map = typing_prems[`gamma |- e : t` when not(e = elim_e)]: (e, t) in
     let siblings = cast_map[`(e, t)`]: ("gcast" [e, t, t']) in
-    let add_subs = premises(r)[`([$!x => t1]gamma) |- e : t2`]:
+    let add_subs = typing_prems[`([$!x => t1]gamma) |- e : t2`]:
       (e, e{("gcast" [$!x, t1'|vars(pa_type), t1])/x})
     in
     let tas = filter_ts(vars(es)) in
@@ -111,7 +111,7 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
     let siblings = substitute(siblings, turn_to_value) in
     let t_p = t'|vars(pa_type) in
     let target = 
-      let e = (op (tas_p @ [$v.] @ siblings)) in
+      let e = (op (tas @ [$v.] @ siblings)) in
       if t = t_p then e else ("gcast" [e, t_p, t])
     in
     some(["R-ELIM-GCAST-" ^ uppercase(op)] {

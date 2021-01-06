@@ -71,6 +71,7 @@ rule token = parse
   | "less?" {QLESS}
   | "greater?" {QGREATER}
   | "member?" {QMEMBER}
+  | "assoc?" {QASSOC}
   | "none?" {QNOTHING}
   | "some?" {QSOMETHING}
   | "empty?" {QEMPTY}

@@ -395,6 +395,7 @@ module Exp = struct
     | Lt of t * t
     | Gt of t * t
     | Is_member of t * t
+    | Is_assoc of t * t
     | Is_nothing of t
     | Is_something of t
     | Is_empty of t
@@ -633,6 +634,8 @@ module Exp = struct
         Printf.sprintf "greater?(%s, %s)" (to_string e1) (to_string e2)
     | Is_member (e1, e2) ->
         Printf.sprintf "member?(%s, %s)" (to_string e1) (to_string e2)
+    | Is_assoc (e1, e2) ->
+        Printf.sprintf "assoc?(%s, %s)" (to_string e1) (to_string e2)
     | Is_nothing e -> Printf.sprintf "none?(%s)" (to_string e)
     | Is_something e -> Printf.sprintf "some?(%s)" (to_string e)
     | Is_empty e -> Printf.sprintf "empty?(%s)" (to_string e)
@@ -746,7 +749,7 @@ let incompat name ts ts' =
        (List.map ts ~f:Type.to_string |> String.concat ~sep:", ")
        expect)
 
-let type_equal pref t =
+let type_equal t =
   let rec eq t =
     match t with
     | Type.Lan -> "L.equal"
@@ -763,7 +766,7 @@ let type_equal pref t =
   in
   eq t
 
-let type_compare pref t =
+let type_compare t =
   let rec eq t =
     match t with
     | Type.Lan -> "L.compare"
@@ -1614,14 +1617,14 @@ let rec compile ctx e =
       let e', typ, _ = compile ctx e in
       match typ with
       | Type.List _ ->
-          let e' = Printf.sprintf "(List.tl_exn %s)" e' in
+          let e' = Printf.sprintf "(List.tl_exn (%s))" e' in
           (e', typ, ctx)
       | _ -> incompat "Tail" [typ] [] )
   | Exp.Last e -> (
       let e', typ, _ = compile ctx e in
       match typ with
       | Type.List typ' ->
-          let e' = Printf.sprintf "(List.last_exn %s)" e' in
+          let e' = Printf.sprintf "(List.last_exn (%s))" e' in
           (e', typ', ctx)
       | _ -> incompat "Last" [typ] [] )
   | Exp.Nth (e1, e2) -> (
@@ -1629,30 +1632,30 @@ let rec compile ctx e =
       let e2', typ2, _ = compile ctx e2 in
       match (typ1, typ2) with
       | Type.List typ', Type.Int ->
-          let e' = Printf.sprintf "(List.nth_exn %s %s)" e1' e2' in
+          let e' = Printf.sprintf "(List.nth_exn (%s) (%s))" e1' e2' in
           (e', typ', ctx)
       | _ -> incompat "Nth" [typ1; typ2] [] )
   | Exp.List_concat e -> (
       let e', typ, _ = compile ctx e in
       match typ with
       | Type.(List (List _ as typ')) ->
-          let e' = Printf.sprintf "(List.concat %s)" e' in
+          let e' = Printf.sprintf "(List.concat (%s))" e' in
           (e', typ', ctx)
       | _ -> incompat "Concat" [typ] [] )
   | Exp.Rev e -> (
       let e', typ, _ = compile ctx e in
       match typ with
       | Type.List _ ->
-          let e' = Printf.sprintf "(List.rev %s)" e' in
+          let e' = Printf.sprintf "(List.rev (%s))" e' in
           (e', typ, ctx)
       | _ -> incompat "Rev" [typ] [] )
   | Exp.Dedup e -> (
       let e', typ, _ = compile ctx e in
       match typ with
       | Type.List typ' ->
-          let cmp = type_compare "Dedup" typ' in
+          let cmp = type_compare typ' in
           let e' =
-            Printf.sprintf "(Aux.dedup_list_stable %s ~compare:%s)" e' cmp
+            Printf.sprintf "(Aux.dedup_list_stable (%s) ~compare:%s)" e' cmp
           in
           (e', typ, ctx)
       | _ -> incompat "Rev" [typ] [] )
@@ -1675,7 +1678,7 @@ let rec compile ctx e =
         match Type_unify.run [typ1'; typ2'] with
         | None -> incompat "Diff" [typ1; typ2] []
         | Some typ' ->
-            let eq = type_equal "Diff" typ1' in
+            let eq = type_equal typ1' in
             let e' =
               Printf.sprintf "(Aux.diff_list_stable %s %s ~equal:%s)" e1' e2'
                 eq
@@ -1690,7 +1693,7 @@ let rec compile ctx e =
         match Type_unify.run [typ1'; typ2'] with
         | None -> incompat "Intersect" [typ1; typ2] []
         | Some typ' ->
-            let eq = type_equal "Intersect" typ1' in
+            let eq = type_equal typ1' in
             let e' =
               Printf.sprintf "(Aux.intersect_list_stable %s %s ~equal:%s)"
                 e1' e2' eq
@@ -1720,7 +1723,7 @@ let rec compile ctx e =
       let e2', typ2, _ = compile ctx e2 in
       match typ2 with
       | Type.(List (Tuple [typ1'; typ2'])) when Type.equal typ1 typ1' ->
-          let eq = type_equal "Assoc" typ1 in
+          let eq = type_equal typ1 in
           let e' =
             Printf.sprintf "(List.Assoc.find %s %s ~equal:%s)" e2' e1' eq
           in
@@ -2340,7 +2343,7 @@ and compile_bool ctx b =
       let e2', typ2, _ = compile ctx e2 in
       if Type.equal typ1 typ2 then
         let e' =
-          Printf.sprintf "(%s %s %s)" (type_equal "Eq" typ1) e1' e2'
+          Printf.sprintf "((%s) (%s) (%s))" (type_equal typ1) e1' e2'
         in
         (e', Type.Bool, ctx)
       else incompat "Eq" [typ1; typ2] []
@@ -2365,10 +2368,26 @@ and compile_bool ctx b =
       let e2', typ2, _ = compile ctx e2 in
       match typ2 with
       | Type.List typ2' when Type.equal typ1 typ2' ->
-          let eq = type_equal "Is_member" typ1 in
-          let e' = Printf.sprintf "(List.mem %s %s ~equal:%s)" e2' e1' eq in
+          let eq = type_equal typ1 in
+          let e' =
+            Printf.sprintf "(List.mem (%s) (%s) ~equal:%s)" e2' e1' eq
+          in
           (e', Type.Bool, ctx)
       | _ -> incompat "Is_member" [typ1; typ2] [typ1; Type.List typ1] )
+  | Exp.Is_assoc (e1, e2) -> (
+      let e1', typ1, _ = compile ctx e1 in
+      let e2', typ2, _ = compile ctx e2 in
+      match typ2 with
+      | Type.(List (Tuple [typ2'; _])) ->
+          if Type.equal typ1 typ2' then
+            let eq = type_equal typ1 in
+            let e' =
+              Printf.sprintf "(List.Assoc.mem (%s) (%s) ~equal:%s)" e2' e1'
+                eq
+            in
+            (e', Type.Bool, ctx)
+          else incompat "Is_assoc (key)" [typ1] [typ2']
+      | _ -> incompat "Is_assoc (map)" [typ2] [] )
   | Exp.Is_nothing e -> (
       let e', typ, _ = compile ctx e in
       match typ with

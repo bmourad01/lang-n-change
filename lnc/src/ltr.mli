@@ -191,6 +191,7 @@ module Exp : sig
     | Lt of t * t
     | Gt of t * t
     | Is_member of t * t
+    | Is_assoc of t * t
     | Is_nothing of t
     | Is_something of t
     | Is_empty of t

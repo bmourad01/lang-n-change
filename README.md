@@ -60,10 +60,12 @@ Run `./transform <.tr> <.lan>`. The transformed language definition is printed t
 
 The following algorithms are found in the `examples/` directory:
 
-- `big.tr` transforms a small-step functional language with evaluation contexts to use big-step semantics.
+- `big.tr` transforms a functional language to use big-step semantics.
 - `pattern_matching.tr` adds pattern-matching as a top-level operator to a functional language. 
 - `ref.tr` adds mutable references and other imperative-style features to a functional language.
 - `subtyping.tr` adds algorithmic subtyping for a functional language (excludes width/row-subtyping).
+
+Each of these algorithms assume that the input language uses small-step semantics with evaluation contexts.
 
 ### Gradualizer
 

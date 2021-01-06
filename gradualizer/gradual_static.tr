@@ -161,10 +161,11 @@ in
 ) else skip);
 
 let seek
-    (m: (string, string list) tuple list)
+    (h: string)
     (key: string)
     (data: term list)
     (tag: string) =
+  let m = hint(h) in
   match assoc(key, m) with
   | none -> []
   | some(m) -> zip(m, data)[`(x, t)` when x = tag]: t
@@ -199,7 +200,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   in
 
   let not_uniquified = dedup(concat(premises(self)[`&(pred ts)`]:
-    let outs = seek(hint("mode"), pred, ts, "out") in
+    let outs = seek("mode", pred, ts, "out") in
     filter_ts(vars(outs))[`t` when not(assoc?(t, tmap))]: self))
   in
   let tmap = map_merge(tmap, not_uniquified[`t`]: (t, [t.])) in
@@ -217,7 +218,7 @@ set_rules(rules(keep)[`gamma |- e : t`]: (
   let rec extract_contra (t: term) : term list =
     match t with
     | (c ts) ->
-      let contras = seek(hint("variance"), c, ts, "contra") in
+      let contras = seek("variance", c, ts, "contra") in
       vars(contras) @ concat(diff(ts, contras)[`_`]: extract_contra(self))
     | _ -> []
   in

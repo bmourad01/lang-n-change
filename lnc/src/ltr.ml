@@ -1375,7 +1375,19 @@ let rec compile ctx e =
                 Printf.sprintf "(%s %s)" e' (String.concat es' ~sep:" ")
               in
               (e', List.last_exn typs', ctx) )
-      | _ -> incompat "Apply (function)" [typ] [] )
+      | Type.(List (Tuple [typ1; typ2])) ->
+          if List.length typs > 1 then
+            failwith "Apply (assoc): invalid arity"
+          else
+            let typ' = List.hd_exn typs in
+            if Type.equal typ' typ1 then
+              let e' =
+                Printf.sprintf "(List.Assoc.find_exn (%s) (%s) ~equal:%s)" e'
+                  (List.hd_exn es') (type_equal typ')
+              in
+              (e', typ2, ctx)
+            else incompat "Apply (assoc key)" [typ'] [typ1]
+      | _ -> incompat "Apply" [typ] [] )
   | Exp.Ite (b, e1, e2) -> (
       let b', b_typ, _ = compile ctx b in
       match b_typ with

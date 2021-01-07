@@ -214,7 +214,7 @@ let map_merge
     | some(tts) -> (t, ts @ tts)
   in
   let ov = diff(m2[`(t, _)`]: t, m1[`(t, _)`]: t) in
-  let rest = ov[`t`]: (t, assoc!(t, m2)) in
+  let rest = ov[`t`]: (t, m2(t)) in
   m @ rest
 in
 
@@ -301,10 +301,10 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
       let tuser = assoc(t1, consumer_type_by_user) in
       let tfinal =
         match tuser with
-        | none -> assoc!(t2, final_type)
+        | none -> final_type(t2)
         | some(t) -> t
       in
-      let tcons = var_overlap(assoc!(t2, tmap), consumers) in
+      let tcons = var_overlap(tmap(t2), consumers) in
       let flowfinal = &("flows" [t1, tfinal]) in
       let flowcons = match tcons with
         | [] -> []
@@ -330,7 +330,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
        uniquify([conclusion.], [], hint("mode"), "out", prev_vars)
      in
      let inputmap = flowc[`[t, _, n1, e, n2]`]:
-       let t1 = nth(assoc!($!t, tmap), str_int(n1)) in
+       let t1 = nth(tmap($!t), str_int(n1)) in
        let t2 = extract_type_by_index($!e, str_int(n2)) in
        (t1, t2)
      in

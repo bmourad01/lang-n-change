@@ -331,6 +331,7 @@ module Exp = struct
     | Zip of t * t
     | Unzip of t
     | Assoc of t * t
+    | Keys_of of t
     | Length of t
     (* option operations *)
     | Nothing
@@ -551,6 +552,7 @@ module Exp = struct
     | Unzip e -> Printf.sprintf "unzip(%s)" (to_string e)
     | Assoc (e1, e2) ->
         Printf.sprintf "assoc(%s, %s)" (to_string e1) (to_string e2)
+    | Keys_of e -> Printf.sprintf "keys(%s)" (to_string e)
     | Length e -> Printf.sprintf "length(%s)" (to_string e)
     | Nothing -> "none"
     | Something e -> Printf.sprintf "some(%s)" (to_string e)
@@ -1779,6 +1781,15 @@ let rec compile ctx e =
           in
           (e', Type.Option typ2', ctx)
       | _ -> incompat "Assoc" [typ1; typ2] [] )
+  | Exp.Keys_of e -> (
+      let e', typ, _ = compile ctx e in
+      match typ with
+      | Type.(List (Tuple [typ1; _])) ->
+          let e' =
+            Printf.sprintf "(List.map (%s) ~f:(fun (x, _) -> x))" e'
+          in
+          (e', Type.(List typ1), ctx)
+      | _ -> incompat "Keys_of" [typ] [] )
   | Exp.Length e -> (
       let e', typ, _ = compile ctx e in
       match typ with

@@ -127,6 +127,7 @@ module Exp : sig
     | Zip of t * t
     | Unzip of t
     | Assoc of t * t
+    | Keys_of of t
     | Length of t
     (* option operations *)
     | Nothing

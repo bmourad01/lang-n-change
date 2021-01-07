@@ -110,6 +110,7 @@ rule token = parse
   | "intersect" {INTERSECT}
   | "assoc!" {GETASSOC}
   | "assoc" {ASSOC}
+  | "keys" {KEYS}
   | "length" {LENGTH}
   | "append" {APPEND}
   | "rev" {REV}
@@ -146,7 +147,7 @@ rule token = parse
   | "remove_relation" {REMOVERELATION}
   | "rule_name" {RULENAME}
   | "premises" {PREMISES}
-  | "Premise" {PREMISESELF}
+  | "Premises" {PREMISESELF}
   | "conclusion" {CONCLUSION}
   | "set_conclusion" {SETCONCLUSION}
   | "rules" {RULES}

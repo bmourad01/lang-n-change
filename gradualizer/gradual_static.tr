@@ -225,15 +225,15 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
 
   (* split equal types in the outputs *)
   let (new_premises, tmap) =
-    let ignored = Premise[`_`]:
+    let ignored = Premises[`_`]:
       match self with
       | _ |- _ : _{_/x} -> some(self)
       | _ -> none
     in
-    uniquify(Premise[`_`]: self, ignored, hint("mode"), "out")
+    uniquify(Premises[`_`]: self, ignored, hint("mode"), "out")
   in
 
-  let not_uniquified = dedup(concat(Premise[`&(pred ts)`]:
+  let not_uniquified = dedup(concat(Premises[`&(pred ts)`]:
     let outs = seek("mode", pred, ts, "out") in
     filter_ts(vars(outs))[`t` when not(assoc?(t, tmap))]: self))
   in
@@ -256,7 +256,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
       vars(contras) @ concat(diff(ts, contras)[`_`]: extract_contra(self))
     | _ -> []
   in
-  let consumers = concat(Premise[`_ |- _ : t`]: extract_contra(t)) in
+  let consumers = concat(Premises[`_ |- _ : t`]: extract_contra(t)) in
   let final_type = 
     let evars = vars(e) in
     tmap[`(t, ts)`]:
@@ -269,11 +269,11 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
           if not(empty?(ol)) then (t, head(ol))
           else (t, t')
   in
-  let producers = diff(tmap_inverse[`(t, _)`]: t, consumers) in
+  let producers = diff(keys(tmap_inverse), consumers) in
   let lone_inputs = filter_ts(diff(vars(self), consumers @ producers)) in
    
   let extract_type_by_index (e: term) (n: int) =
-    head(Premise[`_ |- ee : t` when e = ee]: nth(filter_ts(vars!(t)), n))
+    head(Premises[`_ |- ee : t` when e = ee]: nth(filter_ts(vars!(t)), n))
   in
   let consumer_type_by_user =
     match assoc(op, hint_list("flows")) with
@@ -287,11 +287,11 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   
   (* mark each producer as flowing to consumers through their final type *)
   [name] {
-    Premise,
+    Premises,
     tmap[`(t, ts)`]:
       if less?(length(ts), 2) then none
       else some(&("gjoin" (ts @ [t'.]))),
-    Premise[`_`]:
+    Premises[`_`]:
       match self with
       | t1 <: t2 ==> t3 t4 -> [&("flows" [t1, t3]), &("flows" [t2, t4])]
       | &("join" [t1, t2, t3, t4, t5]) -> [&("flows" [t1, t4]), &("flows" [t2, t5])]
@@ -325,7 +325,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   in
   (if empty?(flowc) then substitute(self, final_type)
    else
-     let prev_vars = tmap_inverse[`(t, _)`]: t in
+     let prev_vars = keys(tmap_inverse) in
      let (new_concl, tmap) = 
        uniquify([conclusion.], [], hint("mode"), "out", prev_vars)
      in
@@ -351,7 +351,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
     | _ -> (t, [])
   in
   [name] {
-    Premise(keep)[`gamma |- e : t`]:
+    Premises(keep)[`gamma |- e : t`]:
       let (t, fs) = make_match(t) in
       (gamma |- e : t) :: fs,
     (* first check if the lone input was substituted *)
@@ -363,7 +363,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
  
   (* remove duplicates and trivial flows *) 
   [name] {
-    dedup(Premise(keep)[`&("flows" [t1, t2])`]:
+    dedup(Premises(keep)[`&("flows" [t1, t2])`]:
       if t1 = t2 then none else some(self))
     -----------------------------------------
     conclusion
@@ -372,7 +372,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   (* compile to the cast calculus *)
   lift (gamma |- e : t) to (gamma |- ("ci" [e, e']) : t).;
   let rec destination_type (t: term) : term =
-    let typs = concat(Premise[`f`]:
+    let typs = concat(Premises[`f`]:
       match f with
       | &("matches" [t1, (c ts)]) when t1 = t ->
         [(c (ts[`t`]: destination_type(t))).]
@@ -385,10 +385,10 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
     if empty?(typs) then t else head(typs)
   in
   let dests =
-    if empty?(Premise) then []
+    if empty?(Premises) then []
     else vars(self)[`t`]: (t, destination_type(t))
   in
-  let emap = (e, t) :: Premise[`_ |- ("ci" [e, _]) : t`]: (e, t) in
+  let emap = (e, t) :: Premises[`_ |- ("ci" [e, _]) : t`]: (e, t) in
   let rec insert_cast (e: term) : term =
     match e with
     | (op es) -> (op (es[`e`]: insert_cast(e)))
@@ -403,26 +403,26 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   match conclusion with gamma |- ("ci" [e, _]) : t ->
 
   [name] {
-    Premise
+    Premises
     ------------------------------------------------------------
     gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
   };
   
   [name] {
-    Premise(keep)[`&("gjoin" ts)`]:
+    Premises(keep)[`&("gjoin" ts)`]:
       if member?(last(ts), vars(t)) then some(self) else none
     ---------------------------------------------------------
     conclusion
   };
 
-  let join_ts = Premise[`_`]:
+  let join_ts = Premises[`_`]:
     match self with
     | &("gjoin" ts) -> some(last(ts))
     | _ -> none
   in
 
   [name] {
-    Premise(keep)[`&("flows" [t1, t2])`]:
+    Premises(keep)[`&("flows" [t1, t2])`]:
       if member?(t2, join_ts) || (t1 = t2) then none else some(t1 ~ t2)
     -------------------------------------------------------------------
     conclusion

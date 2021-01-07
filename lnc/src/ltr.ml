@@ -1434,19 +1434,34 @@ let rec compile ctx e =
       in
       let e', typ, _ = compile pat_ctx e in
       match typ with
-      | Type.Formula ->
-          let e' =
-            Printf.sprintf
-              "{lan with rules=let tr = function\n\
-              \          | %s -> %s\n\
-              \          | x -> x\n\
-              \          in\n\
-              \          String.Map.of_alist_exn (List.map (Map.data \
-               lan.rules) ~f:(fun r -> (r.name, {r with premises = List.map \
-               r.premises ~f:tr; conclusion = tr r.conclusion})))}"
-              pat' e'
-          in
-          (e', Type.Lan, ctx)
+      | Type.Formula -> (
+        match Map.find ctx.type_env "self" with
+        | Some Type.Rule ->
+            let e' =
+              Printf.sprintf
+                "(let tr = function\n\
+                \          | %s -> %s\n\
+                \          | x -> x\n\
+                \          in\n\
+                 {self with premises = List.map self.premises ~f:tr; \
+                 conclusion = tr self.conclusion})"
+                pat' e'
+            in
+            (e', Type.Rule, ctx)
+        | _ ->
+            let e' =
+              Printf.sprintf
+                "{lan with rules=let tr = function\n\
+                \          | %s -> %s\n\
+                \          | x -> x\n\
+                \          in\n\
+                \          String.Map.of_alist_exn (List.map (Map.data \
+                 lan.rules) ~f:(fun r -> (r.name, {r with premises = \
+                 List.map r.premises ~f:tr; conclusion = tr \
+                 r.conclusion})))}"
+                pat' e'
+            in
+            (e', Type.Lan, ctx) )
       | _ -> incompat "Lift" [typ] [Type.Formula] )
   | Exp.Lift_in_rule (p, e, r) -> (
       let pat_ctx = {ctx with type_env= String.Map.empty} in

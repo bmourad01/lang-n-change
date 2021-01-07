@@ -370,7 +370,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   };
 
   (* compile to the cast calculus *)
-  (lift (gamma |- e : t) to (gamma |- ("ci" [e, e']) : t) in self);
+  lift (gamma |- e : t) to (gamma |- ("ci" [e, e']) : t).;
   let rec destination_type (t: term) : term =
     let typs = concat(Premise[`f`]:
       match f with

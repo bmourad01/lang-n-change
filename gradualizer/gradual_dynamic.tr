@@ -3,14 +3,14 @@ Expression e ::= ... | ("gcast" [$e, $T, $T]).;
 Context E ::= ... | ("gcast" [$E, $T, $T]).;
 
 Value v ::= {
-  let casts = syntax("Type")[`(c ts)` when not(empty?(ts))]:
+  let casts = Type[`(c ts)` when not(empty?(ts))]:
     ("gcast" [$v, (c ts), (c ts)])
   in
-  syntax("Value") @ casts @ [("gcast" [$v, $G, ("dyn" [])]).]
+  Value @ casts @ [("gcast" [$v, $G, ("dyn" [])]).]
 };
 
 Ground G ::= {
-  syntax("Type")[`(c ts)` when not(c = "dyn")]:
+  Type[`(c ts)` when not(c = "dyn")]:
     let dyns = ts[`t`]: if binding?(t) then t else ("dyn" []) in
     (c dyns)
 };
@@ -27,7 +27,7 @@ add_relation($T ~ $T);
 # mode: ... | consistent => inp inp;
 # principal: ... | consistent => yes yes;
 
-add_rules(syntax("Type")[`(c ts)`]:
+add_rules(Type[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
     ts[`t`]: unbind(t) ~ unbind(t)'
     -------------------------------
@@ -45,7 +45,7 @@ add_rule(["C-DYN-T"] {
   ("dyn" []) ~ $T
 });
 
-add_rules(syntax("Type")[`(c ts)` when not(empty?(ts))]:
+add_rules(Type[`(c ts)` when not(empty?(ts))]:
   ["R-GCAST-" ^ uppercase(c)] {
     ------------------------------------
     ("gcast" [$v, (c ts), (c ts)]) --> $v

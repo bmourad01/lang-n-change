@@ -170,7 +170,9 @@ module Exp : sig
     | New_rule of {name: t; premises: t list; conclusion: t}
     | Rule_name of t
     | Rule_premises of t
+    | Rule_premises_self
     | Rule_conclusion of t
+    | Rule_conclusion_self
     | Set_conclusion of t * t
     | Rules_of
     | Add_rule of t

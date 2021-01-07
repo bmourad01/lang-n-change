@@ -146,9 +146,11 @@ rule token = parse
   | "remove_relation" {REMOVERELATION}
   | "rule_name" {RULENAME}
   | "premises" {PREMISES}
+  | "Premise" {PREMISESELF}
   | "conclusion" {CONCLUSION}
   | "set_conclusion" {SETCONCLUSION}
   | "rules" {RULES}
+  | "Rule" {CAPRULE}
   | "add_rules" {ADDRULES}
   | "add_rule" {ADDRULE}
   | "set_rules" {SETRULES}

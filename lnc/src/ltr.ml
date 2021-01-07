@@ -374,7 +374,9 @@ module Exp = struct
     | New_rule of {name: t; premises: t list; conclusion: t}
     | Rule_name of t
     | Rule_premises of t
+    | Rule_premises_self
     | Rule_conclusion of t
+    | Rule_conclusion_self
     | Set_conclusion of t * t
     | Rules_of
     | Add_rule of t
@@ -603,7 +605,9 @@ module Exp = struct
           (to_string conclusion)
     | Rule_name e -> Printf.sprintf "rule_name(%s)" (to_string e)
     | Rule_premises e -> Printf.sprintf "premises(%s)" (to_string e)
+    | Rule_premises_self -> Printf.sprintf "Premise"
     | Rule_conclusion e -> Printf.sprintf "conclusion(%s)" (to_string e)
+    | Rule_conclusion_self -> Printf.sprintf "conclusion"
     | Set_conclusion (e1, e2) ->
         Printf.sprintf "set_conclusion(%s, %s)" (to_string e1) (to_string e2)
     | Rules_of -> "rules"
@@ -1402,7 +1406,21 @@ let rec compile ctx e =
               e1' e2'
           in
           (e', Type.Lan, ctx2)
-      | _ -> incompat "Seq" [typ1; typ2] Type.[Lan; Lan] )
+      | Type.Rule, Type.Rule -> (
+        match Map.find ctx.type_env "self" with
+        | Some Type.Rule ->
+            let e' =
+              Printf.sprintf
+                "let self = %s in lan_vars := Set.union !lan_vars (R.vars \
+                 self |> L.Term_set.of_list); %s"
+                e1' e2'
+            in
+            (e', Type.Rule, ctx2)
+        | Some _ ->
+            failwith "Cannot compose rules, 'self' is not bound to a rule"
+        | None ->
+            failwith "Cannot compose rules, 'self' is not bound to a rule" )
+      | _ -> incompat "Seq" [typ1; typ2] [] )
   | Exp.Skip -> ("lan", Type.Lan, ctx)
   | Exp.Lift (p, e) -> (
       let pat_ctx = {ctx with type_env= String.Map.empty} in
@@ -2171,6 +2189,11 @@ let rec compile ctx e =
           let e' = Printf.sprintf "((fun (r: R.t) -> r.premises) %s)" e' in
           (e', Type.(List Formula), ctx)
       | _ -> incompat "Rule_premises" [typ] [Type.Rule] )
+  | Exp.Rule_premises_self -> (
+    match Map.find ctx.type_env "self" with
+    | Some Type.Rule -> ("self.premises", Type.(List Formula), ctx)
+    | Some _ -> failwith "Premise: 'self' is not bound to a rule"
+    | None -> failwith "Premise: 'self' is not bound" )
   | Exp.Rule_conclusion e -> (
       let e', typ, _ = compile ctx e in
       match typ with
@@ -2178,6 +2201,11 @@ let rec compile ctx e =
           let e' = Printf.sprintf "((fun (r: R.t) -> r.conclusion) %s)" e' in
           (e', Type.Formula, ctx)
       | _ -> incompat "Rule_conclusion" [typ] [Type.Rule] )
+  | Exp.Rule_conclusion_self -> (
+    match Map.find ctx.type_env "self" with
+    | Some Type.Rule -> ("self.conclusion", Type.Formula, ctx)
+    | Some _ -> failwith "Premise: 'self' is not bound to a rule"
+    | None -> failwith "Premise: 'self' is not bound" )
   | Exp.Set_conclusion (e1, e2) -> (
       let e1', typ1, _ = compile ctx e1 in
       match typ1 with

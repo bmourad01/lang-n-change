@@ -1,0 +1,61 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (none T) | (some T e) | (get e)
+Value v ::= (abs T (x)e) | (zero.) | (none T) | (some T v)
+Type T ::= (arrow T T) | (nat.) | (option T)
+Context E ::= (hole.) | (app E e) | (app v E) | (some E) | (get E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-NONE]
+--------------------------------
+Gamma |- (none T) : (option T).
+
+[T-SOME]
+Gamma |- e : T
+--------------------------------
+Gamma |- (some T e) : (option T).
+
+[T-GET]
+Gamma |- e : (option T)
+--------------------------------
+Gamma |- (get e) : T.
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-GET-SOME]
+--------------------------------
+(get (some T v)) --> v.
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | get => 0.

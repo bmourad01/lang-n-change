@@ -1,0 +1,63 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (succ e) | (natrec e e e)
+Value v ::= (abs T (x)e) | (zero.) | (succ v)
+Type T ::= (arrow T T) | (nat.)
+Context E ::= (hole.) | (app E e) | (app v E) | (succ E) | (natrec E e e) | (natrec v E e) | (natrec v v E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-SUCC]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (succ e) : (nat.).
+
+[T-NATREC]
+Gamma |- e1 : (nat.),
+Gamma |- e2 : (nat.),
+Gamma |- e3 : (arrow (nat.) (arrow (nat.) (nat.)))
+--------------------------------
+Gamma |- (natrec e1 e2 e3) : (nat.).
+ 
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-NATREC-ZERO]
+--------------------------------
+(natrec (zero.) v1 v2) --> v1.
+
+[R-NAREC-SUCC]
+--------------------------------
+(add (succ v1) v2 v3) --> (app (app v3 v1) (natrec v1 v2 v3)).
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | add => 0 | natrec => 0.

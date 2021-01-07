@@ -1,0 +1,146 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (tt.) | (ff.) | (nill T) | (is_nil T e) | (cons T e e) | (head T e) | (tail T e) | (zero.) | (succ e) | (rangee e) | (reverse_range e) | (reverse e) | (append e e)
+Value v ::= (abs T (x)e) | (tt.) | (ff.) | (nill T) | (cons T v v) | (zero.) | (succ v)
+Type T ::= (arrow T T) | (bool.) | (list T) | (nat.)
+Context E ::= (hole.) | (app E e) | (app v E) | (is_nil T E) | (cons T E e) | (cons T v E) | (head T E) | (tail T E) | (succ E) | (rangee E) | (reverse_range E) | (reverse E) | (append E e) | (append v E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-TRUE]
+--------------------------------
+Gamma |- (tt.) : (bool.).
+ 
+[T-FALSE]
+--------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-NIL]
+--------------------------------
+Gamma |- (nill T) : (list T).
+
+[T-IS-NIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (is_nil T e) : (bool.).
+
+[T-CONS]
+Gamma |- e1 : T,
+Gamma |- e2 : (list T)
+--------------------------------
+Gamma |- (cons T e1 e2) : (list T).
+ 
+[T-HEAD]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (head T e) : T.
+
+[T-TAIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (tail T e) : (list T).
+
+[T-RANGE]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (rangee e) : (list (nat.)).
+
+[T-REVERSE-RANGE]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (reverse_range e) : (list (nat.)).
+
+[T-REVERSE]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (reverse e) : (list T).
+
+[T-APPEND]
+Gamma |- e1 : (list T),
+Gamma |- e2 : (list T)
+--------------------------------
+Gamma |- (append e1 e2) : (list T).
+
+[T-ZERO]
+--------------------------------
+Gamma |- (zero.) : (nat.).
+
+[T-SUCC]
+Gamma |- e : (nat.)
+--------------------------------
+Gamma |- (succ e) : (nat.).
+
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-IS-NIL-TRUE]
+--------------------------------
+(is_nil T (nill T)) --> (tt.).
+
+[R-IS-NIL-FALSE]
+--------------------------------
+(is_nil T (cons T v1 v2)) --> (ff.).
+
+[R-HEAD-CONS]
+--------------------------------
+(head T (cons T v1 v2)) --> v1.
+
+[R-TAIL-CONS]
+--------------------------------
+(tail T (cons T v1 v2)) --> v2.
+
+[R-REVERSE-RANGE-ZERO]
+--------------------------------
+(reverse_range (zero.)) --> (nill (nat.)).
+
+[R-REVERSE-RANGE-SUCC]
+--------------------------------
+(reverse_range (succ v)) --> (cons (succ v) (reverse_range v)).
+
+[R-RANGE]
+--------------------------------
+(rangee v) --> (reverse (reverse_range v)).
+
+[R-REVERSE-NIL]
+--------------------------------
+(reverse (nill T)) --> (nill T).
+
+[R-REVERSE-CONS]
+--------------------------------
+(reverse (cons T v1 v2)) --> (append (reverse v2) (cons T v1 (nill T))).
+
+[R-APPEND-NIL]
+--------------------------------
+(append (nill T) v) --> v.
+
+[R-APPEND-CONS]
+--------------------------------
+(append (cons T v1 v2) v3) --> (cons T v1 (append v2 v3)).
+
+%
+
+mode: typeof => inp inp out | step => inp out.
+principal: typeof => no yes no | step => yes no.
+variance: arrow => contra cov | list => cov.
+eliminationform: app => 0 | is_nil => 1 | head => 1 | tail => 1 | rangee => 0 | reverse_range => 0 | reverse => 0 | append => 0.

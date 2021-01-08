@@ -83,15 +83,16 @@ add_relation("contains", [$e, $e]);
 };
 
 (Context[`(op ts)` when not(op = "hole")]:
+  let e = fresh_var("e") in
   let args = ts[`t`]:
     if var?(t) && var_kind?(t, "Context") then fresh_var("e") else t
   in
   let es = args[`t` when var?(t) && var_kind?(t, "Expression")]: t in
 
   ["CONTAINS-" ^ uppercase(op) ^ "-" ^ int_str(i)] {
-    if empty?(es) then none else some(&("contains" [head(es), $e]))
+    if empty?(es) then none else some(&("contains" [head(es), e]))
     ---------------------------------------------------------------
-    &("contains" [(op args), $e])
+    &("contains" [(op args), e])
   }
 );
 

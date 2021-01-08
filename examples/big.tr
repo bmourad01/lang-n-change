@@ -6,11 +6,11 @@ let get_pm (es: term list) =
 in
 
 let es_of_op (op: string) =
-  head(syntax("Expression")[`(opp es)` when op = opp]: es)
+  head(Expression[`(opp es)` when op = opp]: es)
 in
 
 (* transform elimination forms to big-step style *)
-set_rules(rules(keep)[`(op args) --> rhs`]:
+set_rules(Rule(keep)[`(op args) --> rhs`]:
   let exprs = es_of_op(op)' in
   if empty?(exprs) then none
   else
@@ -19,26 +19,26 @@ set_rules(rules(keep)[`(op args) --> rhs`]:
     let pmvs = get_pm(args) @ get_vs(args) in
     let new_args = emap[`(arg, expr)`]: if member?(arg, pmvs) then expr else arg in
     some([rule_name(self)] {
+      Premises,
       pmvs[`e`]:
         match assoc(e, emap) with
         | none -> none
         | some(lhs) -> some(lhs --> e),
-      (if rhs = v_res then none else some(rhs --> v_res)),
-      premises(self)
-      -------------------------
+      if rhs = v_res then none else some(rhs --> v_res)
+      -------------------------------------------------
       (op new_args) --> v_res
     })
 );
 
 (* generate the contextual rules for intro forms *)
-add_rules(syntax("Value")[`(op vs)`]:
+add_rules(Value[`(op vs)`]:
   let es = es_of_op(op) in
   let emap = zip(vs, es) in
   let pmvs = get_pm(vs) @ get_vs(vs) in
   let args = emap[`(v, e)`]: if member?(v, pmvs) then e else v in
   some(["R-VALUE-" ^ uppercase(op)] {
     pmvs[`e`]:
-      let ee = assoc!(e, emap) in
+      let ee = emap(e) in
       if (var?(e) && var_kind?(e, "Type"))
          || (var?(ee) && var_kind?(ee, "Type"))
       then none

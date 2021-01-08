@@ -25,8 +25,7 @@ lift (e1 --> e2) to (<[e1, $m]> --> <[e2, $m]>).;
  * produce a fresh memory which is then used in the next step *)
 (Rule(keep)[`<[e1, _]> --> <[e2, _]>`]:
   let step_prems = Premises[`_ --> _`]: self in
-  let concl = conclusion(self) in
-  let steps = step_prems @ [concl.] in
+  let steps = step_prems @ [conclusion.] in
   let stores = steps[`_`]: fresh_var("m") in
   let smap1 = zip(steps, stores) in
   let smap2 = zip(step_prems, tail(stores)) in 
@@ -34,7 +33,7 @@ lift (e1 --> e2) to (<[e1, $m]> --> <[e2, $m]>).;
   [rule_name(self)] {
     Premises(keep)[`<[e1, _]> --> <[e2, _]>`]: <[e1, smap1(self)]> --> <[e2, smap2(self)]>
     --------------------------------------------------------------------------------------
-    <[e1, head(stores)]> --> <[e2, assoc!(concl, smap1)]>
+    <[e1, head(stores)]> --> <[e2, smap1(conclusion)]>
   }
 );
 

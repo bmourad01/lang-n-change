@@ -2,7 +2,7 @@ let is_val_var (v: term) = var?(v) && var_kind?(v, "Value") in
 let get_vs (es: term list) = es[`e` when is_val_var(e)]: e in
 
 let get_pm (es: term list) =
-  es[`e` when not(binding?(e)) && not(var?(e))]: e
+  es[`e` when constructor?(e)]: e
 in
 
 let es_of_op (op: string) =

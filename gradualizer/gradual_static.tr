@@ -400,12 +400,14 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
 
   match conclusion with gamma |- ("ci" [e, _]) : t ->
 
+  (* perform cast insertion on the conclusion *)
   [name] {
     Premises
-    ------------------------------------------------------------
+    ------------------------------------------------------------------------------------------
     gamma |- ("ci" [e, insert_cast(e)'|(vars(e)[`t` when var_kind?(t, "Expression")]: t)]) : t
   };
   
+  (* remove spurious joins *)
   [name] {
     Premises(keep)[`&("gjoin" ts)`]:
       if member?(last(ts), vars(t)) then some(self) else none
@@ -413,11 +415,8 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
     conclusion
   };
 
-  let join_ts = Premises[`_`]:
-    match self with
-    | &("gjoin" ts) -> some(last(ts))
-    | _ -> none
-  in
+  (* remove flows to join types, and promote the remaining flows to consistency *)  
+  let join_ts = Premises[`&("gjoin" ts)`]: last(ts) in
 
   [name] {
     Premises(keep)[`&("flows" [t1, t2])`]:

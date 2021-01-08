@@ -1634,6 +1634,7 @@ let rec compile ctx e =
             match when_typ with
             | Type.Bool ->
                 let pat_ctx = bind_var pat_ctx "self" typ' in
+                let pat_ctx = bind_var pat_ctx "i" Type.Int in
                 let body', body_typ, body_ctx = compile pat_ctx body in
                 let body', body_typ =
                   match body_typ with
@@ -1666,7 +1667,7 @@ let rec compile ctx e =
                     in
                     Printf.sprintf
                       {|
-                      (List.filter_map %s ~f:(fun self ->
+                      (List.filter_mapi %s ~f:(fun i self ->
                        match %s with
                        | %s when %s -> %s
                        | x -> %s))

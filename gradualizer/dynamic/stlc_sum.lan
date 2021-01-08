@@ -1,7 +1,7 @@
 Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (case e (x)e (x)e) | (inl T e) | (inr T e)
 Value v ::= (abs T (x)e) | (zero.) | (inl T v) | (inr T v)
 Type T ::= (arrow T T) | (nat.) | (plus T T)
-Context E ::= (hole.) | (app E e) | (app v E)
+Context E ::= (hole.) | (app E e) | (app v E) | (case E (x)e (x)e)
 Environment Gamma ::= [<x, T>...]
 
 %

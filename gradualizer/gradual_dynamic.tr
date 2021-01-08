@@ -58,6 +58,43 @@ add_relation($T ~ $T);
   }
 );
 
+add_relation("ground_of", [$T, $G]);
+
+# mode: ... | ground_of => inp out;
+# principal: ... | ground_of => yes no;
+
+let groundof (c: string) = head(Ground[`(cc _)` when c = cc]: self) in
+
+(Type[`(c ts)` when not(c = "dyn")]:
+  ["GROUND-OF-" ^ uppercase(c)] {
+    ------------------------------------
+    &("ground_of" [(c ts), groundof(c)])
+  }
+);
+
+add_relation("contains", [$e, $e]);
+
+# mode: ... | contains => inp inp;
+# principal: ... | contains => yes no;
+
+["CONTAINS-E"] {
+  ----------------------
+  &("contains" [$e, $e])
+};
+
+(Context[`(op ts)` when not(op = "hole")]:
+  let args = ts[`t`]:
+    if var?(t) && var_kind?(t, "Context") then fresh_var("e") else t
+  in
+  let es = args[`t` when var?(t) && var_kind?(t, "Expression")]: t in
+
+  ["CONTAINS-" ^ uppercase(op) ^ "-" ^ int_str(i)] {
+    if empty?(es) then none else some(&("contains" [head(es), $e]))
+    ---------------------------------------------------------------
+    &("contains" [(op args), $e])
+  }
+);
+
 ["R-GCAST-GCAST-OK"] {
   ---------------------------------------------------------------------------
   ("gcast" [("gcast" [$v, $G, ("dyn" []), $L1]), ("dyn" []), $G, $L2]) --> $v
@@ -70,19 +107,25 @@ add_relation($T ~ $T);
 };
 
 ["R-GCAST-T-TO-DYN"] {
-  &($T =/= $G),
-  &($T =/= ("dyn" [])),
-  $T ~ $G
+  &("ground_of" [$T, $G]),
+  &($T =/= $G)
   -------------------------------------------------------------------------------------------------
   ("gcast" [$v, $T, ("dyn" []), $L]) --> ("gcast" [("gcast" [$v, $T, $G, $L]), $G, ("dyn" []), $L])
 };
 
 ["R-GCAST-DYN-TO-T"] {
-  &($T =/= $G),
-  &($T =/= ("dyn" [])),
-  $T ~ $G
+  &("ground_of" [$T, $G]),
+  &($T =/= $G)
   -------------------------------------------------------------------------------------------------
   ("gcast" [$v, ("dyn" []), $T, $L]) --> ("gcast" [("gcast" [$v, ("dyn" []), $G, $L]), $G, $T, $L])
+};
+
+["R-BLAME"] {
+  $nil |- $e : $T1,
+  &("contains" [$e, ("blame" [$T2, $L])]),
+  &($e =/= ("blame" [$T2, $L]))
+  -------------------------------------
+  $e --> ("blame" [$T1, $L])
 };
 
 hint("eliminationform")[`(op, pa)`]:

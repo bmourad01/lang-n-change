@@ -1,0 +1,296 @@
+Context E ::= (app E e) | (app v E) | (cast E T) | (get E) | (hole.) | (some E)
+Environment Gamma ::= [<x, T>...]
+Expression e ::= x | (abs T (x)e) | (app e e) | (cast e T) | (get e) | (none T) | (some T e) | (zero.)
+Type T ::= (arrow T T) | (bot.) | (nat.) | (option T) | (top.)
+Value v ::= (abs T (x)e) | (none T) | (some T v) | (zero.)
+
+%
+
+join T T T.
+meet T T T.
+e --> e.
+T <: T.
+Gamma |- e : T.
+
+%
+
+[JOIN-ARROW]
+meet T1 T3 T5,
+join T2 T4 T6
+--------------------------------------
+join (arrow T1 T2) (arrow T3 T4) (arrow T5 T6).
+
+[JOIN-ARROW-BOT]
+--------------------------------------
+join (arrow T1 T2) (bot.) (arrow T1 T2).
+
+[JOIN-ARROW-TOP]
+--------------------------------------
+join (arrow T1 T2) (top.) (top.).
+
+[JOIN-BOT]
+--------------------------------------
+join (bot.) (bot.) (bot.).
+
+[JOIN-BOT-ARROW]
+--------------------------------------
+join (bot.) (arrow T1 T2) (arrow T1 T2).
+
+[JOIN-BOT-NAT]
+--------------------------------------
+join (bot.) (nat.) (nat.).
+
+[JOIN-BOT-OPTION]
+--------------------------------------
+join (bot.) (option T) (option T).
+
+[JOIN-BOT-TOP]
+--------------------------------------
+join (bot.) (top.) (top.).
+
+[JOIN-NAT]
+--------------------------------------
+join (nat.) (nat.) (nat.).
+
+[JOIN-NAT-BOT]
+--------------------------------------
+join (nat.) (bot.) (nat.).
+
+[JOIN-NAT-TOP]
+--------------------------------------
+join (nat.) (top.) (top.).
+
+[JOIN-OPTION]
+join T T7 T8
+--------------------------------------
+join (option T) (option T7) (option T8).
+
+[JOIN-OPTION-BOT]
+--------------------------------------
+join (option T) (bot.) (option T).
+
+[JOIN-OPTION-TOP]
+--------------------------------------
+join (option T) (top.) (top.).
+
+[JOIN-TOP]
+--------------------------------------
+join (top.) (top.) (top.).
+
+[JOIN-TOP-ARROW]
+--------------------------------------
+join (top.) (arrow T1 T2) (top.).
+
+[JOIN-TOP-BOT]
+--------------------------------------
+join (top.) (bot.) (top.).
+
+[JOIN-TOP-NAT]
+--------------------------------------
+join (top.) (nat.) (top.).
+
+[JOIN-TOP-OPTION]
+--------------------------------------
+join (top.) (option T) (top.).
+
+[MEET-ARROW]
+join T1 T9 T11,
+meet T2 T10 T12
+--------------------------------------
+meet (arrow T1 T2) (arrow T9 T10) (arrow T11 T12).
+
+[MEET-ARROW-BOT]
+--------------------------------------
+meet (arrow T1 T2) (bot.) (bot.).
+
+[MEET-ARROW-TOP]
+--------------------------------------
+meet (arrow T1 T2) (top.) (arrow T1 T2).
+
+[MEET-BOT]
+--------------------------------------
+meet (bot.) (bot.) (bot.).
+
+[MEET-BOT-ARROW]
+--------------------------------------
+meet (bot.) (arrow T1 T2) (bot.).
+
+[MEET-BOT-NAT]
+--------------------------------------
+meet (bot.) (nat.) (bot.).
+
+[MEET-BOT-OPTION]
+--------------------------------------
+meet (bot.) (option T) (bot.).
+
+[MEET-BOT-TOP]
+--------------------------------------
+meet (bot.) (top.) (bot.).
+
+[MEET-NAT]
+--------------------------------------
+meet (nat.) (nat.) (nat.).
+
+[MEET-NAT-BOT]
+--------------------------------------
+meet (nat.) (bot.) (bot.).
+
+[MEET-NAT-TOP]
+--------------------------------------
+meet (nat.) (top.) (nat.).
+
+[MEET-OPTION]
+meet T T13 T14
+--------------------------------------
+meet (option T) (option T13) (option T14).
+
+[MEET-OPTION-BOT]
+--------------------------------------
+meet (option T) (bot.) (bot.).
+
+[MEET-OPTION-TOP]
+--------------------------------------
+meet (option T) (top.) (option T).
+
+[MEET-TOP]
+--------------------------------------
+meet (top.) (top.) (top.).
+
+[MEET-TOP-ARROW]
+--------------------------------------
+meet (top.) (arrow T1 T2) (arrow T1 T2).
+
+[MEET-TOP-BOT]
+--------------------------------------
+meet (top.) (bot.) (bot.).
+
+[MEET-TOP-NAT]
+--------------------------------------
+meet (top.) (nat.) (nat.).
+
+[MEET-TOP-OPTION]
+--------------------------------------
+meet (top.) (option T) (option T).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-CAST]
+--------------------------------------
+(cast v T) --> v.
+
+[R-GET-SOME]
+--------------------------------------
+(get (some T v)) --> v.
+
+[S-ARROW]
+T15 <: T1,
+T2 <: T16
+--------------------------------------
+(arrow T1 T2) <: (arrow T15 T16).
+
+[S-BOT]
+--------------------------------------
+(bot.) <: (bot.).
+
+[S-BOT-ARROW]
+--------------------------------------
+(bot.) <: (arrow T1 T2).
+
+[S-BOT-BOT]
+--------------------------------------
+(bot.) <: (bot.).
+
+[S-BOT-NAT]
+--------------------------------------
+(bot.) <: (nat.).
+
+[S-BOT-OPTION]
+--------------------------------------
+(bot.) <: (option T).
+
+[S-BOT-TOP]
+--------------------------------------
+(bot.) <: (top.).
+
+[S-NAT]
+--------------------------------------
+(nat.) <: (nat.).
+
+[S-OPTION]
+T <: T17
+--------------------------------------
+(option T) <: (option T17).
+
+[S-TOP]
+--------------------------------------
+(top.) <: (top.).
+
+[S-TOP-ARROW]
+--------------------------------------
+(arrow T1 T2) <: (top.).
+
+[S-TOP-BOT]
+--------------------------------------
+(bot.) <: (top.).
+
+[S-TOP-NAT]
+--------------------------------------
+(nat.) <: (top.).
+
+[S-TOP-OPTION]
+--------------------------------------
+(option T) <: (top.).
+
+[S-TOP-TOP]
+--------------------------------------
+(top.) <: (top.).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+T1_2 <: T1_1
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-CAST]
+Gamma |- e : T1,
+T1 <: T2
+--------------------------------------
+Gamma |- (cast e T2) : T2.
+
+[T-GET]
+Gamma |- e : (option T)
+--------------------------------------
+Gamma |- (get e) : T.
+
+[T-NONE]
+--------------------------------------
+Gamma |- (none T) : (option T).
+
+[T-SOME]
+Gamma |- e : T
+--------------------------------------
+Gamma |- (some T e) : (option T).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+[T-ZERO]
+--------------------------------------
+Gamma |- (zero.) : (nat.).
+
+%
+
+eliminationform: app => 0 | get => 0.
+mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | typeof => inp inp out.
+principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | typeof => no yes no.
+variance: arrow => contra cov.

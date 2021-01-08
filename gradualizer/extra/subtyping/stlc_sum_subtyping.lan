@@ -1,0 +1,251 @@
+Context E ::= (app E e) | (app v E) | (case E (x)e (x)e) | (cast E T) | (hole.) | (inl T E) | (inr T E)
+Environment Gamma ::= [<x, T>...]
+Expression e ::= x | (abs T (x)e) | (app e e) | (case e (x)e (x)e) | (cast e T) | (inl T e) | (inr T e)
+Type T ::= (arrow T T) | (bot.) | (plus T T) | (top.)
+Value v ::= (abs T (x)e) | (inl T v) | (inr T v)
+
+%
+
+join T T T.
+meet T T T.
+e --> e.
+T <: T.
+Gamma |- e : T.
+
+%
+
+[JOIN-ARROW]
+meet T1 T3 T5,
+join T2 T4 T6
+--------------------------------------
+join (arrow T1 T2) (arrow T3 T4) (arrow T5 T6).
+
+[JOIN-ARROW-BOT]
+--------------------------------------
+join (arrow T1 T2) (bot.) (arrow T1 T2).
+
+[JOIN-ARROW-TOP]
+--------------------------------------
+join (arrow T1 T2) (top.) (top.).
+
+[JOIN-BOT]
+--------------------------------------
+join (bot.) (bot.) (bot.).
+
+[JOIN-BOT-ARROW]
+--------------------------------------
+join (bot.) (arrow T1 T2) (arrow T1 T2).
+
+[JOIN-BOT-PLUS]
+--------------------------------------
+join (bot.) (plus T1 T2) (plus T1 T2).
+
+[JOIN-BOT-TOP]
+--------------------------------------
+join (bot.) (top.) (top.).
+
+[JOIN-PLUS]
+join T1 T7 T9,
+join T2 T8 T10
+--------------------------------------
+join (plus T1 T2) (plus T7 T8) (plus T9 T10).
+
+[JOIN-PLUS-BOT]
+--------------------------------------
+join (plus T1 T2) (bot.) (plus T1 T2).
+
+[JOIN-PLUS-TOP]
+--------------------------------------
+join (plus T1 T2) (top.) (top.).
+
+[JOIN-TOP]
+--------------------------------------
+join (top.) (top.) (top.).
+
+[JOIN-TOP-ARROW]
+--------------------------------------
+join (top.) (arrow T1 T2) (top.).
+
+[JOIN-TOP-BOT]
+--------------------------------------
+join (top.) (bot.) (top.).
+
+[JOIN-TOP-PLUS]
+--------------------------------------
+join (top.) (plus T1 T2) (top.).
+
+[MEET-ARROW]
+join T1 T11 T13,
+meet T2 T12 T14
+--------------------------------------
+meet (arrow T1 T2) (arrow T11 T12) (arrow T13 T14).
+
+[MEET-ARROW-BOT]
+--------------------------------------
+meet (arrow T1 T2) (bot.) (bot.).
+
+[MEET-ARROW-TOP]
+--------------------------------------
+meet (arrow T1 T2) (top.) (arrow T1 T2).
+
+[MEET-BOT]
+--------------------------------------
+meet (bot.) (bot.) (bot.).
+
+[MEET-BOT-ARROW]
+--------------------------------------
+meet (bot.) (arrow T1 T2) (bot.).
+
+[MEET-BOT-PLUS]
+--------------------------------------
+meet (bot.) (plus T1 T2) (bot.).
+
+[MEET-BOT-TOP]
+--------------------------------------
+meet (bot.) (top.) (bot.).
+
+[MEET-PLUS]
+meet T1 T15 T17,
+meet T2 T16 T18
+--------------------------------------
+meet (plus T1 T2) (plus T15 T16) (plus T17 T18).
+
+[MEET-PLUS-BOT]
+--------------------------------------
+meet (plus T1 T2) (bot.) (bot.).
+
+[MEET-PLUS-TOP]
+--------------------------------------
+meet (plus T1 T2) (top.) (plus T1 T2).
+
+[MEET-TOP]
+--------------------------------------
+meet (top.) (top.) (top.).
+
+[MEET-TOP-ARROW]
+--------------------------------------
+meet (top.) (arrow T1 T2) (arrow T1 T2).
+
+[MEET-TOP-BOT]
+--------------------------------------
+meet (top.) (bot.) (bot.).
+
+[MEET-TOP-PLUS]
+--------------------------------------
+meet (top.) (plus T1 T2) (plus T1 T2).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-CASE-INL]
+--------------------------------------
+(case (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
+
+[R-CASE-INR]
+--------------------------------------
+(case (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
+
+[R-CAST]
+--------------------------------------
+(cast v T) --> v.
+
+[S-ARROW]
+T19 <: T1,
+T2 <: T20
+--------------------------------------
+(arrow T1 T2) <: (arrow T19 T20).
+
+[S-BOT]
+--------------------------------------
+(bot.) <: (bot.).
+
+[S-BOT-ARROW]
+--------------------------------------
+(bot.) <: (arrow T1 T2).
+
+[S-BOT-BOT]
+--------------------------------------
+(bot.) <: (bot.).
+
+[S-BOT-PLUS]
+--------------------------------------
+(bot.) <: (plus T1 T2).
+
+[S-BOT-TOP]
+--------------------------------------
+(bot.) <: (top.).
+
+[S-PLUS]
+T1 <: T21,
+T2 <: T22
+--------------------------------------
+(plus T1 T2) <: (plus T21 T22).
+
+[S-TOP]
+--------------------------------------
+(top.) <: (top.).
+
+[S-TOP-ARROW]
+--------------------------------------
+(arrow T1 T2) <: (top.).
+
+[S-TOP-BOT]
+--------------------------------------
+(bot.) <: (top.).
+
+[S-TOP-PLUS]
+--------------------------------------
+(plus T1 T2) <: (top.).
+
+[S-TOP-TOP]
+--------------------------------------
+(top.) <: (top.).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+T1_2 <: T1_1
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-CASE]
+Gamma |- e1 : (sum T1 T2),
+[x1 => T1]Gamma |- e2 : T_1,
+[x2 => T2]Gamma |- e3 : T_2,
+join T_1 T_2 T
+--------------------------------------
+Gamma |- (case e1 (x1)e2 (x2)e3) : T.
+
+[T-CAST]
+Gamma |- e : T1,
+T1 <: T2
+--------------------------------------
+Gamma |- (cast e T2) : T2.
+
+[T-INL]
+Gamma |- e : T1
+--------------------------------------
+Gamma |- (inl T2 e) : (sum T1 T2).
+
+[T-INR]
+Gamma |- e : T2
+--------------------------------------
+Gamma |- (inr T1 e) : (sum T1 T2).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+%
+
+eliminationform: app => 0 | case => 0.
+mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | typeof => inp inp out.
+principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | typeof => no yes no.
+variance: arrow => contra cov | plus => cov cov.

@@ -295,9 +295,12 @@ in
       else some(&("gjoin" (ts @ [t'.]))),
     Premises[`_`]:
       match self with
-      | t1 <: t2 ==> t3 t4 -> [&("flows" [t1, t3]), &("flows" [t2, t4])]
-      | &("join" [t1, t2, t3, t4, t5]) -> [&("flows" [t1, t4]), &("flows" [t2, t5])]
-      | &("meet" [t1, t2, t3, t4, t5]) -> [&("flows" [t1, t4]), &("flows" [t2, t5])]
+      | t1 <: t2 ==> t3 t4 ->
+        [&("flows" [t1, t3]), &("flows" [t3, t1]), &("flows" [t2, t4]), &("flows" [t4, t2])]
+      | &("join" [t1, t2, t3, t4, t5]) ->
+        [&("flows" [t1, t4]), &("flows" [t4, t1]), &("flows" [t2, t5]), &("flows" [t5, t2])]
+      | &("meet" [t1, t2, t3, t4, t5]) ->
+        [&("flows" [t1, t4]), &("flows" [t4, t1]), &("flows" [t2, t5]), &("flows" [t5, t2])]
       | _ -> [],
     dedup(concat(tmap_inverse[`(t1, t2)`]: (
       let tuser = assoc(t1, consumer_type_by_user) in
@@ -425,6 +428,25 @@ in
     Premises(keep)[`&("flows" [t1, t2])`]:
       if member?(t2, join_ts) || (t1 = t2) then none else some(t1 ~ t2)
     -------------------------------------------------------------------
+    conclusion
+  };
+
+  (* filter out duplicates that correspond to bidirectional
+   * flows, since the consistency relation is symmetric *)
+  let rec filter_bidirectional
+      (acc : formula list)
+      (prems : formula list) : formula list =
+    match prems with
+    | [] -> rev(acc)
+    | (t1 ~ t2) :: rest -> 
+      let acc = if member?(t2 ~ t1, acc) then acc else (t1 ~ t2) :: acc in
+      filter_bidirectional(acc, rest)
+    | f :: rest -> filter_bidirectional(f :: acc, rest)
+  in
+    
+  [name] {
+    filter_bidirectional([], Premises)
+    ----------------------------------
     conclusion
   }
 ));

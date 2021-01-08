@@ -1463,16 +1463,29 @@ let rec compile ctx e =
                 e1' e2'
             in
             (e', typ2, ctx2) )
-      | Type.(List Rule), _ ->
-          let e' =
-            Printf.sprintf
-              "let lan = {lan with rules = (List.fold (%s) ~init:lan.rules \
-               ~f:(fun m (r: R.t) -> Map.set m r.name r))} in lan_vars := \
-               List.map (Map.data lan.rules) ~f:R.vars |> List.concat |> \
-               L.Term_set.of_list; %s"
-              e1' e2'
-          in
-          (e', typ2, ctx2)
+      | Type.(List Rule), _ -> (
+        match Map.find ctx.type_env "self" with
+        | None when Type.(equal typ2 Rule) ->
+            let e' =
+              Printf.sprintf
+                "let lan = {lan with rules = (List.fold (%s) \
+                 ~init:lan.rules ~f:(fun m (r: R.t) -> Map.set m r.name \
+                 r))} in lan_vars := List.map (Map.data lan.rules) \
+                 ~f:R.vars |> List.concat |> L.Term_set.of_list; {lan with \
+                 rules = let (r : R.t) = %s in Map.set lan.rules r.name r}"
+                e1' e2'
+            in
+            (e', Type.Lan, ctx2)
+        | _ ->
+            let e' =
+              Printf.sprintf
+                "let lan = {lan with rules = (List.fold (%s) \
+                 ~init:lan.rules ~f:(fun m (r: R.t) -> Map.set m r.name \
+                 r))} in lan_vars := List.map (Map.data lan.rules) \
+                 ~f:R.vars |> List.concat |> L.Term_set.of_list; %s"
+                e1' e2'
+            in
+            (e', typ2, ctx2) )
       | _ -> incompat "Seq" [typ1; typ2] [] )
   | Exp.Skip -> ("lan", Type.Lan, ctx)
   | Exp.Lift (p, e) -> (

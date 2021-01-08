@@ -25,7 +25,7 @@ add_relation("static", [$T.]);
 # mode: ... | consistent => inp inp | matches => inp out | gjoin => inp inp out | static => inp;
 # principal: ... | consistent => yes yes | matches => yes no | gjoin => yes yes no | static => yes;
     
-add_rules(Type[`(c ts)`]:
+(Type[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
     ts[`t`]: unbind(t) ~ unbind(t)'
     -------------------------------
@@ -33,17 +33,17 @@ add_rules(Type[`(c ts)`]:
   }
 );
 
-add_rule(["C-T-DYN"] {
+["C-T-DYN"] {
   ----------------
   $T ~ ("dyn" [])
-});
+};
     
-add_rule(["C-DYN-T"] {
+["C-DYN-T"] {
   ----------------
   ("dyn" []) ~ $T
-});
+};
 
-add_rules(Type[`(c ts)` when not(c = "dyn")]: 
+(Type[`(c ts)` when not(c = "dyn")]: 
   let ts = ts[`t`]: if binding?(t) then $(bound(t))("dyn" []) else ("dyn" []) in
   ["MATCHES-DYN-" ^ uppercase(c)] {
     ---------------------------------
@@ -51,14 +51,14 @@ add_rules(Type[`(c ts)` when not(c = "dyn")]:
   }
 );
 
-add_rules(Type[`(c ts)` when not(c = "dyn")]:
+(Type[`(c ts)` when not(c = "dyn")]:
   ["MATCHES-" ^ uppercase(c)] {
     -----------------------------
     &("matches" [(c ts), (c ts)])
   }
 );
 
-add_rules(Type[`(c ts)` when not(c = "dyn")]:
+(Type[`(c ts)` when not(c = "dyn")]:
   ["STATIC-" ^ uppercase(c)] {
     ts[`t`]: &("static" [t.])
     ----------------------------
@@ -66,7 +66,7 @@ add_rules(Type[`(c ts)` when not(c = "dyn")]:
   }
 );
 
-add_rules(Type[`(c ts)` when not(c = "dyn")]:
+(Type[`(c ts)` when not(c = "dyn")]:
   ["GJOIN-" ^ uppercase(c)] {
     ts[`t`]:
       let t = unbind(t) in
@@ -76,15 +76,15 @@ add_rules(Type[`(c ts)` when not(c = "dyn")]:
   }
 );
 
-add_rule(["GJOIN-T-DYN"] {
+["GJOIN-T-DYN"] {
   ------------------------------
   &("gjoin" [$T, ("dyn" []), $T])
-});
+};
     
-add_rule(["GJOIN-DYN-T"] {
+["GJOIN-DYN-T"] {
   ------------------------------
   &("gjoin" [("dyn" []), $T, $T])
-});
+};
 
 (* check if the language has subtyping *)
 let has_subtyping =
@@ -114,7 +114,7 @@ in
   # principal: ... | subtype_flow => yes yes no no | join => yes yes no no no | meet => yes yes no no no;
 
   (* add some grounding rules for the new relations *)
-  add_rules(concat(Type[`(c ts)` when not(c = "dyn")]:
+  concat(Type[`(c ts)` when not(c = "dyn")]:
     if empty?(ts) then [
       ["S-DYN-" ^ uppercase(c)] {
         --------------------------------------
@@ -172,22 +172,22 @@ in
         &("meet" [(c ts), ("dyn" ts), $T1', $T2', $T3'])
       }
     ]
-  ));
+  );
 
-  add_rule(["S-DYN"] {
+  ["S-DYN"] {
     --------------------------------------------------
     ("dyn" []) <: ("dyn" []) ==> ("dyn" []) ("dyn" [])
-  });
+  };
 
-  add_rule(["JOIN-DYN"] {
+  ["JOIN-DYN"] {
     ----------------------------------------------------------------------
     &("join" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
-  });
+  };
 
-  add_rule(["MEET-DYN"] {
+  ["MEET-DYN"] {
     ----------------------------------------------------------------------
     &("meet" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
-  })
+  }
 ) else skip);
 
 let seek
@@ -214,7 +214,7 @@ let map_merge
 in
 
 (* gradualize the typing rules *)
-set_rules(Rule(keep)[`gamma |- e : t`]: (
+(Rule(keep)[`gamma |- e : t`]: (
   let name = rule_name(self) in
   let op = match e with (op _) -> op | _ -> "" in
 
@@ -426,9 +426,9 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   }
 ));
 
-add_rule(["T-GCAST"] {
+["T-GCAST"] {
   $Gamma |- $e : $T1,
   $T1 ~ $T2
   ---------------------------------------
   $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
-})
+}

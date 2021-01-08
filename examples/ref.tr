@@ -21,11 +21,10 @@ lift (gamma |- e : t) to (<[gamma, $Sigma]> |- e : t).;
 (* modify the shape of reduction rules *)
 lift (e1 --> e2) to (<[e1, $m]> --> <[e2, $m]>).;
 
-(* modify the shape of reduction rules *)
+(* any steps that appear in the premises of a reduction rule must
+ * produce a fresh memory which is then used in the next step *)
 (Rule(keep)[`<[e1, _]> --> <[e2, _]>`]:
-  (* any steps that appear in the premises must produce
-   * a fresh memory which is then used in the next step *)
-  let step_prems = premises(self)[`_ --> _`]: self in
+  let step_prems = Premises[`_ --> _`]: self in
   let concl = conclusion(self) in
   let steps = step_prems @ [concl.] in
   let stores = steps[`_`]: fresh_var("m") in
@@ -33,9 +32,8 @@ lift (e1 --> e2) to (<[e1, $m]> --> <[e2, $m]>).;
   let smap2 = zip(step_prems, tail(stores)) in 
 
   [rule_name(self)] {
-    premises(self)(keep)[`<[e1, _]> --> <[e2, _]>`]:
-      <[e1, smap1(self)]> --> <[e2, smap2(self)]>
-    ---------------------------------------------------------
+    Premises(keep)[`<[e1, _]> --> <[e2, _]>`]: <[e1, smap1(self)]> --> <[e2, smap2(self)]>
+    --------------------------------------------------------------------------------------
     <[e1, head(stores)]> --> <[e2, assoc!(concl, smap1)]>
   }
 );

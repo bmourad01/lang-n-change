@@ -15,19 +15,19 @@ Ground G ::= {
     (c dyns)
 };
 
-add_rule(["T-GCAST"] {
+["T-GCAST"] {
   $Gamma |- $e : $T1,
   $T1 ~ $T2
   ---------------------------------------
   $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
-});
+};
 
 add_relation($T ~ $T);
 
 # mode: ... | consistent => inp inp;
 # principal: ... | consistent => yes yes;
 
-add_rules(Type[`(c ts)`]:
+(Type[`(c ts)`]:
   ["C-" ^ uppercase(c)] {
     ts[`t`]: unbind(t) ~ unbind(t)'
     -------------------------------
@@ -35,51 +35,51 @@ add_rules(Type[`(c ts)`]:
   }
 );
 
-add_rule(["C-T-DYN"] {
+["C-T-DYN"] {
   ----------------
   $T ~ ("dyn" [])
-});
+};
     
-add_rule(["C-DYN-T"] {
+["C-DYN-T"] {
   ----------------
   ("dyn" []) ~ $T
-});
+};
 
-add_rules(Type[`(c ts)` when not(empty?(ts))]:
+(Type[`(c ts)` when not(empty?(ts))]:
   ["R-GCAST-" ^ uppercase(c)] {
     ------------------------------------
     ("gcast" [$v, (c ts), (c ts)]) --> $v
   }
 );
 
-add_rule(["R-GCAST-GCAST-OK"] {
+["R-GCAST-GCAST-OK"] {
   --------------------------------------------------------------
   ("gcast" [("gcast" [$v, $G, ("dyn" [])]), ("dyn" []), $G]) --> $v
-});
+};
 
-add_rule(["R-GCAST-GCAST-ERROR"] {
+["R-GCAST-GCAST-ERROR"] {
   &($G1 =/= $G2)
   -------------------------------------------------------------------------
   ("gcast" [("gcast" [$v, $G1, ("dyn" [])]), ("dyn" []), $G2]) --> ("err" [])
-});
+};
 
-add_rule(["R-GCAST-T-TO-DYN"] {
+["R-GCAST-T-TO-DYN"] {
   &($T =/= $G),
   &($T =/= ("dyn" [])),
   $T ~ $G
   ----------------------------------------------------------------------------------
   ("gcast" [$v, $T, ("dyn" [])]) --> ("gcast" [("gcast" [$v, $T, $G]), $G, ("dyn" [])])
-});
+};
 
-add_rule(["R-GCAST-DYN-TO-T"] {
+["R-GCAST-DYN-TO-T"] {
   &($T =/= $G),
   &($T =/= ("dyn" [])),
   $T ~ $G
   ----------------------------------------------------------------------------------
   ("gcast" [$v, ("dyn" []), $T]) --> ("gcast" [("gcast" [$v, ("dyn" []), $G]), $G, $T])
-});
+};
 
-add_rules(hint("eliminationform")[`(op, pa)`]:
+hint("eliminationform")[`(op, pa)`]:
   let r = head(Rule[`_ |- (opp _) : _` when op = opp]: self) in
   let idx = str_int(head(pa)) in
   let typing_prems = premises(r)[`gamma |- e : t`]: self in
@@ -110,4 +110,4 @@ add_rules(hint("eliminationform")[`(op, pa)`]:
     some(["R-ELIM-GCAST-" ^ uppercase(op)] {
        ----------------------------------------------------------------------
        (op (tas @ [("gcast" [pa_v, pa_type', pa_type]).] @ siblings)) --> target
-    }))
+    })

@@ -10,7 +10,7 @@ let es_of_op (op: string) =
 in
 
 (* transform elimination forms to big-step style *)
-set_rules(Rule(keep)[`(op args) --> rhs`]:
+(Rule(keep)[`(op args) --> rhs`]: 
   let exprs = es_of_op(op)' in
   if empty?(exprs) then none
   else
@@ -31,7 +31,7 @@ set_rules(Rule(keep)[`(op args) --> rhs`]:
 );
 
 (* generate the contextual rules for intro forms *)
-add_rules(Value[`(op vs)`]:
+(Value[`(op vs)`]:
   let es = es_of_op(op) in
   let emap = zip(vs, es) in
   let pmvs = get_pm(vs) @ get_vs(vs) in

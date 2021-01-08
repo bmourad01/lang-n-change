@@ -67,6 +67,11 @@ The following algorithms are found in the `examples/` directory:
 
 Each of these algorithms assume that the input language uses small-step semantics with evaluation contexts.
 
+Some sample language definitions are provided in the `lan/` directory:
+
+- `fpl.lan` is a functional programming language combining features of the call-by-value Simply-Typed Lambda Cauclus with lists, pairs, natural numbers, booleans, and so on, as well as universal types (a-la System-F) and iso-recursive types.
+- `mj.lan` is a simplified version of the MJ [5] (Middleweight Java) calculus.
+
 ### Gradualizer
 
 The `gradualizer/` directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4], and contains one-to-one translations of the language repositories for both papers (`gradualizer/static/` and `gradualizer/dynamic/`, respectively; see https://github.com/mcimini/Gradualizer and https://github.com/mcimini/GradualizerDynamicSemantics).
@@ -100,3 +105,5 @@ Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the
 [3] Matteo Cimini and Jeremy G. Siek. 2016. The gradualizer: a methodology and algorithm for generating gradual type systems. In Proceedings of the 43rd Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL '16). Association for Computing Machinery, New York, NY, USA, 443–455. DOI:https://doi.org/10.1145/2837614.2837632
  
 [4] Matteo Cimini and Jeremy G. Siek. 2017. Automatically generating the dynamic semantics of gradually typed languages. In Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages (POPL 2017). Association for Computing Machinery, New York, NY, USA, 789–803. DOI:https://doi.org/10.1145/3009837.3009863 
+
+[5] Bierman, G., Parkinson, M.J., & Pitts, A. (2003). MJ: An imperative core calculus for Java and Java with effects.

@@ -493,7 +493,7 @@ module Exp = struct
     | Ite (b, e1, e2) ->
         Printf.sprintf "if %s then %s else %s" (to_string b) (to_string e1)
           (to_string e2)
-    | Seq (e1, e2) -> Printf.sprintf "%s; %s" (to_string e1) (to_string e2)
+    | Seq (e1, e2) -> Printf.sprintf "(%s; %s)" (to_string e1) (to_string e2)
     | Skip -> "skip"
     | Lift (p, e) ->
         Printf.sprintf "lift %s to %s." (Pattern.to_string p) (to_string e)
@@ -508,7 +508,7 @@ module Exp = struct
           | None -> ""
           | Some w -> Printf.sprintf " when %s" (to_string w)
         in
-        Printf.sprintf "%s%s[|%s%s|]: (%s)" field_str keep_str
+        Printf.sprintf "%s%s[`%s`%s]: (%s)" field_str keep_str
           (Pattern.to_string pattern)
           when_str (to_string body)
     | Match {exp; cases} ->
@@ -1453,7 +1453,29 @@ let rec compile ctx e =
             incompat "Seq (rule)" [typ1; typ2] Type.[Rule; Rule]
         | Some _ ->
             failwith "Cannot compose rules, 'self' is not bound to a rule"
-        | None ->
+        | None when Type.(equal typ2 Rule) ->
+            let e' =
+              Printf.sprintf
+                "let lan = {lan with rules = let (r: R.t) = %s in Map.set \
+                 lan.rules r.name r} in lan_vars := List.map (Map.data \
+                 lan.rules) ~f:R.vars |> List.concat |> L.Term_set.of_list; \
+                 {lan with rules = let (r: R.t) = %s in Map.set lan.rules \
+                 r.name r}"
+                e1' e2'
+            in
+            (e', Type.Lan, ctx2)
+        | None when Type.(equal typ2 (List Rule)) ->
+            let e' =
+              Printf.sprintf
+                "let lan = {lan with rules = let (r: R.t) = %s in Map.set \
+                 lan.rules r.name r} in lan_vars := List.map (Map.data \
+                 lan.rules) ~f:R.vars |> List.concat |> L.Term_set.of_list; \
+                 {lan with rules = (List.fold (%s) ~init:lan.rules ~f:(fun \
+                 m (r: R.t) -> Map.set m r.name r))}"
+                e1' e2'
+            in
+            (e', Type.Lan, ctx2)
+        | None when Type.(equal typ2 Lan) ->
             let e' =
               Printf.sprintf
                 "let lan = {lan with rules = let (r: R.t) = %s in Map.set \
@@ -1462,7 +1484,8 @@ let rec compile ctx e =
                  %s"
                 e1' e2'
             in
-            (e', typ2, ctx2) )
+            (e', Type.Lan, ctx2)
+        | _ -> incompat "Seq" [typ1; typ2] [] )
       | Type.(List Rule), _ -> (
         match Map.find ctx.type_env "self" with
         | None when Type.(equal typ2 Rule) ->
@@ -1473,6 +1496,18 @@ let rec compile ctx e =
                  r))} in lan_vars := List.map (Map.data lan.rules) \
                  ~f:R.vars |> List.concat |> L.Term_set.of_list; {lan with \
                  rules = let (r : R.t) = %s in Map.set lan.rules r.name r}"
+                e1' e2'
+            in
+            (e', Type.Lan, ctx2)
+        | None when Type.(equal typ2 (List Rule)) ->
+            let e' =
+              Printf.sprintf
+                "let lan = {lan with rules = (List.fold (%s) \
+                 ~init:lan.rules ~f:(fun m (r: R.t) -> Map.set m r.name \
+                 r))} in lan_vars := List.map (Map.data lan.rules) \
+                 ~f:R.vars |> List.concat |> L.Term_set.of_list; {lan with \
+                 rules = (List.fold (%s) ~init:lan.rules ~f:(fun m (r: R.t) \
+                 -> Map.set m r.name r))}"
                 e1' e2'
             in
             (e', Type.Lan, ctx2)
@@ -2879,6 +2914,7 @@ let generate_caml e =
   let type_env = String.Map.empty in
   let type_vars = String.Set.empty in
   let ctx = {type_env; type_vars} in
+  let e = Exp.(Seq (e, Skip)) in
   let s, typ, _ = compile ctx e in
   match typ with
   | Type.Lan ->

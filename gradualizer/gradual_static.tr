@@ -1,12 +1,12 @@
 (* add the cast operator and the dynamic type *)
-Expression e ::= ... | ("gcast" [$e, $T, $T]).;
+Expression e ::= ... | ("gcast" [$e, $T, $T, $L]).;
 Type T ::= ... | ("dyn" []).;
 
 Value v ::= {
   let casts = Type[`(c ts)` when not(empty?(ts))]:
-    ("cast" [$v, (c ts), (c ts)])
+    ("gcast" [$v, (c ts), (c ts), $L])
   in
-  Value @ casts @ [("cast" [$v, $G, ("dyn" [])]).]
+  Value @ casts @ [("gcast" [$v, $G, ("dyn" []), $L]).]
 };
 
 (* add ground types *)
@@ -398,7 +398,7 @@ in
       | none -> e
       | some(t) ->
         let tsub = substitute(t, dests) in
-        if t = tsub then e else ("gcast" [e, t, tsub])
+        if t = tsub then e else ("gcast" [e, t, tsub, fresh_var("L")])
   in
 
   match conclusion with gamma |- ("ci" [e, _]) : t ->
@@ -432,6 +432,6 @@ in
 ["T-GCAST"] {
   $Gamma |- $e : $T1,
   $T1 ~ $T2
-  ---------------------------------------
-  $Gamma |- ("gcast" [$e, $T1, $T2]) : $T2
+  --------------------------------------------
+  $Gamma |- ("gcast" [$e, $T1, $T2, $L]) : $T2
 }

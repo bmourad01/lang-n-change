@@ -70,7 +70,7 @@ Each of these algorithms assume that the input language uses small-step semantic
 Some sample language definitions are provided in the `lan/` directory:
 
 - `fpl.lan` is a functional programming language combining features of the call-by-value Simply-Typed λ-Calculus (STLC) with lists, pairs, natural numbers, booleans, and so on, as well as universal types (a-la System F) and iso-recursive types.
-- `mj.lan` is a simplified version of the MJ [5] (Middleweight Java) calculus.
+- `mj.lan` is a simplified version of the MJ (Middleweight Java) calculus, as seen in [5].
 
 ### Gradualizer
 
@@ -106,4 +106,4 @@ Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the
  
 [4] Matteo Cimini and Jeremy G. Siek. 2017. Automatically generating the dynamic semantics of gradually typed languages. In Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages (POPL 2017). Association for Computing Machinery, New York, NY, USA, 789–803. DOI:https://doi.org/10.1145/3009837.3009863 
 
-[5] Bierman, G., Parkinson, M.J., & Pitts, A. (2003). MJ: An imperative core calculus for Java and Java with effects.
+[5] Bierman, G., Parkinson, M.J., & Pitts, A. (2003). MJ: An imperative core calculus for Java and Java with effects. https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-563.pdf

@@ -69,7 +69,7 @@ Each of these algorithms assume that the input language uses small-step semantic
 
 Some sample language definitions are provided in the `lan/` directory:
 
-- `fpl.lan` is a functional programming language combining features of the call-by-value Simply-Typed λ-Calculus (STLC) with lists, pairs, natural numbers, booleans, and so on, as well as universal types (a-la System-F) and iso-recursive types.
+- `fpl.lan` is a functional programming language combining features of the call-by-value Simply-Typed λ-Calculus (STLC) with lists, pairs, natural numbers, booleans, and so on, as well as universal types (a-la System F) and iso-recursive types.
 - `mj.lan` is a simplified version of the MJ [5] (Middleweight Java) calculus.
 
 ### Gradualizer

@@ -16,11 +16,6 @@ Ground G ::= {
     some((c dyns))
 };
     
-let is_typ_var (t: term) = var?(t) && var_kind?(t, "Type") in
-let is_exp_var (t: term) = var?(t) && var_kind?(t, "Expression") in
-let filter_ts (ts: term list) = ts[`t` when is_typ_var(t)]: t in
-let filter_es (ts: term list) = ts[`t` when is_exp_var(t)]: t in
-
 (* define the consistency, pattern-matching, join, and static relations *)
 add_relation($T ~ $T);
 add_relation("matches", [$T, $T]);
@@ -235,7 +230,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
 
   let not_uniquified = dedup(concat(Premises[`&(pred ts)`]:
     let outs = seek("mode", pred, ts, "out") in
-    filter_ts(vars(outs))[`t` when not(assoc?(t, tmap))]: self))
+    vars(outs)[`t` when var_kind?(t, "Type") && not(assoc?(t, tmap))]: self))
   in
   let tmap = map_merge(tmap, not_uniquified[`t`]: (t, [t.])) in
 
@@ -245,7 +240,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
     conclusion
   };
     
-  let tmap = map_merge(tmap, filter_ts(vars(e))[`t`]: (t, [t.])) in
+  let tmap = map_merge(tmap, vars(e)[`t` when var_kind?(t, "Type")]: (t, [t.])) in
   let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
 
   (* find producers, consumers, and final types *)
@@ -270,10 +265,13 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
           else (t, t')
   in
   let producers = diff(keys(tmap_inverse), consumers) in
-  let lone_inputs = filter_ts(diff(vars(self), consumers @ producers)) in
+  let lone_inputs =
+    diff(vars(self), consumers @ producers)[`t` when var_kind?(t, "Type")]: t
+  in
    
   let extract_type_by_index (e: term) (n: int) =
-    head(Premises[`_ |- ee : t` when e = ee]: nth(filter_ts(vars!(t)), n))
+    head(Premises[`_ |- ee : t` when e = ee]:
+      nth(vars!(t)[`t` when var_kind?(t, "Type")]: t, n))
   in
   let consumer_type_by_user =
     match assoc(op, hint_list("flows")) with
@@ -405,7 +403,7 @@ set_rules(Rule(keep)[`gamma |- e : t`]: (
   [name] {
     Premises
     ------------------------------------------------------------
-    gamma |- ("ci" [e, insert_cast(e)'|filter_es(vars(e))]) : t
+    gamma |- ("ci" [e, insert_cast(e)'|(vars(e)[`t` when var_kind?(t, "Expression")]: t)]) : t
   };
   
   [name] {

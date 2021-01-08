@@ -269,9 +269,7 @@ in
   in
   let producers = diff(keys(tmap_inverse), consumers) in
   let lone_inputs =
-    let inputs = concat(Premises[`&(pred ts)`]:
-      vars(seek("mode", pred, ts, "inp")))
-    in
+    let inputs = concat(Premises[`&(pred ts)`]: vars(seek("mode", pred, ts, "inp"))) in
     diff(inputs, consumers @ producers)[`t` when var_kind?(t, "Type")]: t
   in
    

@@ -218,6 +218,9 @@ in
   let name = rule_name(self) in
   let op = match e with (op _) -> op | _ -> "" in
 
+  (* collect type annotations *)
+  let tas = vars(e)[`t` when var_kind?(t, "Type")]: t in
+
   (* split equal types in the outputs *)
   let (new_premises, tmap) =
     let ignored = Premises[`_`]:
@@ -225,7 +228,7 @@ in
       | _ |- _ : _{_/x} -> some(self)
       | _ -> none
     in
-    uniquify(Premises[`_`]: self, ignored, hint("mode"), "out")
+    uniquify(Premises, ignored, hint("mode"), "out", tas)
   in
 
   let not_uniquified = dedup(concat(Premises[`&(pred ts)`]:
@@ -240,7 +243,7 @@ in
     conclusion
   };
     
-  let tmap = map_merge(tmap, vars(e)[`t` when var_kind?(t, "Type")]: (t, [t.])) in
+  let tmap = map_merge(tmap, tas[`t`]: (t, [t.])) in
   let tmap_inverse = concat(tmap[`(t, ts)`]: ts[`_`]: (self, t)) in
 
   (* find producers, consumers, and final types *)
@@ -266,7 +269,10 @@ in
   in
   let producers = diff(keys(tmap_inverse), consumers) in
   let lone_inputs =
-    diff(vars(self), consumers @ producers)[`t` when var_kind?(t, "Type")]: t
+    let inputs = concat(Premises[`&(pred ts)`]:
+      vars(seek("mode", pred, ts, "inp")))
+    in
+    diff(inputs, consumers @ producers)[`t` when var_kind?(t, "Type")]: t
   in
    
   let extract_type_by_index (e: term) (n: int) =
@@ -376,8 +382,7 @@ in
         [(c (ts[`t`]: destination_type(t))).]
       | &("flows" [t1, t2]) when t2 = t ->
         if member?(t1, consumers) then [t1.] else [t2.]
-      | &("flows" [t1, t2]) when t1 = t ->
-        if member?(t1, consumers) then [t1.] else [t2.]
+      | &("flows" [t1, t2]) when t1 = t -> [t2.]
       | _ -> [])
     in
     if empty?(typs) then t else head(typs)

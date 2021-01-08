@@ -734,6 +734,7 @@ let uniquify_map_of_formulae ?(minimum = 1) ?(prev_vars = [])
           let v' = Term.Var v' in
           if List.mem prev_vars v' ~equal:Term.equal then
             aux2 (succ n) (succ n')
+          else if List.mem prev_vars x ~equal:Term.equal then (v', n, succ n')
           else (v', n, n')
         in
         let v', n, n' = aux2 n n' in

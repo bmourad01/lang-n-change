@@ -91,24 +91,27 @@ hint("eliminationform")[`(op, pa)`]:
   if empty?(ts) then none      
   else
     let cast_map = typing_prems[`gamma |- e : t` when not(e = elim_e)]: (e, t) in
-    let siblings = cast_map[`(e, t)`]: ("gcast" [e, t, t']) in
+    let siblings_lhs = keys(cast_map) in
+    let siblings_rhs = cast_map[`(e, t)`]: ("gcast" [e, t, t', $L]) in
     let add_subs = typing_prems[`([$!x => t1]gamma) |- e : t2`]:
-      (e, e{("gcast" [$!x, t1'|vars(pa_type), t1])/x})
+      (e, e{("gcast" [$!x, t1'|vars(pa_type), t1, $L])/x})
     in
     let tas = vars(es)[`t` when var_kind?(t, "Type")]: t in
     let tas_p = tas'|vars(pa_type) in
-    let siblings = substitute(siblings, add_subs) in
+    let siblings_lhs = substitute(siblings_lhs, add_subs) in
+    let siblings_rhs = substitute(siblings_rhs, add_subs) in
     let turn_to_value = concat(Rule[`(opp ts) --> _` when op = opp]:
       zip(es, ts)[`(t1, t2)` when var?(t2) && var_kind?(t2, "Value")]: self)
     in
-    let siblings = substitute(siblings, turn_to_value) in
+    let siblings_lhs = substitute(siblings_lhs, turn_to_value) in
+    let siblings_rhs = substitute(siblings_rhs, turn_to_value) in
     let t_p = t'|vars(pa_type) in
     let pa_v = fresh_var("v") in
     let target = 
-      let e = (op (tas_p @ [pa_v.] @ siblings)) in
-      if t = t_p then e else ("gcast" [e, t_p, t])
+      let e = (op (tas_p @ [pa_v.] @ siblings_rhs)) in
+      if t = t_p then e else ("gcast" [e, t_p, t, $L])
     in
     some(["R-ELIM-GCAST-" ^ uppercase(op)] {
        ----------------------------------------------------------------------
-       (op (tas @ [("gcast" [pa_v, pa_type', pa_type]).] @ siblings)) --> target
+       (op (tas @ [("gcast" [pa_v, pa_type', pa_type, $L]).] @ siblings_lhs)) --> target
     })

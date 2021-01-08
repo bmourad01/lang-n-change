@@ -1405,6 +1405,8 @@ let rec compile ctx e =
   | Exp.Seq (e1, e2) -> (
       let e1', typ1, ctx1 = compile ctx e1 in
       let e2', typ2, ctx2 = compile ctx e2 in
+      (* this is really horrible, but we want a more concise syntax where
+       * explicitly calling 'add_rule/add_rules/set_rules' is optional *)
       match (typ1, typ2) with
       | Type.Lan, Type.Lan ->
           let e' =

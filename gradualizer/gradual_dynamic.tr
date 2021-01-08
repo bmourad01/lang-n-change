@@ -1,7 +1,7 @@
 Type T ::= ... | ("dyn" []).;
-Expression e ::= ... | ("gcast" [$e, $T, $T, $L]).;
+Expression e ::= ... | ("gcast" [$e, $T, $T, $L]) | ("blame" [$T, $L]).;
 Context E ::= ... | ("gcast" [$E, $T, $T, $L]).;
-Error er ::= ... | ("blame" [$G, $L]).;
+Error er ::= ... | ("blame" [$T, $L]).;
 
 Value v ::= {
   let casts = Type[`(c ts)` when not(empty?(ts))]:
@@ -21,6 +21,11 @@ Ground G ::= {
   $T1 ~ $T2
   --------------------------------------------
   $Gamma |- ("gcast" [$e, $T1, $T2, $L]) : $T2
+};
+
+["T-BLAME"] {
+  ----------------------------------
+  $Gamma |- ("blame" [$T, $L]) : $T
 };
 
 add_relation($T ~ $T);

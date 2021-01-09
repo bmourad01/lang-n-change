@@ -81,7 +81,9 @@ The `gradualizer/` directory contains algorithms for adding gradual typing to a 
 
 ## Compiling to λProlog
 
-Run `./lprolog <.lan>`. The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).
+Run `./lprolog <.lan>`.
+The generated `.mod` and `.sig` files are created in the directory `lp/<name of .lan>/` and compiled/linked using Teyjus (`tjcc` and `tjlink`, respectively; note that these are assumed to be visible from your `PATH` environment variable).
+To run queries/execute programs, first enter the aforementioned directory, and then run `tjsim <name of .lan> -s <query>`.
 
 ## TODO
 

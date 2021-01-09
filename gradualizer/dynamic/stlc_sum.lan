@@ -1,7 +1,7 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (case e (x)e (x)e) | (inl T e) | (inr T e)
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (case T e (x)e (x)e) | (inl T e) | (inr T e)
 Value v ::= (abs T (x)e) | (zero.) | (inl T v) | (inr T v)
 Type T ::= (arrow T T) | (nat.) | (plus T T)
-Context E ::= (hole.) | (app E e) | (app v E) | (case E (x)e (x)e)
+Context E ::= (hole.) | (app E e) | (app v E) | (case T E (x)e (x)e)
 Environment Gamma ::= [<x, T>...]
 
 %
@@ -36,7 +36,7 @@ Gamma |- e1 : (sum T1 T2),
 [x1 => T1]Gamma |- e2 : T,
 [x2 => T2]Gamma |- e3 : T
 --------------------------------
-Gamma |- (case e1 (x1)e2 (x2)e3) : T.
+Gamma |- (case T e1 (x1)e2 (x2)e3) : T.
 
 [T-INL]
 Gamma |- e : T1
@@ -54,15 +54,15 @@ Gamma |- (inr T1 e) : (sum T1 T2).
 
 [R-CASE-INL]
 --------------------------------
-(case (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
+(case T (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
 
 [R-CASE-INR]
 --------------------------------
-(case (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
+(case T (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
 
 %
 
 mode: |- => inp inp out | step => inp out.
 principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov | plus => cov cov.
-eliminationform: app => 0 | case => 0.
+eliminationform: app => 0 | case => 1.

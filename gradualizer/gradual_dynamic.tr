@@ -139,13 +139,16 @@ hint("eliminationform")[`(op, pa)`]:
   match pa_type with (c ts) ->
   if empty?(ts) then none      
   else
+    let tas = vars(es)[`t` when var_kind?(t, "Type")]: t in
     let cast_map = typing_prems[`gamma |- e : t` when not(e = elim_e)]: (e, t) in
-    let siblings_lhs = es[`e` when not (e = elim_e)]: e in
-    let siblings_rhs = cast_map[`(e, t)`]: ("gcast" [e, t, t', $L]) in
+    let siblings_lhs = es[`e` when not(e = elim_e) && not(member?(e, tas))]: e in
+    let siblings_rhs = cast_map[`(e, t)`]:
+     let t_p = t'|vars(pa_type) in
+     if t = t_p then e else ("gcast" [e, t, t_p, $L])
+    in
     let add_subs = typing_prems[`([$!x => t1]gamma) |- e : t2`]:
       (e, e{("gcast" [$!x, t1'|vars(pa_type), t1, $L])/x})
     in
-    let tas = vars(es)[`t` when var_kind?(t, "Type")]: t in
     let tas_p = tas'|vars(pa_type) in
     let siblings_rhs = substitute(siblings_rhs, add_subs) in
     let turn_to_value = concat(Rule[`(opp ts) --> _` when op = opp]:

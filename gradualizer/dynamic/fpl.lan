@@ -305,7 +305,7 @@ Gamma |- (raise T e) : T.
 
 %
 
-mode: typeof => inp inp out | step => inp out.
-principal: typeof => no yes no | step => yes no.
+mode: |- => inp inp out | step => inp out.
+principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov | list => cov | plus => cov cov | times => cov cov.
 eliminationform: app => 0 | pred => 0 | is_zero => 0 | ite => 0 | is_nil => 1 | head => 1 | tail => 1 | case => 0 | fst => 0 | snd => 0 | appT => 1 | unfold => 0 | try => 0.

@@ -106,7 +106,7 @@ Gamma |- (succ e) : (nat.).
 
 %
 
-mode: typeof => inp inp out | step => inp out.
-principal: typeof => no yes no | step => yes no.
+mode: |- => inp inp out | step => inp out.
+principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov | list => cov.
 eliminationform: app => 0 | is_nil => 1 | head => 1 | tail => 1 | mapi => 1.

@@ -334,6 +334,6 @@ Gamma |- x : T.
 %
 
 eliminationform: app => 0 | head => 1 | is_nil => 1 | map => 1 | tail => 1.
-mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | typeof => inp inp out.
-principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | typeof => no yes no.
+mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | |- => inp inp out.
+principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | |- => no yes no.
 variance: arrow => contra cov | list => cov.

@@ -101,19 +101,25 @@ hint_element_list:
   | LSQUARE separated_nonempty_list(COMMA, hint_value) RSQUARE
     { Hint.Strs $2 }
 
+hint_element_name:
+  | NAME
+    { $1 }
+  | TURNSTILE
+    { Predicate.Builtin.typeof }
+
 hint_element:
-  | NAME MAPSTO elems = nonempty_list(hint_value)
+  | hint_element_name MAPSTO elems = nonempty_list(hint_value)
     {
       let open Core_kernel in
       let elems = List.map elems ~f:(fun e -> Hint.Str e) in
       String.Map.singleton $1 elems
     }
-  | NAME MAPSTO nonempty_list(hint_element_list)
+  | hint_element_name MAPSTO nonempty_list(hint_element_list)
     {
       let open Core_kernel in
       String.Map.singleton $1 $3
     }
-  | NAME
+  | hint_element_name
     {
       let open Core_kernel in
       String.Map.singleton $1 []

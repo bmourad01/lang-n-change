@@ -51,7 +51,7 @@ Gamma |- (appT T1 e) : T2{T1/Z}.
 
 %
 
-mode: typeof => inp inp out | step => inp out.
-principal: typeof => no yes no | step => yes no.
+mode: |- => inp inp out | step => inp out.
+principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov.
 eliminationform: app => 0 | appT => 1.

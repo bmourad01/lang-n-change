@@ -77,7 +77,7 @@ Gamma |- (select4 e) : T4.
 
 %
 
-mode: typeof => inp inp out | step => inp out.
-principal: typeof => no yes no | step => yes no.
+mode: |- => inp inp out | step => inp out.
+principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov | tupleT => cov cov cov cov.
 eliminationform: app => 0 | select1 => 0 | select2 => 0 | select3 => 0 | select4 => 0.

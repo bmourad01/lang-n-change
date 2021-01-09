@@ -86,6 +86,110 @@ add_relation("static", [$T.]);
   &("gjoin" [("dyn" []), $T, $T])
 };
 
+(* check if the language has subtyping *)
+let has_subtyping =
+  let has_relation (r: string) =
+    not(empty?(relations[`(name, _)` when r = name]: self))
+  in
+  has_relation("subtype")
+  && has_relation("join")
+  && has_relation("meet")
+in
+
+(if has_subtyping then (
+  (* we use the 'subtype_flow' relation instead *)
+  remove_relation("subtype");
+  remove_hint("mode", "subtype");
+  remove_hint("principal", "subtype");
+  
+  (* change the shape of subtype/join/meet relations *)
+  lift t1 <: t2 to t1 <: t2 ==> t1' t2'.;
+  lift &("join" [t1, t2, t3]) to &("join" [t1, t2, t3, t1', t2']).;
+  lift &("meet" [t1, t2, t3]) to &("meet" [t1, t2, t3, t1', t2']).;
+  add_relation($T <: $T ==> $T $T);
+  add_relation("join", [$T, $T, $T, $T, $T]);
+  add_relation("meet", [$T, $T, $T, $T, $T]);
+
+  # mode: ... | subtype_flow => inp inp out out | join => inp inp out out out | meet => inp inp out out out;
+  # principal: ... | subtype_flow => yes yes no no | join => yes yes no no no | meet => yes yes no no no;
+
+  (* add some grounding rules for the new relations *)
+  concat(Type[`(c ts)` when not(c = "dyn")]:
+    if empty?(ts) then [
+      ["S-DYN-" ^ uppercase(c)] {
+        --------------------------------------
+        ("dyn" []) <: (c []) ==> (c []) (c [])
+      },
+      ["S-" ^ uppercase(c) ^ "-DYN"] {
+        --------------------------------------
+        (c []) <: ("dyn" []) ==> (c []) (c [])
+      },
+      ["JOIN-DYN-" ^ uppercase(c)] {
+        ------------------------------------------------------
+        &("join" [("dyn" []), (c []), (c []), (c []), (c [])])
+      },
+      ["JOIN-" ^ uppercase(c) ^ "-DYN"] {
+        ------------------------------------------------------
+        &("join" [(c []), ("dyn" []), (c []), (c []), (c [])])
+      },
+      ["MEET-DYN-" ^ uppercase(c)] {
+        --------------------------------------------------------------
+        &("meet" [("dyn" []), (c []), ("dyn" []), (c []), (c [])])
+      },
+      ["MEET-" ^ uppercase(c) ^ "-DYN"] {
+        --------------------------------------------------------------
+        &("meet" [(c []), ("dyn" []), ("dyn" []), (c []), (c [])])
+      }
+    ] else [
+      ["S-DYN-" ^ uppercase(c)] {
+        (c (ts[`_`]: ("dyn" []))) <: (c ts) ==> $T1' $T2'
+        -------------------------------------------------
+        ("dyn" []) <: (c ts) ==> $T1' $T2'
+      },
+      ["S-" ^ uppercase(c) ^ "-DYN"] {
+        (c ts) <: (c (ts[`_`]: ("dyn" []))) ==> $T1' $T2'
+        -------------------------------------------------
+        (c ts) <: ("dyn" []) ==> $T1' $T2'
+      },
+      ["JOIN-DYN-" ^ uppercase(c)] {
+        &("join" [(c (ts[`_`]: ("dyn" []))), (c ts), $T1', $T2', $T3'])
+        ---------------------------------------------------------------
+        &("join" [("dyn" []), (c ts), $T1', $T2', $T3'])
+      },
+      ["JOIN-" ^ uppercase(c) ^ "-DYN"] {
+        &("join" [(c ts), (c (ts[`_`]: ("dyn" []))), $T1', $T2', $T3'])
+        ---------------------------------------------------------------
+        &("join" [(c ts), ("dyn" []), $T1', $T2', $T3'])
+      },
+      ["MEET-DYN-" ^ uppercase(c)] {
+        &("meet" [(c (ts[`_`]: ("dyn" []))), (c ts), $T1', $T2', $T3'])
+        --------------------------------------------------------------
+        &("meet" [("dyn" []), (c ts), $T1', $T2', $T3'])
+      },
+      ["MEET-" ^ uppercase(c) ^ "-DYN"] {
+        &("meet" [(c ts), (c (ts[`_`]: ("dyn" []))), $T1', $T2', $T3'])
+        --------------------------------------------------------------
+        &("meet" [(c ts), ("dyn" ts), $T1', $T2', $T3'])
+      }
+    ]
+  );
+
+  ["S-DYN"] {
+    --------------------------------------------------
+    ("dyn" []) <: ("dyn" []) ==> ("dyn" []) ("dyn" [])
+  };
+
+  ["JOIN-DYN"] {
+    ----------------------------------------------------------------------
+    &("join" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
+  };
+
+  ["MEET-DYN"] {
+    ----------------------------------------------------------------------
+    &("meet" [("dyn" []), ("dyn" []), ("dyn" []), ("dyn" []), ("dyn" [])])
+  }
+) else skip);
+
 let seek
     (h: string)
     (key: string)
@@ -168,6 +272,20 @@ in
     let inputs = concat(Premises[`&(pred ts)`]: vars(seek("mode", pred, ts, "inp"))) in
     diff(inputs, consumers @ producers)[`t` when var_kind?(t, "Type")]: t
   in
+   
+  let extract_type_by_index (e: term) (n: int) =
+    head(Premises[`_ |- ee : t` when e = ee]:
+      nth(vars!(t)[`t` when var_kind?(t, "Type")]: t, n))
+  in
+  let consumer_type_by_user =
+    match assoc(op, hint_list("flows")) with
+    | none -> []
+    | some(flows) ->
+      concat(flows[`[e1, n1, e2, n2]`]:
+        let t1 = extract_type_by_index($!e1, str_int(n1)) in
+        let t2 = extract_type_by_index($!e2, str_int(n2)) in
+        [(t2, t1), (t1, t1)])
+  in
   
   (* mark each producer as flowing to consumers through their final type *)
   [name] {
@@ -175,20 +293,56 @@ in
     tmap[`(t, ts)`]:
       if less?(length(ts), 2) then none
       else some(&("gjoin" (ts @ [t'.]))),
+    Premises[`_`]:
+      match self with
+      | t1 <: t2 ==> t3 t4 ->
+        [&("flows" [t1, t3]), &("flows" [t3, t1]), &("flows" [t2, t4]), &("flows" [t4, t2])]
+      | &("join" [t1, t2, t3, t4, t5]) ->
+        [&("flows" [t1, t4]), &("flows" [t4, t1]), &("flows" [t2, t5]), &("flows" [t5, t2])]
+      | &("meet" [t1, t2, t3, t4, t5]) ->
+        [&("flows" [t1, t4]), &("flows" [t4, t1]), &("flows" [t2, t5]), &("flows" [t5, t2])]
+      | _ -> [],
     dedup(concat(tmap_inverse[`(t1, t2)`]: (
-      let tfinal = final_type(t2) in
+      let tuser = assoc(t1, consumer_type_by_user) in
+      let tfinal =
+        match tuser with
+        | none -> final_type(t2)
+        | some(t) -> t
+      in
       let tcons = var_overlap(tmap(t2), consumers) in
       let flowfinal = &("flows" [t1, tfinal]) in
       let flowcons = match tcons with
         | [] -> []
-        | t :: _ -> [&("flows" [tfinal, t]).]
+        | t :: _ ->
+          let t = if none?(tuser) then t else get(tuser) in
+          [&("flows" [tfinal, t]).]
       in
       flowfinal :: flowcons)))
     ---------------------------------------------------------
     conclusion
   };
   
-  substitute(self, final_type);
+  (* replace each input by its final type *)
+  let flowc =
+    match assoc(op, hint_list("flows")) with
+    | none -> []
+    | some(flows) -> flows[`[_, "c", _, _, _]`]: self
+  in
+  (if empty?(flowc) then substitute(self, final_type)
+   else
+     let prev_vars = keys(tmap_inverse) in
+     let (new_concl, tmap) = 
+       uniquify([conclusion.], [], hint("mode"), "out", prev_vars)
+     in
+     let inputmap = flowc[`[t, _, n1, e, n2]`]:
+       let t1 = nth(tmap($!t), str_int(n1)) in
+       let t2 = extract_type_by_index($!e, str_int(n2)) in
+       (t1, t2)
+     in
+     let lonemap = concat(tmap[`(t, ts)`]:
+       if member?(t, lone_inputs) then (ts[`_`]: (self, t)) else [])
+     in
+     set_conclusion(self, substitute(head(new_concl), lonemap @ inputmap)));
   
   (* use pattern matching on type constructors in the outputs and
    * restrict lone input variables to range over static types only *)

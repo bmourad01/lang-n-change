@@ -13,6 +13,7 @@ matches T T.
 static T.
 e --> e.
 Gamma |- e : T.
+Gamma |- e ==> e : T.
 
 %
 
@@ -42,6 +43,71 @@ T ~ T'
 [C-T-DYN]
 --------------------------------------
 T ~ (dyn.).
+
+[CC-T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
+
+[CC-T-APP]
+Gamma |- e1 : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+gjoin T1_1 T1_2 T1',
+T1_2 ~ T1_1
+--------------------------------------
+Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
+
+[CC-T-CONS]
+Gamma |- e1 : T_1,
+Gamma |- e2 : M2,
+matches M2 (list T_2),
+gjoin T_1 T_2 T T',
+T_1 ~ T,
+T_2 ~ T
+--------------------------------------
+Gamma |- (cons T e1 e2) ==> (cons T (gcast e1' T_1 T L3) (gcast e2' M2 (list T) L4)) : (list T).
+
+[CC-T-FALSE]
+--------------------------------------
+Gamma |- (ff.) ==> (ff.) : (bool.).
+
+[CC-T-HEAD]
+Gamma |- e : M3,
+matches M3 (list T_1),
+gjoin T_1 T T',
+T_1 ~ T
+--------------------------------------
+Gamma |- (head T e) ==> (head T (gcast e' M3 (list T) L5)) : T.
+
+[CC-T-IS-NIL]
+Gamma |- e : M4,
+matches M4 (list T_1),
+gjoin T_1 T T',
+T_1 ~ T
+--------------------------------------
+Gamma |- (is_nil T e) ==> (is_nil T (gcast e' M4 (list T) L6)) : (bool.).
+
+[CC-T-NIL]
+--------------------------------------
+Gamma |- (nill T) ==> (nill T) : (list T).
+
+[CC-T-TAIL]
+Gamma |- e : M5,
+matches M5 (list T_1),
+gjoin T_1 T T',
+T_1 ~ T
+--------------------------------------
+Gamma |- (tail T e) ==> (tail T (gcast e' M5 (list T) L7)) : (list T).
+
+[CC-T-TRUE]
+--------------------------------------
+Gamma |- (tt.) ==> (tt.) : (bool.).
+
+[CC-T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x ==> x' : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',
@@ -126,30 +192,32 @@ static T
 static (list T).
 
 [T-ABS]
-[x => T1]Gamma |- (ci e e') : T2
+[x => T1]Gamma |- e : T2
 --------------------------------------
-Gamma |- (ci (abs T1 (x)e) (abs T1 (x)e')) : (arrow T1 T2).
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
 
 [T-APP]
-Gamma |- (ci e1 e1') : M1,
+Gamma |- e1 : M1,
 matches M1 (arrow T1_1 T2),
-Gamma |- (ci e2 e2') : T1_2,
+Gamma |- e2 : T1_2,
+gjoin T1_1 T1_2 T1',
 T1_2 ~ T1_1
 --------------------------------------
-Gamma |- (ci (app e1 e2) (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2))) : T2.
+Gamma |- (app e1 e2) : T2.
 
 [T-CONS]
-Gamma |- (ci e1 e1') : T_1,
-Gamma |- (ci e2 e2') : M2,
+Gamma |- e1 : T_1,
+Gamma |- e2 : M2,
 matches M2 (list T_2),
+gjoin T_1 T_2 T T',
 T_1 ~ T,
 T_2 ~ T
 --------------------------------------
-Gamma |- (ci (cons T e1 e2) (cons T (gcast e1' T_1 T L3) (gcast e2' M2 (list T) L4))) : (list T).
+Gamma |- (cons T e1 e2) : (list T).
 
 [T-FALSE]
 --------------------------------------
-Gamma |- (ci (ff.) (ff.)) : (bool.).
+Gamma |- (ff.) : (bool.).
 
 [T-GCAST]
 Gamma |- e : T1,
@@ -158,42 +226,45 @@ T1 ~ T2
 Gamma |- (gcast e T1 T2 L) : T2.
 
 [T-HEAD]
-Gamma |- (ci e e') : M3,
+Gamma |- e : M3,
 matches M3 (list T_1),
+gjoin T_1 T T',
 T_1 ~ T
 --------------------------------------
-Gamma |- (ci (head T e) (head T (gcast e' M3 (list T) L5))) : T.
+Gamma |- (head T e) : T.
 
 [T-IS-NIL]
-Gamma |- (ci e e') : M4,
+Gamma |- e : M4,
 matches M4 (list T_1),
+gjoin T_1 T T',
 T_1 ~ T
 --------------------------------------
-Gamma |- (ci (is_nil T e) (is_nil T (gcast e' M4 (list T) L6))) : (bool.).
+Gamma |- (is_nil T e) : (bool.).
 
 [T-NIL]
 --------------------------------------
-Gamma |- (ci (nill T) (nill T)) : (list T).
+Gamma |- (nill T) : (list T).
 
 [T-TAIL]
-Gamma |- (ci e e') : M5,
+Gamma |- e : M5,
 matches M5 (list T_1),
+gjoin T_1 T T',
 T_1 ~ T
 --------------------------------------
-Gamma |- (ci (tail T e) (tail T (gcast e' M5 (list T) L7))) : (list T).
+Gamma |- (tail T e) : (list T).
 
 [T-TRUE]
 --------------------------------------
-Gamma |- (ci (tt.) (tt.)) : (bool.).
+Gamma |- (tt.) : (bool.).
 
 [T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- (ci x x') : T.
+Gamma |- x : T.
 
 %
 
 eliminationform: app => 0 | head => 1 | is_nil => 1 | tail => 1.
-mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out.
-principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no.
+mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out | typeof_cc => inp inp out out.
+principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no | typeof_cc => no yes no no.
 variance: arrow => contra cov | list => cov.

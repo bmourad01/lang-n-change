@@ -13,6 +13,7 @@ matches T T.
 static T.
 e --> e.
 Gamma |- e : T.
+Gamma |- e ==> e : T.
 
 %
 
@@ -33,6 +34,26 @@ T2 ~ T2'
 [C-T-DYN]
 --------------------------------------
 T ~ (dyn.).
+
+[CC-T-ABSINF]
+[x => T1]Gamma |- e : T2,
+static T1
+--------------------------------------
+Gamma |- (abs_inf (x)e) ==> (abs_inf (x)e') : (arrow T1 T2).
+
+[CC-T-APP]
+Gamma |- e1 : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+gjoin T1_1 T1_2 T1',
+T1_2 ~ T1_1
+--------------------------------------
+Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
+
+[CC-T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x ==> x' : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',
@@ -67,18 +88,19 @@ static T2
 static (arrow T1 T2).
 
 [T-ABSINF]
-[x => T1]Gamma |- (ci e e') : T2,
+[x => T1]Gamma |- e : T2,
 static T1
 --------------------------------------
-Gamma |- (ci (abs_inf (x)e) (abs_inf (x)e')) : (arrow T1 T2).
+Gamma |- (abs_inf (x)e) : (arrow T1 T2).
 
 [T-APP]
-Gamma |- (ci e1 e1') : M1,
+Gamma |- e1 : M1,
 matches M1 (arrow T1_1 T2),
-Gamma |- (ci e2 e2') : T1_2,
+Gamma |- e2 : T1_2,
+gjoin T1_1 T1_2 T1',
 T1_2 ~ T1_1
 --------------------------------------
-Gamma |- (ci (app e1 e2) (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2))) : T2.
+Gamma |- (app e1 e2) : T2.
 
 [T-GCAST]
 Gamma |- e : T1,
@@ -89,11 +111,11 @@ Gamma |- (gcast e T1 T2 L) : T2.
 [T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- (ci x x') : T.
+Gamma |- x : T.
 
 %
 
 eliminationform: app => 0.
-mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out.
-principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no.
+mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out | typeof_cc => inp inp out out.
+principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no | typeof_cc => no yes no no.
 variance: arrow => contra cov.

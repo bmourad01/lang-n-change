@@ -40,29 +40,28 @@ T2 ~ T2'
 T ~ (dyn.).
 
 [CC-T-ABS]
-[x => T1]Gamma |- e : T2
+[x => T1]Gamma |- e ==> e' : T2
 --------------------------------------
 Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
 
 [CC-T-ADD]
-Gamma |- e1 : M1,
+Gamma |- e1 ==> e1' : M1,
 matches M1 (nat.),
-Gamma |- e2 : M2,
+Gamma |- e2 ==> e2' : M2,
 matches M2 (nat.)
 --------------------------------------
 Gamma |- (add e1 e2) ==> (add (gcast e1' M1 (nat.) L1) (gcast e2' M2 (nat.) L2)) : (nat.).
 
 [CC-T-APP]
-Gamma |- e1 : M3,
+Gamma |- e1 ==> e1' : M3,
 matches M3 (arrow T1_1 T2),
-Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
+Gamma |- e2 ==> e2' : T1_2,
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) ==> (app (gcast e1' M3 (arrow T1_1 T2) L3) (gcast e2' T1_2 T1_1 L4)) : T2.
 
 [CC-T-SUCC]
-Gamma |- e : M4,
+Gamma |- e ==> e' : M4,
 matches M4 (nat.)
 --------------------------------------
 Gamma |- (succ e) ==> (succ (gcast e' M4 (nat.) L5)) : (nat.).
@@ -149,7 +148,6 @@ Gamma |- (add e1 e2) : (nat.).
 Gamma |- e1 : M3,
 matches M3 (arrow T1_1 T2),
 Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) : T2.

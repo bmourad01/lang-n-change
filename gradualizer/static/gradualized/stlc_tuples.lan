@@ -44,48 +44,47 @@ T4 ~ T4'
 (tupleT T1 T2 T3 T4) ~ (tupleT T1' T2' T3' T4').
 
 [CC-T-ABS]
-[x => T1]Gamma |- e : T2
+[x => T1]Gamma |- e ==> e' : T2
 --------------------------------------
 Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
 
 [CC-T-APP]
-Gamma |- e1 : M1,
+Gamma |- e1 ==> e1' : M1,
 matches M1 (arrow T1_1 T2),
-Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
+Gamma |- e2 ==> e2' : T1_2,
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
 
 [CC-T-SELECT1]
-Gamma |- e : M2,
+Gamma |- e ==> e' : M2,
 matches M2 (tupleT T1 T2 T3 T4)
 --------------------------------------
 Gamma |- (select1 e) ==> (select1 (gcast e' M2 (tupleT T1 T2 T3 T4) L3)) : T1.
 
 [CC-T-SELECT2]
-Gamma |- e : M3,
+Gamma |- e ==> e' : M3,
 matches M3 (tupleT T1 T2 T3 T4)
 --------------------------------------
 Gamma |- (select2 e) ==> (select2 (gcast e' M3 (tupleT T1 T2 T3 T4) L4)) : T2.
 
 [CC-T-SELECT3]
-Gamma |- e : M4,
+Gamma |- e ==> e' : M4,
 matches M4 (tupleT T1 T2 T3 T4)
 --------------------------------------
 Gamma |- (select3 e) ==> (select3 (gcast e' M4 (tupleT T1 T2 T3 T4) L5)) : T3.
 
 [CC-T-SELECT4]
-Gamma |- e : M5,
+Gamma |- e ==> e' : M5,
 matches M5 (tupleT T1 T2 T3 T4)
 --------------------------------------
 Gamma |- (select4 e) ==> (select4 (gcast e' M5 (tupleT T1 T2 T3 T4) L6)) : T4.
 
 [CC-T-TUPLE]
-Gamma |- e1 : T1,
-Gamma |- e2 : T2,
-Gamma |- e3 : T3,
-Gamma |- e4 : T4
+Gamma |- e1 ==> e1' : T1,
+Gamma |- e2 ==> e2' : T2,
+Gamma |- e3 ==> e3' : T3,
+Gamma |- e4 ==> e4' : T4
 --------------------------------------
 Gamma |- (tuple e1 e2 e3 e4) ==> (tuple e1' e2' e3' e4') : (tupleT T1 T2 T3 T4).
 
@@ -175,7 +174,6 @@ Gamma |- (abs T1 (x)e) : (arrow T1 T2).
 Gamma |- e1 : M1,
 matches M1 (arrow T1_1 T2),
 Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) : T2.

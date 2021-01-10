@@ -384,7 +384,7 @@ concat(Rule(keep)[`gamma |- e : t`]: (
 
     (* remove spurious joins *)
     let r = [name] {
-      Premises(keep)[`&("gjoin" ts)`]:
+      premises(r)(keep)[`&("gjoin" ts)`]:
         if member?(last(ts), vars(t)) then some(self) else none
       ---------------------------------------------------------
       conclusion(r)
@@ -393,7 +393,7 @@ concat(Rule(keep)[`gamma |- e : t`]: (
     (* remove flows to join types, and promote the remaining flows to consistency *)  
     let join_ts = Premises[`&("gjoin" ts)`]: last(ts) in
     let r = [name] {
-      Premises(keep)[`&("flows" [t1, t2])`]:
+      premises(r)(keep)[`&("flows" [t1, t2])`]:
         if member?(t2, join_ts) || (t1 = t2) then none else some(t1 ~ t2)
       -------------------------------------------------------------------
       conclusion(r)
@@ -423,7 +423,7 @@ concat(Rule(keep)[`gamma |- e : t`]: (
   let r = cleanup(self, match conclusion with _ |- _ : t -> t) in
 
   (* compile to the cast calculus *)
-  lift (gamma |- e : t) to (gamma |- e ==> e' : t).;
+  lift (gamma |- e : t) to (gamma |- e ==> e' : t) in r.;
   let rec destination_type (t: term) : term =
     let typs = concat(Premises[`f`]:
       match f with

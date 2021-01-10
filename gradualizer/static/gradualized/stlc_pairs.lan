@@ -42,33 +42,32 @@ T2 ~ T2'
 (times T1 T2) ~ (times T1' T2').
 
 [CC-T-ABS]
-[x => T1]Gamma |- e : T2
+[x => T1]Gamma |- e ==> e' : T2
 --------------------------------------
 Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
 
 [CC-T-APP]
-Gamma |- e1 : M1,
+Gamma |- e1 ==> e1' : M1,
 matches M1 (arrow T1_1 T2),
-Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
+Gamma |- e2 ==> e2' : T1_2,
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
 
 [CC-T-FST]
-Gamma |- e : M2,
+Gamma |- e ==> e' : M2,
 matches M2 (times T1 T2)
 --------------------------------------
 Gamma |- (fst e) ==> (fst (gcast e' M2 (times T1 T2) L3)) : T1.
 
 [CC-T-PAIR]
-Gamma |- e1 : T1,
-Gamma |- e2 : T2
+Gamma |- e1 ==> e1' : T1,
+Gamma |- e2 ==> e2' : T2
 --------------------------------------
 Gamma |- (pair e1 e2) ==> (pair e1' e2') : (times T1 T2).
 
 [CC-T-SND]
-Gamma |- e : M3,
+Gamma |- e ==> e' : M3,
 matches M3 (times T1 T2)
 --------------------------------------
 Gamma |- (snd e) ==> (snd (gcast e' M3 (times T1 T2) L4)) : T2.
@@ -147,7 +146,6 @@ Gamma |- (abs T1 (x)e) : (arrow T1 T2).
 Gamma |- e1 : M1,
 matches M1 (arrow T1_1 T2),
 Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) : T2.

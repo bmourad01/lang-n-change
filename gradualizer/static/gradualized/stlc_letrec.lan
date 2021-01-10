@@ -36,29 +36,27 @@ T2 ~ T2'
 T ~ (dyn.).
 
 [CC-T-ABS]
-[x => T1]Gamma |- e : T2
+[x => T1]Gamma |- e ==> e' : T2
 --------------------------------------
 Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
 
 [CC-T-APP]
-Gamma |- e1 : M1,
+Gamma |- e1 ==> e1' : M1,
 matches M1 (arrow T1_1 T2),
-Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
+Gamma |- e2 ==> e2' : T1_2,
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
 
 [CC-T-LET]
-Gamma |- e1 : T1,
-[x => T1]Gamma |- e2 : T2
+Gamma |- e1 ==> e1' : T1,
+[x => T1]Gamma |- e2 ==> e2' : T2
 --------------------------------------
 Gamma |- (let e1 (x)e2) ==> (let e1' (x)e2') : T2.
 
 [CC-T-LETREC]
-[x => T1_1]Gamma |- e1 : T1,
-[x => T1]Gamma |- e2 : T2,
-gjoin T1_1 T1 T1',
+[x => T1_1]Gamma |- e1 ==> e1' : T1,
+[x => T1]Gamma |- e2 ==> e2' : T2,
 T1_1 ~ T1
 --------------------------------------
 Gamma |- (letrec T1 (x)e1 (x)e2) ==> (letrec T1 (x)e1' (x)e2') : T2.
@@ -117,7 +115,6 @@ Gamma |- (abs T1 (x)e) : (arrow T1 T2).
 Gamma |- e1 : M1,
 matches M1 (arrow T1_1 T2),
 Gamma |- e2 : T1_2,
-gjoin T1_1 T1_2 T1',
 T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) : T2.
@@ -137,7 +134,6 @@ Gamma |- (let e1 (x)e2) : T2.
 [T-LETREC]
 [x => T1_1]Gamma |- e1 : T1,
 [x => T1]Gamma |- e2 : T2,
-gjoin T1_1 T1 T1',
 T1_1 ~ T1
 --------------------------------------
 Gamma |- (letrec T1 (x)e1 (x)e2) : T2.

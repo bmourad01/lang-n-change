@@ -1,0 +1,178 @@
+Context E ::= (app E e) | (app v E) | (hole.) | (select1 E) | (select2 E) | (select3 E) | (select4 E) | (tuple E e e e) | (tuple v E e e) | (tuple v v E e) | (tuple v v v E)
+Environment Gamma ::= [<x, T>...]
+Expression e ::= x | (abs T (x)e) | (app e e) | (gcast e T T L) | (select1 e) | (select2 e) | (select3 e) | (select4 e) | (tuple e e e e)
+Ground G ::= (arrow (dyn.) (dyn.)) | (tupleT (dyn.) (dyn.) (dyn.) (dyn.))
+Type T ::= (arrow T T) | (dyn.) | (tupleT T T T T)
+Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (tupleT T T T T) (tupleT T T T T) L) | (tuple v v v v)
+
+%
+
+T ~ T.
+gjoin T T T.
+matches T T.
+static T.
+e --> e.
+Gamma |- e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[C-TUPLET]
+T1 ~ T1',
+T2 ~ T2',
+T3 ~ T3',
+T4 ~ T4'
+--------------------------------------
+(tupleT T1 T2 T3 T4) ~ (tupleT T1' T2' T3' T4').
+
+[GJOIN-ARROW]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
+
+[GJOIN-DYN-T]
+--------------------------------------
+gjoin (dyn.) T T.
+
+[GJOIN-T-DYN]
+--------------------------------------
+gjoin T (dyn.) T.
+
+[GJOIN-TUPLET]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2'',
+gjoin T3 T3' T3'',
+gjoin T4 T4' T4''
+--------------------------------------
+gjoin (tupleT T1 T2 T3 T4) (tupleT T1' T2' T3' T4') (tupleT T1'' T2'' T3'' T4'').
+
+[MATCHES-ARROW]
+--------------------------------------
+matches (arrow T1 T2) (arrow T1 T2).
+
+[MATCHES-DYN-ARROW]
+--------------------------------------
+matches (dyn.) (arrow (dyn.) (dyn.)).
+
+[MATCHES-DYN-TUPLET]
+--------------------------------------
+matches (dyn.) (tupleT (dyn.) (dyn.) (dyn.) (dyn.)).
+
+[MATCHES-TUPLET]
+--------------------------------------
+matches (tupleT T1 T2 T3 T4) (tupleT T1 T2 T3 T4).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-SELECT1]
+--------------------------------------
+(select1 (tuple v1 v2 v3 v4)) --> v1.
+
+[R-SELECT2]
+--------------------------------------
+(select2 (tuple v1 v2 v3 v4)) --> v2.
+
+[R-SELECT3]
+--------------------------------------
+(select3 (tuple v1 v2 v3 v4)) --> v3.
+
+[R-SELECT4]
+--------------------------------------
+(select4 (tuple v1 v2 v3 v4)) --> v4.
+
+[STATIC-ARROW]
+static T1,
+static T2
+--------------------------------------
+static (arrow T1 T2).
+
+[STATIC-TUPLET]
+static T1,
+static T2,
+static T3,
+static T4
+--------------------------------------
+static (tupleT T1 T2 T3 T4).
+
+[T-ABS]
+[x => T1]Gamma |- (ci e e') : T2
+--------------------------------------
+Gamma |- (ci (abs T1 (x)e) (abs T1 (x)e')) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- (ci e1 e1') : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- (ci e2 e2') : T1_2,
+T1_2 ~ T1_1
+--------------------------------------
+Gamma |- (ci (app e1 e2) (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2))) : T2.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-SELECT1]
+Gamma |- (ci e e') : M2,
+matches M2 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (ci (select1 e) (select1 (gcast e' M2 (tupleT T1 T2 T3 T4) L3))) : T1.
+
+[T-SELECT2]
+Gamma |- (ci e e') : M3,
+matches M3 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (ci (select2 e) (select2 (gcast e' M3 (tupleT T1 T2 T3 T4) L4))) : T2.
+
+[T-SELECT3]
+Gamma |- (ci e e') : M4,
+matches M4 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (ci (select3 e) (select3 (gcast e' M4 (tupleT T1 T2 T3 T4) L5))) : T3.
+
+[T-SELECT4]
+Gamma |- (ci e e') : M5,
+matches M5 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (ci (select4 e) (select4 (gcast e' M5 (tupleT T1 T2 T3 T4) L6))) : T4.
+
+[T-TUPLE]
+Gamma |- (ci e1 e1') : T1,
+Gamma |- (ci e2 e2') : T2,
+Gamma |- (ci e3 e3') : T3,
+Gamma |- (ci e4 e4') : T4
+--------------------------------------
+Gamma |- (ci (tuple e1 e2 e3 e4) (tuple e1' e2' e3' e4')) : (tupleT T1 T2 T3 T4).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- (ci x x') : T.
+
+%
+
+eliminationform: app => 0 | select1 => 0 | select2 => 0 | select3 => 0 | select4 => 0.
+mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out.
+principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no.
+variance: arrow => contra cov | tupleT => cov cov cov cov.

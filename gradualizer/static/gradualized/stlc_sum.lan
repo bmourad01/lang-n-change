@@ -1,0 +1,151 @@
+Context E ::= (app E e) | (app v E) | (case E (x)e (x)e) | (hole.) | (inl T E) | (inr T E)
+Environment Gamma ::= [<x, T>...]
+Expression e ::= x | (abs T (x)e) | (app e e) | (case e (x)e (x)e) | (gcast e T T L) | (inl T e) | (inr T e)
+Ground G ::= (arrow (dyn.) (dyn.)) | (plus (dyn.) (dyn.))
+Type T ::= (arrow T T) | (dyn.) | (plus T T)
+Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (plus T T) (plus T T) L) | (inl T v) | (inr T v)
+
+%
+
+T ~ T.
+gjoin T T T.
+matches T T.
+static T.
+e --> e.
+Gamma |- e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-PLUS]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(plus T1 T2) ~ (plus T1' T2').
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[GJOIN-ARROW]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
+
+[GJOIN-DYN-T]
+--------------------------------------
+gjoin (dyn.) T T.
+
+[GJOIN-PLUS]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (plus T1 T2) (plus T1' T2') (plus T1'' T2'').
+
+[GJOIN-T-DYN]
+--------------------------------------
+gjoin T (dyn.) T.
+
+[MATCHES-ARROW]
+--------------------------------------
+matches (arrow T1 T2) (arrow T1 T2).
+
+[MATCHES-DYN-ARROW]
+--------------------------------------
+matches (dyn.) (arrow (dyn.) (dyn.)).
+
+[MATCHES-DYN-PLUS]
+--------------------------------------
+matches (dyn.) (plus (dyn.) (dyn.)).
+
+[MATCHES-PLUS]
+--------------------------------------
+matches (plus T1 T2) (plus T1 T2).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-CASE-INL]
+--------------------------------------
+(case (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
+
+[R-CASE-INR]
+--------------------------------------
+(case (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
+
+[STATIC-ARROW]
+static T1,
+static T2
+--------------------------------------
+static (arrow T1 T2).
+
+[STATIC-PLUS]
+static T1,
+static T2
+--------------------------------------
+static (plus T1 T2).
+
+[T-ABS]
+[x => T1]Gamma |- (ci e e') : T2
+--------------------------------------
+Gamma |- (ci (abs T1 (x)e) (abs T1 (x)e')) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- (ci e1 e1') : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- (ci e2 e2') : T1_2,
+T1_2 ~ T1_1
+--------------------------------------
+Gamma |- (ci (app e1 e2) (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2))) : T2.
+
+[T-CASE]
+Gamma |- (ci e1 e1') : M2,
+matches M2 (sum T1 T2),
+[x1 => T1]Gamma |- (ci e2 e2') : T_1,
+[x2 => T2]Gamma |- (ci e3 e3') : T_2,
+gjoin T_1 T_2 T'
+--------------------------------------
+Gamma |- (ci (case e1 (x1)e2 (x2)e3) (case (gcast e1' M2 (sum T1 T2) L3) (x1)e2' (x2)e3')) : T'.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-INL]
+Gamma |- (ci e e') : T1
+--------------------------------------
+Gamma |- (ci (inl T2 e) (inl T2 e')) : (sum T1 T2).
+
+[T-INR]
+Gamma |- (ci e e') : T2
+--------------------------------------
+Gamma |- (ci (inr T1 e) (inr T1 e')) : (sum T1 T2).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- (ci x x') : T.
+
+%
+
+eliminationform: app => 0 | case => 0.
+mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out.
+principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no.
+variance: arrow => contra cov | plus => cov cov.

@@ -163,6 +163,8 @@ sugared_relation:
     { (Predicate.Builtin.typeof, [$1; $3; $5]) }
   | term TURNSTILE term COLON term BIGARROW term DOT
     { (Predicate.Builtin.typeof_match, [$1; $3; $5; $7]) }
+  | term TURNSTILE term BIGARROW term COLON term DOT
+    { (Predicate.Builtin.typeof_cc, [$1; $3; $5; $7]) }
   | term STEP term DOT
     { (Predicate.Builtin.step, [$1; $3]) }
   | term SUBTYPE term DOT
@@ -190,6 +192,12 @@ sugared_formula:
   | term TURNSTILE term COLON term BIGARROW term
     {
       let predicate = Predicate.Builtin.typeof_match in
+      let args = [$1; $3; $5; $7] in
+      Formula.Prop {predicate; args}
+    }
+  | term TURNSTILE term BIGARROW term COLON term
+    {
+      let predicate = Predicate.Builtin.typeof_cc in
       let args = [$1; $3; $5; $7] in
       Formula.Prop {predicate; args}
     }

@@ -417,6 +417,8 @@ sugared_relation:
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.typeof, Exp.List [$1; $3; $5]) }
   | exp TURNSTILE exp COLON exp BIGARROW exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.typeof_match, Exp.List [$1; $3; $5; $7]) }
+  | exp TURNSTILE exp BIGARROW exp COLON exp
+    { Exp.New_relation (Exp.Str Language.Predicate.Builtin.typeof_cc, Exp.List [$1; $3; $5; $7]) }
   | exp STEP exp
     { Exp.New_relation (Exp.Str Language.Predicate.Builtin.step, Exp.List [$1; $3]) }
   | exp SUBTYPE exp
@@ -540,6 +542,12 @@ sugared_formula:
   | exp TURNSTILE exp COLON exp BIGARROW exp
     {
       let predicate = Exp.Str Language.Predicate.Builtin.typeof_match in
+      let args = Exp.List [$1; $3; $5; $7] in
+      Exp.Formula_prop (predicate, args)
+    }
+  | exp TURNSTILE exp BIGARROW exp COLON exp
+    {
+      let predicate = Exp.Str Language.Predicate.Builtin.typeof_cc in
       let args = Exp.List [$1; $3; $5; $7] in
       Exp.Formula_prop (predicate, args)
     }
@@ -668,6 +676,12 @@ sugared_pattern_formula:
   | pattern TURNSTILE pattern COLON pattern BIGARROW pattern
     {
       let predicate = Exp.Pattern.Str Language.Predicate.Builtin.typeof_match in
+      let args = Exp.Pattern.List [$1; $3; $5; $7] in
+      Exp.Pattern.Formula_prop (predicate, args)
+    }
+  | pattern TURNSTILE pattern BIGARROW pattern COLON pattern
+    {
+      let predicate = Exp.Pattern.Str Language.Predicate.Builtin.typeof_cc in
       let args = Exp.Pattern.List [$1; $3; $5; $7] in
       Exp.Pattern.Formula_prop (predicate, args)
     }

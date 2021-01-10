@@ -1443,7 +1443,8 @@ let rec compile ctx e =
           (e', Type.Lan, ctx2)
       | Type.Rule, _ -> (
         match Map.find ctx.type_env "self" with
-        | Some Type.Rule when Type.(equal typ2 Rule) ->
+        | Some Type.Rule
+          when Type.(equal typ2 Rule || equal typ2 (List Rule)) ->
             let e' =
               Printf.sprintf
                 "let self = %s in lan_vars := Set.union !lan_vars (R.vars \

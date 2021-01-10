@@ -117,6 +117,8 @@ module Predicate : sig
 
     val typeof_match : t
 
+    val typeof_cc : t
+
     val step : t
 
     val subtype : t

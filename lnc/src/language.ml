@@ -491,6 +491,8 @@ module Predicate = struct
 
     let typeof_match = "typeof_match"
 
+    let typeof_cc = "typeof_cc"
+
     let step = "step"
 
     let subtype = "subtype"
@@ -524,6 +526,12 @@ module Formula = struct
         else if Predicate.(equal predicate Builtin.typeof_match) && len = 4
         then
           Printf.sprintf "%s |- %s : %s ==> %s"
+            (Term.to_string (List.hd_exn args))
+            (Term.to_string (List.nth_exn args 1))
+            (Term.to_string (List.nth_exn args 2))
+            (Term.to_string (List.last_exn args))
+        else if Predicate.(equal predicate Builtin.typeof_cc) && len = 4 then
+          Printf.sprintf "%s |- %s ==> %s : %s"
             (Term.to_string (List.hd_exn args))
             (Term.to_string (List.nth_exn args 1))
             (Term.to_string (List.nth_exn args 2))
@@ -957,6 +965,12 @@ let to_string lan =
                  (Term.to_string (List.last_exn ts))
              else if Predicate.(equal p Builtin.typeof_match) && len = 4 then
                Printf.sprintf "%s |- %s : %s ==> %s."
+                 (Term.to_string (List.hd_exn ts))
+                 (Term.to_string (List.nth_exn ts 1))
+                 (Term.to_string (List.nth_exn ts 2))
+                 (Term.to_string (List.last_exn ts))
+             else if Predicate.(equal p Builtin.typeof_cc) && len = 4 then
+               Printf.sprintf "%s |- %s ==> %s : %s."
                  (Term.to_string (List.hd_exn ts))
                  (Term.to_string (List.nth_exn ts 1))
                  (Term.to_string (List.nth_exn ts 2))

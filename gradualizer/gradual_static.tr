@@ -109,8 +109,13 @@ let map_merge
   m @ rest
 in
 
+add_relation($Gamma |- $e ==> $e : $T);
+
+# mode: ... | typeof_cc => inp inp out out;
+# principal: ... | typeof_cc => no yes no no;
+
 (* gradualize the typing rules *)
-(Rule(keep)[`gamma |- e : t`]: (
+concat(Rule(keep)[`gamma |- e : t`]: (
   let name = rule_name(self) in
   let op = match e with (op _) -> op | _ -> "" in
 
@@ -220,8 +225,51 @@ in
     conclusion
   };
 
+  let cleanup (r: rule) (t: term) =
+    let name = rule_name(r) in
+
+    (* remove spurious joins *)
+    let r = [name] {
+      Premises(keep)[`&("gjoin" ts)`]:
+        if member?(last(ts), vars(t)) then some(self) else none
+      ---------------------------------------------------------
+      conclusion(r)
+    } in
+
+    (* remove flows to join types, and promote the remaining flows to consistency *)  
+    let join_ts = Premises[`&("gjoin" ts)`]: last(ts) in
+    let r = [name] {
+      Premises(keep)[`&("flows" [t1, t2])`]:
+        if member?(t2, join_ts) || (t1 = t2) then none else some(t1 ~ t2)
+      -------------------------------------------------------------------
+      conclusion(r)
+    } in
+
+    (* filter out duplicates that correspond to bidirectional
+     * flows, since the consistency relation is symmetric *)
+    let rec filter_bidirectional
+        (acc : formula list)
+        (prems : formula list) : formula list =
+      match prems with
+      | [] -> rev(acc)
+      | (t1 ~ t2) :: rest -> 
+        let acc = if member?(t2 ~ t1, acc) then acc else (t1 ~ t2) :: acc in
+        filter_bidirectional(acc, rest)
+      | f :: rest -> filter_bidirectional(f :: acc, rest)
+    in
+    let r =[name] {
+      filter_bidirectional([], premises(r))
+      ----------------------------------
+      conclusion(r)
+    } in
+
+    r
+  in
+
+  let r = cleanup(self, match conclusion with _ |- _ : t -> t) in
+
   (* compile to the cast calculus *)
-  lift (gamma |- e : t) to (gamma |- ("ci" [e, e']) : t).;
+  lift (gamma |- e : t) to (gamma |- e ==> e' : t).;
   let rec destination_type (t: term) : term =
     let typs = concat(Premises[`f`]:
       match f with
@@ -238,7 +286,7 @@ in
     if empty?(Premises) then []
     else vars(self)[`t`]: (t, destination_type(t))
   in
-  let emap = (e, t) :: Premises[`_ |- ("ci" [e, _]) : t`]: (e, t) in
+  let emap = (e, t) :: Premises[`_ |- e ==> _ : t`]: (e, t) in
   let rec insert_cast (e: term) : term =
     match e with
     | (op es) -> (op (es[`e`]: insert_cast(e)))
@@ -250,51 +298,18 @@ in
         if t = tsub then e else ("gcast" [e, t, tsub, fresh_var("L")])
   in
 
-  match conclusion with gamma |- ("ci" [e, _]) : t ->
+  match conclusion with gamma |- e ==> _  : t ->
+  
+  let cc_name = "CC-" ^ name in
 
   (* perform cast insertion on the conclusion *)
-  [name] {
+  [cc_name] {
     Premises
     ------------------------------------------------------------------------------------------
-    gamma |- ("ci" [e, insert_cast(e)'|(vars(e)[`t` when var_kind?(t, "Expression")]: t)]) : t
-  };
-  
-  (* remove spurious joins *)
-  [name] {
-    Premises(keep)[`&("gjoin" ts)`]:
-      if member?(last(ts), vars(t)) then some(self) else none
-    ---------------------------------------------------------
-    conclusion
+    gamma |- e ==> insert_cast(e)'|(vars(e)[`t` when var_kind?(t, "Expression")]: t) : t
   };
 
-  (* remove flows to join types, and promote the remaining flows to consistency *)  
-  let join_ts = Premises[`&("gjoin" ts)`]: last(ts) in
-
-  [name] {
-    Premises(keep)[`&("flows" [t1, t2])`]:
-      if member?(t2, join_ts) || (t1 = t2) then none else some(t1 ~ t2)
-    -------------------------------------------------------------------
-    conclusion
-  };
-
-  (* filter out duplicates that correspond to bidirectional
-   * flows, since the consistency relation is symmetric *)
-  let rec filter_bidirectional
-      (acc : formula list)
-      (prems : formula list) : formula list =
-    match prems with
-    | [] -> rev(acc)
-    | (t1 ~ t2) :: rest -> 
-      let acc = if member?(t2 ~ t1, acc) then acc else (t1 ~ t2) :: acc in
-      filter_bidirectional(acc, rest)
-    | f :: rest -> filter_bidirectional(f :: acc, rest)
-  in
-    
-  [name] {
-    filter_bidirectional([], Premises)
-    ----------------------------------
-    conclusion
-  }
+  [r, cleanup(self, t)]
 ));
 
 ["T-GCAST"] {

@@ -75,7 +75,7 @@ Gamma |- (snd e) ==> (snd (gcast e' M3 (times T1 T2) L4)) : T2.
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

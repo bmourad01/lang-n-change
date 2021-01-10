@@ -64,7 +64,7 @@ Gamma |- (letrec T1 (x)e1 (x)e2) ==> (letrec T1 (x)e1' (x)e2') : T2.
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

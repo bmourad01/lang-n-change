@@ -69,7 +69,7 @@ Gamma |- (succ e) ==> (succ (gcast e' M4 (nat.) L5)) : (nat.).
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [CC-T-ZERO]
 --------------------------------------

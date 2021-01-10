@@ -305,8 +305,8 @@ concat(Rule(keep)[`gamma |- e : t`]: (
   (* perform cast insertion on the conclusion *)
   [cc_name] {
     Premises
-    ------------------------------------------------------------------------------------------
-    gamma |- e ==> insert_cast(e)'|(vars(e)[`t` when var_kind?(t, "Expression")]: t) : t
+    ----------------------------------------------------------------------------------------------------
+    gamma |- e ==> insert_cast(e)'|(vars(e)[`t` when not(op = "") && var_kind?(t, "Expression")]: t) : t
   };
 
   [r, cleanup(self, t)]

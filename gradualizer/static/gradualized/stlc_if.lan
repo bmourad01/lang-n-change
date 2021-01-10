@@ -72,7 +72,7 @@ Gamma |- (tt.) ==> (tt.) : (bool.).
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

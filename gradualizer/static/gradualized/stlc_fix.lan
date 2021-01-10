@@ -59,7 +59,7 @@ Gamma |- (fix T e) ==> (fix T (gcast e' M2 (arrow T T) L3)) : T.
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

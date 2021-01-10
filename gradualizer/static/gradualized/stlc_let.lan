@@ -57,7 +57,7 @@ Gamma |- (let e1 (x)e2) ==> (let e1' (x)e2') : T2.
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

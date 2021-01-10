@@ -91,7 +91,7 @@ Gamma |- (tuple e1 e2 e3 e4) ==> (tuple e1' e2' e3' e4') : (tupleT T1 T2 T3 T4).
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

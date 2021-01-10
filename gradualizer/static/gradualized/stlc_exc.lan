@@ -71,7 +71,7 @@ Gamma |- (try e1 e2) ==> (try (gcast e1' T_1 T' L4) (gcast e2' M4 (arrow (excT.)
 [CC-T-VAR]
 member <x, T> Gamma
 --------------------------------------
-Gamma |- x ==> x' : T.
+Gamma |- x ==> x : T.
 
 [GJOIN-ARROW]
 gjoin T1 T1' T1'',

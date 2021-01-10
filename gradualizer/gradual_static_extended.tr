@@ -273,11 +273,7 @@ concat(Rule(keep)[`gamma |- e : t`]: (
           else (t, t')
   in
   let producers = diff(keys(tmap_inverse), consumers) in
-  let lone_inputs =
-    let inputs = concat(Premises[`&(pred ts)`]: vars(seek("mode", pred, ts, "inp"))) in
-    diff(inputs, consumers @ producers)[`t` when var_kind?(t, "Type")]: t
-  in
-   
+
   let extract_type_by_index (e: term) (n: int) =
     head(Premises[`_ |- ee : t` when e = ee]:
       nth(vars!(t)[`t` when var_kind?(t, "Type")]: t, n))
@@ -344,10 +340,14 @@ concat(Rule(keep)[`gamma |- e : t`]: (
        let t2 = extract_type_by_index($!e, str_int(n2)) in
        (t1, t2)
      in
-     let lonemap = concat(tmap[`(t, ts)`]:
-       if member?(t, lone_inputs) then (ts[`_`]: (self, t)) else [])
+     let to_change = flowc[`[t, _, _, _, _]`]: $!t in
+     let get_back =
+       concat(diff(keys(tmap), to_change)[`t`]:
+        concat(tmap[`(tt, ts)` when t = tt]:
+          ts[`_`]: (self, t)))
      in
-     set_conclusion(self, substitute(head(new_concl), lonemap @ inputmap)));
+     let new_concl = substitute(head(new_concl), get_back) in
+     set_conclusion(self, substitute(substitute(new_concl, inputmap), final_type)));
   
   (* use pattern matching on type constructors in the outputs and
    * restrict lone input variables to range over static types only *)
@@ -360,13 +360,15 @@ concat(Rule(keep)[`gamma |- e : t`]: (
       (typ, &("matches" [typ, (c new_ts)]) :: fs)
     | _ -> (t, [])
   in
+  let lone_inputs =
+    diff(vars(self), consumers @ producers @ tas @ keys(tmap)')[`t` when var_kind?(t, "Type")]: t
+  in
   [name] {
     Premises(keep)[`gamma |- e : t`]:
       let (t, fs) = make_match(t) in
       (gamma |- e : t) :: fs,
     (* first check if the lone input was substituted *)
-    let r_vars = vars(self) in
-    lone_inputs[`t` when member?(t, r_vars) && constructor?(e)]: &("static" [t.])
+    lone_inputs[`t` when not(op = "")]: &("static" [t.])
     ------------------------------------------------------------------------------
     conclusion
   };

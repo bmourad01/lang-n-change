@@ -5,7 +5,7 @@ let has_binding (ts: term list) : bool =
 in
     
 Pattern p ::= {
-  syntax("Value")[`(op vs)` when not(has_binding(vs))]:
+  Value[`(op vs)` when not(has_binding(vs))]:
     let ps = vs(keep)[`v` when var?(v) && var_kind?(v, "Value")]: $p in
     ((op ^ "_p") ps)
 };
@@ -20,15 +20,15 @@ add_relation($Gamma |- $p : $T ==> $Gamma);
 # principal: ... | typeof_match => no yes no no;
     
 let can_be_pattern (op: string) : bool =
-  not(empty?(syntax("Pattern")[`(op_p _)` when op_p = op]: self))
+  not(empty?(Pattern[`(op_p _)` when op_p = op]: self))
 in
 
-add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
+(Rule[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
   let p_op = op ^ "_p" in
   if not(can_be_pattern(p_op)) then none
   else
     let es_to_ps = zip(es, es[`_`]: fresh_var("p")) in
-    let prems = premises(self)[`_ |- e : _`]:
+    let prems = Premises[`_ |- e : _`]:
       if member?(e, es) then some(self) else none
     in
     let prems_map = zip(prems, prems[`_`]: fresh_var("Gamma")) in
@@ -38,7 +38,7 @@ add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
     let new_gammas = prems_map[`(_, g)`]: g in
     let result = match new_gammas with [] -> gamma | _ -> $Gamma' in
     some(["T-MATCH-" ^ uppercase(op)] {
-      premises(self)[`prem`]:
+      Premises[`prem`]:
         match prem with
         | gamma |- e : t ->
           (match assoc(prem, prems_map) with
@@ -48,22 +48,22 @@ add_rules(rules[`gamma |- (op es) : t` when op_kind?(op, "Value")]:
       (match new_gammas with
        | [] -> none
        | _ -> some(&($Gamma' = $map_union(gamma :: new_gammas))))
-      ---------------------------------------------------------------
+      -----------------------------------------------------------
       gamma |- (p_op args_with_ps) : t ==> result
     })
 );
 
-add_rule(["T-MATCH-VAR"] {
-  ----------------------------------------------------------------------------
+["T-MATCH-VAR"] {
+  ------------------------------------------------------------
   $Gamma |- ("pattern_var" [$x, $T]) : $T ==> [$x => $T]$Gamma
-});
+};
 
 add_relation("match_pattern", [$p, $v, $MR]);
 
 # mode: ... | match_pattern => inp inp out;
 # principal: ... | match_pattern => yes yes no;
 
-add_rules(syntax("Value")[`(op vs)`]:
+(Value[`(op vs)`]:
   let p_op = op ^ "_p" in
   if not(can_be_pattern(p_op)) then none else
     let vs_to_ps = zip(vs, vs[`v`]:
@@ -91,14 +91,14 @@ add_rules(syntax("Value")[`(op vs)`]:
 );
 
 let orig_name (p_op: string) : string option =
-  let res = syntax("Value")[`(op _)` when p_op = (op ^ "_p")]: op in
+  let res = Value[`(op _)` when p_op = (op ^ "_p")]: op in
   match res with
   | [] -> none
   | op :: _ -> some(op)
 in
 
-add_rules(concat(syntax("Pattern")[`(p_op ps)`]: (
-  syntax("Value")[`(op vs)` when not(p_op = (op ^ "_p"))]:
+(concat(Pattern[`(p_op ps)`]: (
+  Value[`(op vs)` when not(p_op = (op ^ "_p"))]:
     match orig_name(p_op) with
     | none -> none
     | some(op2) ->
@@ -108,52 +108,52 @@ add_rules(concat(syntax("Pattern")[`(p_op ps)`]: (
       })
 )));
 
-add_rule(["MATCH-VAR"] {
+["MATCH-VAR"] {
   ------------------------------------------------------------------------------------------
   &("match_pattern" [("pattern_var" [$x, $T]), $v, ("match_subst" [$(<[$v, $x]> :: $nil).])])
-});
+};
     
 add_relation("types_equal", [[$T...], $T]);
 
 # mode: ... | types_equal => inp out;
 # principal: ... | types_equal => yes no;
 
-add_rule(["TYPES-EQUAL-NIL"] {
+["TYPES-EQUAL-NIL"] {
   ----------------------------
   &("types_equal" [$nil, $T])
-});
+};
 
-add_rule(["TYPES-EQUAL"] {
+["TYPES-EQUAL"] {
   &("types_equal" [$typs, $T])
   -------------------------------------
   &("types_equal" [$($T :: $typs), $T])
-});
+};
 
 add_relation("typeof_pmatch", [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
 
 # mode: ... | typeof_pmatch => inp inp inp out;
 # principal: ... | typeof_pmatch => no no yes no;
 
-add_rule(["TYPEOF-PMATCH-NIL"] {
+["TYPEOF-PMATCH-NIL"] {
   ------------------------------------------
   &("typeof_pmatch" [$Gamma, $T, $nil, $nil])
-});
+};
 
-add_rule(["TYPEOF-PMATCH"] {
+["TYPEOF-PMATCH"] {
   $Gamma |- $p : $T ==> $Gamma',
   $Gamma' |- $e : $T',
   &("typeof_pmatch" [$Gamma, $T, $M, $typs])
   ----------------------------------------------------
   &("typeof_pmatch" [$Gamma, $T, $(<[$p, $e]> :: $M), $($T' :: $typs)])
-});
+};
 
-add_rule(["T-PMATCH"] {
+["T-PMATCH"] {
   $Gamma |- $e : $T,
   &("typeof_pmatch" [$Gamma, $T, $($branch :: $M), $typs]),
   &("types_equal" [$typs, $T'])
   ------------------------------------
   $Gamma |- ("pmatch" [$e, $($branch :: $M)]) : $T'
-});
+};
 
 add_relation("first_non_error", [[<[$MR, $e]>...], $MR, $e]);
 
@@ -165,44 +165,44 @@ add_rule(["FIRST-NON-ERROR-NIL"] {
   &("first_non_error" [$nil, ("match_error" []), ("err" [])])
 });
 
-add_rule(["FIRST-NON-ERROR-NEXT"] {
+["FIRST-NON-ERROR-NEXT"] {
   &("first_non_error" [$M, $S, $e'])
   -------------------------------------------------------------------
   &("first_non_error" [$(<[("match_error" []), $e]> :: $M), $S, $e'])
-});
+};
 
-add_rule(["FIRST-NON-ERROR-SUCCESS"] {
+["FIRST-NON-ERROR-SUCCESS"] {
   ----------------------------------------------------------------------------------------
   &("first_non_error" [$(<[("match_subst" [$S.]), $e]> :: $M), ("match_subst" [$S.]), $e])
-});
+};
 
 add_relation("do_match", [$v, [<[$p, $e]>...], [<[$MR, $e]>...]]);
 
 # mode: ... | do_match => inp inp out;
 # principal: ... | do_match => no yes no;
 
-add_rule(["DO-MATCH-NIL"] {
+["DO-MATCH-NIL"] {
   -------------------------------
   &("do_match" [$v, $nil, $nil])
-});
+};
     
-add_rule(["DO-MATCH"] {
+["DO-MATCH"] {
   &("match_pattern" [$p, $v, $MR]),
   &("do_match" [$v, $M, $result])
   -------------------------------------------------------------------
   &("do_match" [$v, $(<[$p, $e]> :: $M), $(<[$MR, $e]> :: $result)])
-});
+};
 
-add_rule(["R-PMATCH-SUCCESS"] {
+["R-PMATCH-SUCCESS"] {
   &("do_match" [$v, $M, $result]),
   &("first_non_error" [$result, ("match_subst" [$S.]), $e])
   ----------------------------------------------------------
   ("pmatch" [$v, $M]) --> $e{S: Expression}
-});
+};
 
-add_rule(["R-PMATCH-ERROR"] {
+["R-PMATCH-ERROR"] {
   &("do_match" [$v, $M, $result]),
   &("first_non_error" [$result, ("match_error" []), $e])
   ----------------------------------------------------------
   ("pmatch" [$v, $M]) --> $e
-})
+}

@@ -135,9 +135,12 @@ hint("eliminationform")[`(op, pa)`]:
   let typing_prems = premises(r)[`gamma |- e : t`]: self in
   match conclusion(r) with gamma |- (op es) : t ->
   let elim_e = nth(es, idx) in
-  let pa_type = head(typing_prems[`_ |- e : (c ts)` when e = elim_e]: (c ts)) in
-  match pa_type with (c ts) ->
-  if empty?(ts) then none      
+  let pa_type = head(typing_prems[`_ |- e : t` when e = elim_e]: t) in
+  let should_skip = match pa_type with
+    | (c ts) -> empty?(ts)
+    | _ -> false
+  in
+  if should_skip then none
   else
     let tas = vars(es)[`t` when var_kind?(t, "Type")]: t in
     let cast_map = typing_prems[`gamma |- e : t` when not(e = elim_e)]: (e, t) in

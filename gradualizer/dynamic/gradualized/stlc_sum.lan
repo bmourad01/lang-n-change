@@ -1,0 +1,191 @@
+Context E ::= (app E e) | (app v E) | (case T E (x)e (x)e) | (gcast E T T L) | (hole.)
+Environment Gamma ::= [<x, T>...]
+Error er ::= (blame T L)
+Expression e ::= x | (abs T (x)e) | (app e e) | (blame T L) | (case T e (x)e (x)e) | (gcast e T T L) | (inl T e) | (inr T e) | (zero.)
+Ground G ::= (arrow (dyn.) (dyn.)) | (nat.) | (plus (dyn.) (dyn.))
+Type T ::= (arrow T T) | (dyn.) | (nat.) | (plus T T)
+Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (plus T T) (plus T T) L) | (inl T v) | (inr T v) | (zero.)
+
+%
+
+T ~ T.
+contains e e.
+ground_of T G.
+e --> e.
+Gamma |- e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-NAT]
+--------------------------------------
+(nat.) ~ (nat.).
+
+[C-PLUS]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(plus T1 T2) ~ (plus T1' T2').
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[CONTAINS-APP-0]
+contains e5 e4
+--------------------------------------
+contains (app e5 e) e4.
+
+[CONTAINS-APP-1]
+contains e7 e6
+--------------------------------------
+contains (app v e7) e6.
+
+[CONTAINS-CASE-2]
+contains e9 e8
+--------------------------------------
+contains (case T e9 (x)e1 (x)e2) e8.
+
+[CONTAINS-E]
+--------------------------------------
+contains e e.
+
+[CONTAINS-GCAST-3]
+contains e11 e10
+--------------------------------------
+contains (gcast e11 T1 T2 L) e10.
+
+[GROUND-OF-ARROW]
+--------------------------------------
+ground_of (arrow T1 T2) (arrow (dyn.) (dyn.)).
+
+[GROUND-OF-NAT]
+--------------------------------------
+ground_of (nat.) (nat.).
+
+[GROUND-OF-PLUS]
+--------------------------------------
+ground_of (plus T1 T2) (plus (dyn.) (dyn.)).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-BLAME]
+nil |- e : T1,
+contains e (blame T2 L),
+not(e = (blame T2 L))
+--------------------------------------
+e --> (blame T1 L).
+
+[R-CASE-INL]
+--------------------------------------
+(case T (inl T v) (x1)e1 (x2)e2) --> e1{v/x1}.
+
+[R-CASE-INR]
+--------------------------------------
+(case T (inr T v) (x1)e1 (x2)e2) --> e2{v/x2}.
+
+[R-ELIM-GCAST-APP]
+--------------------------------------
+(app (gcast v1 (arrow T1' T2') (arrow T1 T2) L) v) --> (gcast (app v1 (gcast v T1 T1' L)) T2' T2 L).
+
+[R-ELIM-GCAST-CASE]
+--------------------------------------
+(case T (gcast v2 (sum T1' T2') (sum T1 T2) L) (x1)e2 (x2)e3) --> (case T v2 e2{(gcast x1 T1' T1 L)/x1} e3{(gcast x2 T2' T2 L)/x2}).
+
+[R-GCAST-ARROW]
+--------------------------------------
+(gcast v (arrow T1 T2) (arrow T1 T2) L) --> v.
+
+[R-GCAST-DYN-TO-T]
+ground_of T G,
+not(T = G)
+--------------------------------------
+(gcast v (dyn.) T L) --> (gcast (gcast v (dyn.) G L) G T L).
+
+[R-GCAST-GCAST-ERROR]
+not(G1 = G2)
+--------------------------------------
+(gcast (gcast v G1 (dyn.) L1) (dyn.) G2 L2) --> (blame G2 L2).
+
+[R-GCAST-GCAST-OK]
+--------------------------------------
+(gcast (gcast v G (dyn.) L1) (dyn.) G L2) --> v.
+
+[R-GCAST-PLUS]
+--------------------------------------
+(gcast v (plus T1 T2) (plus T1 T2) L) --> v.
+
+[R-GCAST-T-TO-DYN]
+ground_of T G,
+not(T = G)
+--------------------------------------
+(gcast v T (dyn.) L) --> (gcast (gcast v T G L) G (dyn.) L).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-BLAME]
+--------------------------------------
+Gamma |- (blame T L) : T.
+
+[T-CASE]
+Gamma |- e1 : (sum T1 T2),
+[x1 => T1]Gamma |- e2 : T,
+[x2 => T2]Gamma |- e3 : T
+--------------------------------------
+Gamma |- (case T e1 (x1)e2 (x2)e3) : T.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-INL]
+Gamma |- e : T1
+--------------------------------------
+Gamma |- (inl T2 e) : (sum T1 T2).
+
+[T-INR]
+Gamma |- e : T2
+--------------------------------------
+Gamma |- (inr T1 e) : (sum T1 T2).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+[T-ZERO]
+--------------------------------------
+Gamma |- (zero.) : (nat.).
+
+%
+
+eliminationform: app => 0 | case => 1.
+mode: consistent => inp inp | contains => inp inp | ground_of => inp out | step => inp out | typeof => inp inp out.
+principal: consistent => yes yes | contains => yes no | ground_of => yes no | step => yes no | typeof => no yes no.
+variance: arrow => contra cov | plus => cov cov.

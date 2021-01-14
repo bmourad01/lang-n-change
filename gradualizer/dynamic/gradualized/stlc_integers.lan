@@ -1,0 +1,171 @@
+Context E ::= (app E e) | (app v E) | (gcast E T T L) | (hole.) | (pred E) | (succ E)
+Environment Gamma ::= [<x, T>...]
+Error er ::= (blame T L) | (err.)
+Expression e ::= x | (abs T (x)e) | (app e e) | (blame T L) | (err.) | (gcast e T T L) | (pred e) | (succ e) | (zero.)
+Ground G ::= (arrow (dyn.) (dyn.)) | (nat.)
+Type T ::= (arrow T T) | (dyn.) | (nat.)
+Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (succ v) | (zero.)
+
+%
+
+T ~ T.
+contains e e.
+ground_of T G.
+e --> e.
+Gamma |- e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-NAT]
+--------------------------------------
+(nat.) ~ (nat.).
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[CONTAINS-APP-0]
+contains e4 e3
+--------------------------------------
+contains (app e4 e) e3.
+
+[CONTAINS-APP-1]
+contains e6 e5
+--------------------------------------
+contains (app v e6) e5.
+
+[CONTAINS-E]
+--------------------------------------
+contains e e.
+
+[CONTAINS-GCAST-2]
+contains e8 e7
+--------------------------------------
+contains (gcast e8 T1 T2 L) e7.
+
+[CONTAINS-PRED-4]
+contains e10 e9
+--------------------------------------
+contains (pred e10) e9.
+
+[CONTAINS-SUCC-5]
+contains e12 e11
+--------------------------------------
+contains (succ e12) e11.
+
+[GROUND-OF-ARROW]
+--------------------------------------
+ground_of (arrow T1 T2) (arrow (dyn.) (dyn.)).
+
+[GROUND-OF-NAT]
+--------------------------------------
+ground_of (nat.) (nat.).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-BLAME]
+nil |- e : T1,
+contains e (blame T2 L),
+not(e = (blame T2 L))
+--------------------------------------
+e --> (blame T1 L).
+
+[R-ELIM-GCAST-APP]
+--------------------------------------
+(app (gcast v1 (arrow T1' T2') (arrow T1 T2) L) v) --> (gcast (app v1 (gcast v T1 T1' L)) T2' T2 L).
+
+[R-GCAST-ARROW]
+--------------------------------------
+(gcast v (arrow T1 T2) (arrow T1 T2) L) --> v.
+
+[R-GCAST-DYN-TO-T]
+ground_of T G,
+not(T = G)
+--------------------------------------
+(gcast v (dyn.) T L) --> (gcast (gcast v (dyn.) G L) G T L).
+
+[R-GCAST-GCAST-ERROR]
+not(G1 = G2)
+--------------------------------------
+(gcast (gcast v G1 (dyn.) L1) (dyn.) G2 L2) --> (blame G2 L2).
+
+[R-GCAST-GCAST-OK]
+--------------------------------------
+(gcast (gcast v G (dyn.) L1) (dyn.) G L2) --> v.
+
+[R-GCAST-T-TO-DYN]
+ground_of T G,
+not(T = G)
+--------------------------------------
+(gcast v T (dyn.) L) --> (gcast (gcast v T G L) G (dyn.) L).
+
+[R-PRED-SUCC]
+--------------------------------------
+(pred (succ v)) --> v.
+
+[R-PRED-ZERO]
+--------------------------------------
+(pred (zero.)) --> (err.).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-BLAME]
+--------------------------------------
+Gamma |- (blame T L) : T.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-PRED]
+Gamma |- e : (nat.)
+--------------------------------------
+Gamma |- (pred e) : (nat.).
+
+[T-SUCC]
+Gamma |- e : (nat.)
+--------------------------------------
+Gamma |- (succ e) : (nat.).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+[T-ZERO]
+--------------------------------------
+Gamma |- (zero.) : (nat.).
+
+%
+
+eliminationform: app => 0 | pred => 0.
+mode: consistent => inp inp | contains => inp inp | ground_of => inp out | step => inp out | typeof => inp inp out.
+principal: consistent => yes yes | contains => yes no | ground_of => yes no | step => yes no | typeof => no yes no.
+variance: arrow => contra cov.

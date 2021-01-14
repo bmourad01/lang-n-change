@@ -237,11 +237,11 @@ Gamma |- (raise T e) : T.
 
 [R-IS-NIL-TRUE]
 --------------------------------
-(is_nil (nill T)) --> (tt.).
+(is_nil T (nill T)) --> (tt.).
 
 [R-IS-NIL-FALSE]
 --------------------------------
-(is_nil (cons T v1 v2)) --> (ff.).
+(is_nil T (cons T v1 v2)) --> (ff.).
 
 [R-HEAD-NIL]
 --------------------------------

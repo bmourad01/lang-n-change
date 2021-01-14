@@ -35,34 +35,35 @@ let filter_ts (ts: term list) =
 in
 
 (* modify all typing rules *)
-set_rules(rules[`_`]:
-  let typ_prems = premises(self)[`&("typeof" _)`]: self in
-  if empty?(typ_prems) then self else
+(Rule[`_`]:
+  let typ_prems = Premises[`&("typeof" _)`]: self in
+  if empty?(typ_prems) then self else (
     (* uniquify all type variables in the outputs;
      * this will return a list of modified premises
      * and a map from the original types to a list of
      * their uniquified counterparts *)
     let (new_premises, tmap) =
-      let ignored = premises(self)[`_`]:
+      let ignored = Premises[`_`]:
         match self with
         | _ |- _ : _{_/x} -> some(self)
         | _ -> none
       in
-      uniquify(premises(self), ignored, hint("mode"), "out")
+      uniquify(Premises, ignored, hint("mode"), "out")
     in
+    let name = rule_name(self) in
 
     (* replace the premises with the uniquified ones *)
-    let r = [rule_name(self)] {
+    [name] {
       new_premises
       ------------------
-      conclusion(self)
-    } in
+      conclusion
+    };
     
     (* grab all types in contravariant positions *)
-    let contra_types = concat(premises(r)[`_ |- _ : t`]: extract_variance(t, "contra")) in
+    let contra_types = concat(Premises[`_ |- _ : t`]: extract_variance(t, "contra")) in
    
     (* grab all types in invariant positions *)
-    let inv_types = concat(premises(r)[`p`]:
+    let inv_types = concat(Premises[`p`]:
       match p with
       | gamma |- e : t -> extract_variance(t, "inv")
       | &member t _ -> filter_ts(vars(t))
@@ -71,8 +72,9 @@ set_rules(rules[`_`]:
     
     (* create a map from the original types (before uniquify)
      * to the "final type" that should appear in the conclusion *)
+    let concl = conclusion in
     let final_type = concat(tmap[`(tk, tv)`]:
-      match conclusion(r) with
+      match concl with
       | gamma |- e : t ->
         let t_types = filter_ts(vars(t)) in
         if empty?(t_types) then none else
@@ -89,20 +91,21 @@ set_rules(rules[`_`]:
      * counterparts and interleave them in a list of pairs,
      * then use these pairs to append new subtyping premises *) 
     let tpairs = concat(tmap[`(_, ts)`]: interleave_pairs(ts)) in
-    let r = [rule_name(r)] {
-      premises(r),
+    [name] {
+      Premises,
       tpairs[`(t1, t2)`]: t1 <: t2
       ----------------------------
-      conclusion(r) 
-    } in 
+      conclusion
+    };
    
     (* reorder the generated subtyping premises according
      * to their variance (i.e. did they appear in a
      * contravariant/invariant position in the premises?) *) 
-    let r = [rule_name(r)] {
-      premises(r)(keep)[`t1 <: t2`]:
+    let prems = Premises in
+    [name] {
+      prems(keep)[`t1 <: t2`]:
         let p = self in
-        let ps = premises(r)[`gamma |- e : (c ts)`]:
+        let ps = prems[`gamma |- e : (c ts)`]:
           match assoc(c, hint("variance")) with
           | none -> none
           | some(variance) ->
@@ -116,12 +119,12 @@ set_rules(rules[`_`]:
             | _ -> none
         in if empty?(ps) then p else head(ps)
       ---------------------------------------
-      conclusion(r)
-    } in
+      conclusion
+    };
     
     (* check for types that are peers, and if so, add a join for them *) 
-    let r = [rule_name(r)] {
-      premises(r),
+    [name] {
+      Premises,
       tmap[`(tk, tv)`]:
         let ov = var_overlap(tv, contra_types) in
         if not(empty?(ov)) then none else
@@ -134,30 +137,29 @@ set_rules(rules[`_`]:
             then some(&("join" (tv @ [tk.])))
             else none
       -----------------------
-      conclusion(r)
-    } in
+      conclusion
+    };
     
     (* substitute the final type in the rule *)
-    let r = substitute(r, final_type) in
+    substitute(self, final_type);
     
     (* eliminate subtyping premises that are subsumed by a join *)
-    let r = [rule_name(r)] {
-      premises(r)(keep)[`t1 <: t2`]:
-        let joins = premises(r)[`&("join" ts)`]:
+    let prems = Premises in
+    [name] {
+      prems(keep)[`t1 <: t2`]:
+        let joins = prems[`&("join" ts)`]:
           let ov1 = var_overlap([t1.], ts) in
           let ov2 = var_overlap([t2.], ts) in
           if empty?(ov1) || empty?(ov2) then none else some(self)
         in
         if empty?(joins) then some(self) else none
       --------------------------------------------
-      conclusion(r)
-    } in
-    
-    r
+      conclusion
+    })
 );
 
 (* add the relation for the join of types *)
-add_rules(syntax("Type")[`(c ts)`]:
+(Type[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)
@@ -188,7 +190,7 @@ add_rules(syntax("Type")[`(c ts)`]:
   }
 );
 
-add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
+(concat(Type[`(c ts)` when not((c = "top") || (c = "bot"))]:
   [["JOIN-TOP-" ^ uppercase(c)] {
      ---------------------------------------
      &("join" [("top" []), (c ts), ("top" [])])
@@ -207,18 +209,18 @@ add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
    }]
 ));
 
-add_rule(["JOIN-TOP-BOT"] {
+["JOIN-TOP-BOT"] {
   ----------------------------------------------
   &("join" [("top" []), ("bot" []), ("top" [])])
-});
+};
 
-add_rule(["JOIN-BOT-TOP"] {
+["JOIN-BOT-TOP"] {
   ----------------------------------------------
   &("join" [("bot" []), ("top" []), ("top" [])])
-});
+};
 
 (* add the relation for the meet of types *)
-add_rules(syntax("Type")[`(c ts)`]:
+(Type[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)
@@ -249,7 +251,7 @@ add_rules(syntax("Type")[`(c ts)`]:
   }
 );
 
-add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
+(concat(Type[`(c ts)` when not((c = "top") || (c = "bot"))]:
   [["MEET-TOP-" ^ uppercase(c)] {
      ---------------------------------------
      &("meet" [("top" []), (c ts), (c ts)])
@@ -268,18 +270,18 @@ add_rules(concat(syntax("Type")[`(c ts)` when not((c = "top") || (c = "bot"))]:
    }]
 ));
 
-add_rule(["MEET-TOP-BOT"] {
+["MEET-TOP-BOT"] {
   ----------------------------------------------
   &("meet" [("top" []), ("bot" []), ("bot" [])])
-});
+};
 
-add_rule(["MEET-BOT-TOP"] {
+["MEET-BOT-TOP"] {
   ----------------------------------------------
   &("meet" [("bot" []), ("top" []), ("bot" [])])
-});
+};
 
 (* add the relation for subtyping *)
-add_rules(syntax("Type")[`(c ts)`]:
+(Type[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
     | none -> []
     | some(variance) -> zip(ts, variance)
@@ -303,7 +305,7 @@ add_rules(syntax("Type")[`(c ts)`]:
   }
 );
 
-add_rules(concat(syntax("Type")[`(c ts)`]:
+(concat(Type[`(c ts)`]:
   [["S-TOP-" ^ uppercase(c)] {
      --------------------
      (c ts) <: ("top" [])
@@ -326,25 +328,22 @@ Expression e ::= ... | ("cast" [$e, $T]).;
 Context E ::= ... | ("cast" [$E, $T]).;
 
 (* add the typing rule for casts *)
-add_rule(
-  let assume = head(relations[`("typeof", a :: _)`]: a) in
-  ["T-CAST"] {
-    assume |- $e : $T1,
-    $T1 <: $T2
-    ----------------------------------
-    assume |- ("cast" [$e, $T2]) : $T2
-  }
-);
+let assume = head(relations[`("typeof", a :: _)`]: a) in
+["T-CAST"] {
+  assume |- $e : $T1,
+  $T1 <: $T2
+  ----------------------------------
+  assume |- ("cast" [$e, $T2]) : $T2
+};
 
 (* add the reduction rule for casts *)
-add_rule(
-  let config = head(relations[`("step", a :: _)`]: a) in
-  let do_config (t: term) = match config with
-    | <_ :: ts> -> <t :: ts>
-    | $!_ -> t
-  in
-  ["R-CAST"] {
-    ----------------------------------------------
-    do_config(("cast" [$v, $T])) --> do_config($v)
-  }
-)
+let config = head(relations[`("step", a :: _)`]: a) in
+let do_config (t: term) = match config with
+  | <_ :: ts> -> <t :: ts>
+  | $!_ -> t
+in
+["R-CAST"] {
+  ----------------------------------------------
+  do_config(("cast" [$v, $T])) --> do_config($v)
+}
+

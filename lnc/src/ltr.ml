@@ -2321,8 +2321,8 @@ let rec compile ctx e =
   | Exp.Rule_premises_self -> (
     match Map.find ctx.type_env "self" with
     | Some Type.Rule -> ("self.premises", Type.(List Formula), ctx)
-    | Some _ -> failwith "Premise: 'self' is not bound to a rule"
-    | None -> failwith "Premise: 'self' is not bound" )
+    | Some _ -> failwith "Premises: 'self' is not bound to a rule"
+    | None -> failwith "Premises: 'self' is not bound" )
   | Exp.Rule_conclusion e -> (
       let e', typ, _ = compile ctx e in
       match typ with
@@ -2333,8 +2333,8 @@ let rec compile ctx e =
   | Exp.Rule_conclusion_self -> (
     match Map.find ctx.type_env "self" with
     | Some Type.Rule -> ("self.conclusion", Type.Formula, ctx)
-    | Some _ -> failwith "Premise: 'self' is not bound to a rule"
-    | None -> failwith "Premise: 'self' is not bound" )
+    | Some _ -> failwith "conclusion: 'self' is not bound to a rule"
+    | None -> failwith "conclusion: 'self' is not bound" )
   | Exp.Set_conclusion (e1, e2) -> (
       let e1', typ1, _ = compile ctx e1 in
       match typ1 with

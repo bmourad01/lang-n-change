@@ -53,11 +53,11 @@ Gamma |- (natrec e1 e2 e3) : (nat.).
 
 [R-NAREC-SUCC]
 --------------------------------
-(add (succ v1) v2 v3) --> (app (app v3 v1) (natrec v1 v2 v3)).
+(natrec (succ v1) v2 v3) --> (app (app v3 v1) (natrec v1 v2 v3)).
 
 %
 
 mode: |- => inp inp out | step => inp out.
 principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov.
-eliminationform: app => 0 | add => 0 | natrec => 0.
+eliminationform: app => 0 | natrec => 0.

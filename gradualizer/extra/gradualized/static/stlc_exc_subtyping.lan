@@ -1,0 +1,527 @@
+Context E ::= (app E e) | (app v E) | (cast E T) | (hole.) | (raise T E) | (try E e)
+Environment Gamma ::= [<x, T>...]
+Error er ::= (raise T e)
+Expression e ::= x | (abs T (x)e) | (app e e) | (cast e T) | (gcast e T T L) | (raise T e) | (try e e)
+Ground G ::= (arrow (dyn.) (dyn.)) | (bot.) | (excT.) | (top.)
+Type T ::= (arrow T T) | (bot.) | (dyn.) | (excT.) | (top.)
+Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L)
+
+%
+
+T ~ T.
+gjoin T T T.
+join T T T T T.
+matches T T.
+meet T T T T T.
+static T.
+e --> e.
+T <: T ==> T T.
+Gamma |- e : T.
+Gamma |- e ==> e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-BOT]
+--------------------------------------
+(bot.) ~ (bot.).
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-EXCT]
+--------------------------------------
+(excT.) ~ (excT.).
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[C-TOP]
+--------------------------------------
+(top.) ~ (top.).
+
+[CC-T-ABS]
+[x => T1]Gamma |- e ==> e' : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
+
+[CC-T-APP]
+Gamma |- e1 ==> e1' : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 ==> e2' : T1_2,
+T1_2 <: T1_1 ==> T1_2' T1_1',
+T1_2 ~ T1_2',
+T1_1 ~ T1_1'
+--------------------------------------
+Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1' T2) L1) (gcast e2' T1_2 T1_2' L2)) : T2.
+
+[CC-T-CAST]
+Gamma |- e ==> e' : T1,
+T1 <: T2 ==> T1' T2',
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+Gamma |- (cast e T2) ==> (cast (gcast e' T1 T1' L3) T2) : T2.
+
+[CC-T-RAISE]
+Gamma |- e ==> e' : M2,
+matches M2 (excT.)
+--------------------------------------
+Gamma |- (raise T e) ==> (raise T (gcast e' M2 (excT.) L4)) : T.
+
+[CC-T-TRY]
+Gamma |- e1 ==> e1' : T_1,
+Gamma |- e2 ==> e2' : M4,
+matches M4 (arrow M3 T_2),
+matches M3 (excT.),
+join T_1 T_2 T T_1' T_2',
+T_1 ~ T_1',
+T_2 ~ T_2'
+--------------------------------------
+Gamma |- (try e1 e2) ==> (try (gcast e1' T_1 T_1' L5) (gcast e2' M4 (arrow (excT.) T_2') L6)) : T.
+
+[CC-T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x ==> x : T.
+
+[GJOIN-ARROW]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
+
+[GJOIN-BOT]
+--------------------------------------
+gjoin (bot.) (bot.) (bot.).
+
+[GJOIN-DYN-T]
+--------------------------------------
+gjoin (dyn.) T T.
+
+[GJOIN-EXCT]
+--------------------------------------
+gjoin (excT.) (excT.) (excT.).
+
+[GJOIN-T-DYN]
+--------------------------------------
+gjoin T (dyn.) T.
+
+[GJOIN-TOP]
+--------------------------------------
+gjoin (top.) (top.) (top.).
+
+[JOIN-ARROW]
+meet T1 T3 T5 T1' T3',
+join T2 T4 T6 T2' T4'
+--------------------------------------
+join (arrow T1 T2) (arrow T3 T4) (arrow T5 T6) (arrow T1' T2') (arrow T3' T4').
+
+[JOIN-ARROW-BOT]
+--------------------------------------
+join (arrow T1 T2) (bot.) (arrow T1 T2) (arrow T1' T2') (bot.).
+
+[JOIN-ARROW-DYN]
+join (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
+--------------------------------------
+join (arrow T1 T2) (dyn.) T1' T2' T3'.
+
+[JOIN-ARROW-TOP]
+--------------------------------------
+join (arrow T1 T2) (top.) (top.) (arrow T1' T2') (top.).
+
+[JOIN-BOT]
+--------------------------------------
+join (bot.) (bot.) (bot.) (bot.) (bot.).
+
+[JOIN-BOT-ARROW]
+--------------------------------------
+join (bot.) (arrow T1 T2) (arrow T1 T2) (bot.) (arrow T1' T2').
+
+[JOIN-BOT-DYN]
+--------------------------------------
+join (bot.) (dyn.) (bot.) (bot.) (bot.).
+
+[JOIN-BOT-EXCT]
+--------------------------------------
+join (bot.) (excT.) (excT.) (bot.) (excT.).
+
+[JOIN-BOT-TOP]
+--------------------------------------
+join (bot.) (top.) (top.) (bot.) (top.).
+
+[JOIN-DYN]
+--------------------------------------
+join (dyn.) (dyn.) (dyn.) (dyn.) (dyn.).
+
+[JOIN-DYN-ARROW]
+join (arrow (dyn.) (dyn.)) (arrow T1 T2) T1' T2' T3'
+--------------------------------------
+join (dyn.) (arrow T1 T2) T1' T2' T3'.
+
+[JOIN-DYN-BOT]
+--------------------------------------
+join (dyn.) (bot.) (bot.) (bot.) (bot.).
+
+[JOIN-DYN-EXCT]
+--------------------------------------
+join (dyn.) (excT.) (excT.) (excT.) (excT.).
+
+[JOIN-DYN-TOP]
+--------------------------------------
+join (dyn.) (top.) (top.) (top.) (top.).
+
+[JOIN-EXCT]
+--------------------------------------
+join (excT.) (excT.) (excT.) (excT.) (excT.).
+
+[JOIN-EXCT-BOT]
+--------------------------------------
+join (excT.) (bot.) (excT.) (excT.) (bot.).
+
+[JOIN-EXCT-DYN]
+--------------------------------------
+join (excT.) (dyn.) (excT.) (excT.) (excT.).
+
+[JOIN-EXCT-TOP]
+--------------------------------------
+join (excT.) (top.) (top.) (excT.) (top.).
+
+[JOIN-TOP]
+--------------------------------------
+join (top.) (top.) (top.) (top.) (top.).
+
+[JOIN-TOP-ARROW]
+--------------------------------------
+join (top.) (arrow T1 T2) (top.) (top.) (arrow T1' T2').
+
+[JOIN-TOP-BOT]
+--------------------------------------
+join (top.) (bot.) (top.) (top.) (bot.).
+
+[JOIN-TOP-DYN]
+--------------------------------------
+join (top.) (dyn.) (top.) (top.) (top.).
+
+[JOIN-TOP-EXCT]
+--------------------------------------
+join (top.) (excT.) (top.) (top.) (excT.).
+
+[MATCHES-ARROW]
+--------------------------------------
+matches (arrow T1 T2) (arrow T1 T2).
+
+[MATCHES-BOT]
+--------------------------------------
+matches (bot.) (bot.).
+
+[MATCHES-DYN-ARROW]
+--------------------------------------
+matches (dyn.) (arrow (dyn.) (dyn.)).
+
+[MATCHES-DYN-BOT]
+--------------------------------------
+matches (dyn.) (bot.).
+
+[MATCHES-DYN-EXCT]
+--------------------------------------
+matches (dyn.) (excT.).
+
+[MATCHES-DYN-TOP]
+--------------------------------------
+matches (dyn.) (top.).
+
+[MATCHES-EXCT]
+--------------------------------------
+matches (excT.) (excT.).
+
+[MATCHES-TOP]
+--------------------------------------
+matches (top.) (top.).
+
+[MEET-ARROW]
+join T1 T7 T9 T1' T7',
+meet T2 T8 T10 T2' T8'
+--------------------------------------
+meet (arrow T1 T2) (arrow T7 T8) (arrow T9 T10) (arrow T1' T2') (arrow T7' T8').
+
+[MEET-ARROW-BOT]
+--------------------------------------
+meet (arrow T1 T2) (bot.) (bot.) (arrow T1' T2') (bot.).
+
+[MEET-ARROW-DYN]
+meet (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
+--------------------------------------
+meet (arrow T1 T2) (dyn T1 T2) T1' T2' T3'.
+
+[MEET-ARROW-TOP]
+--------------------------------------
+meet (arrow T1 T2) (top.) (arrow T1 T2) (arrow T1' T2') (top.).
+
+[MEET-BOT]
+--------------------------------------
+meet (bot.) (bot.) (bot.) (bot.) (bot.).
+
+[MEET-BOT-ARROW]
+--------------------------------------
+meet (bot.) (arrow T1 T2) (bot.) (bot.) (arrow T1' T2').
+
+[MEET-BOT-DYN]
+--------------------------------------
+meet (bot.) (dyn.) (dyn.) (bot.) (bot.).
+
+[MEET-BOT-EXCT]
+--------------------------------------
+meet (bot.) (excT.) (bot.) (bot.) (excT.).
+
+[MEET-BOT-TOP]
+--------------------------------------
+meet (bot.) (top.) (bot.) (bot.) (top.).
+
+[MEET-DYN]
+--------------------------------------
+meet (dyn.) (dyn.) (dyn.) (dyn.) (dyn.).
+
+[MEET-DYN-ARROW]
+meet (arrow (dyn.) (dyn.)) (arrow T1 T2) T1' T2' T3'
+--------------------------------------
+meet (dyn.) (arrow T1 T2) T1' T2' T3'.
+
+[MEET-DYN-BOT]
+--------------------------------------
+meet (dyn.) (bot.) (dyn.) (bot.) (bot.).
+
+[MEET-DYN-EXCT]
+--------------------------------------
+meet (dyn.) (excT.) (dyn.) (excT.) (excT.).
+
+[MEET-DYN-TOP]
+--------------------------------------
+meet (dyn.) (top.) (dyn.) (top.) (top.).
+
+[MEET-EXCT]
+--------------------------------------
+meet (excT.) (excT.) (excT.) (excT.) (excT.).
+
+[MEET-EXCT-BOT]
+--------------------------------------
+meet (excT.) (bot.) (bot.) (excT.) (bot.).
+
+[MEET-EXCT-DYN]
+--------------------------------------
+meet (excT.) (dyn.) (dyn.) (excT.) (excT.).
+
+[MEET-EXCT-TOP]
+--------------------------------------
+meet (excT.) (top.) (excT.) (excT.) (top.).
+
+[MEET-TOP]
+--------------------------------------
+meet (top.) (top.) (top.) (top.) (top.).
+
+[MEET-TOP-ARROW]
+--------------------------------------
+meet (top.) (arrow T1 T2) (arrow T1 T2) (top.) (arrow T1' T2').
+
+[MEET-TOP-BOT]
+--------------------------------------
+meet (top.) (bot.) (bot.) (top.) (bot.).
+
+[MEET-TOP-DYN]
+--------------------------------------
+meet (top.) (dyn.) (dyn.) (top.) (top.).
+
+[MEET-TOP-EXCT]
+--------------------------------------
+meet (top.) (excT.) (excT.) (top.) (excT.).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-CAST]
+--------------------------------------
+(cast v T) --> v.
+
+[R-TRY-1]
+--------------------------------------
+(try (raise T v) e) --> (app e v).
+
+[R-TRY-2]
+--------------------------------------
+(try v e) --> v.
+
+[S-ARROW]
+T11 <: T1 ==> T11' T1',
+T2 <: T12 ==> T2' T12'
+--------------------------------------
+(arrow T1 T2) <: (arrow T11 T12) ==> (arrow T1' T2') (arrow T11' T12').
+
+[S-ARROW-DYN]
+(arrow T1 T2) <: (arrow (dyn.) (dyn.)) ==> T1' T2'
+--------------------------------------
+(arrow T1 T2) <: (dyn.) ==> T1' T2'.
+
+[S-BOT]
+--------------------------------------
+(bot.) <: (bot.) ==> (bot.) (bot.).
+
+[S-BOT-ARROW]
+--------------------------------------
+(bot.) <: (arrow T1 T2) ==> (bot.) (arrow T1' T2').
+
+[S-BOT-BOT]
+--------------------------------------
+(bot.) <: (bot.) ==> (bot.) (bot.).
+
+[S-BOT-DYN]
+--------------------------------------
+(bot.) <: (dyn.) ==> (bot.) (bot.).
+
+[S-BOT-EXCT]
+--------------------------------------
+(bot.) <: (excT.) ==> (bot.) (excT.).
+
+[S-BOT-TOP]
+--------------------------------------
+(bot.) <: (top.) ==> (bot.) (top.).
+
+[S-DYN]
+--------------------------------------
+(dyn.) <: (dyn.) ==> (dyn.) (dyn.).
+
+[S-DYN-ARROW]
+(arrow (dyn.) (dyn.)) <: (arrow T1 T2) ==> T1' T2'
+--------------------------------------
+(dyn.) <: (arrow T1 T2) ==> T1' T2'.
+
+[S-DYN-BOT]
+--------------------------------------
+(dyn.) <: (bot.) ==> (bot.) (bot.).
+
+[S-DYN-EXCT]
+--------------------------------------
+(dyn.) <: (excT.) ==> (excT.) (excT.).
+
+[S-DYN-TOP]
+--------------------------------------
+(dyn.) <: (top.) ==> (top.) (top.).
+
+[S-EXCT]
+--------------------------------------
+(excT.) <: (excT.) ==> (excT.) (excT.).
+
+[S-EXCT-DYN]
+--------------------------------------
+(excT.) <: (dyn.) ==> (excT.) (excT.).
+
+[S-TOP]
+--------------------------------------
+(top.) <: (top.) ==> (top.) (top.).
+
+[S-TOP-ARROW]
+--------------------------------------
+(arrow T1 T2) <: (top.) ==> (arrow T1' T2') (top.).
+
+[S-TOP-BOT]
+--------------------------------------
+(bot.) <: (top.) ==> (bot.) (top.).
+
+[S-TOP-DYN]
+--------------------------------------
+(top.) <: (dyn.) ==> (top.) (top.).
+
+[S-TOP-EXCT]
+--------------------------------------
+(excT.) <: (top.) ==> (excT.) (top.).
+
+[S-TOP-TOP]
+--------------------------------------
+(top.) <: (top.) ==> (top.) (top.).
+
+[STATIC-ARROW]
+static T1,
+static T2
+--------------------------------------
+static (arrow T1 T2).
+
+[STATIC-BOT]
+--------------------------------------
+static (bot.).
+
+[STATIC-EXCT]
+--------------------------------------
+static (excT.).
+
+[STATIC-TOP]
+--------------------------------------
+static (top.).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+T1_2 <: T1_1 ==> T1_2' T1_1',
+T1_2 ~ T1_2',
+T1_1 ~ T1_1'
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-CAST]
+Gamma |- e : T1,
+T1 <: T2 ==> T1' T2',
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+Gamma |- (cast e T2) : T2.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-RAISE]
+Gamma |- e : M2,
+matches M2 (excT.)
+--------------------------------------
+Gamma |- (raise T e) : T.
+
+[T-TRY]
+Gamma |- e1 : T_1,
+Gamma |- e2 : M4,
+matches M4 (arrow M3 T_2),
+matches M3 (excT.),
+join T_1 T_2 T T_1' T_2',
+T_1 ~ T_1',
+T_2 ~ T_2'
+--------------------------------------
+Gamma |- (try e1 e2) : T.
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+%
+
+eliminationform: app => 0 | try => 0.
+mode: consistent => inp inp | gjoin => inp inp out | join => inp inp out out out | matches => inp out | meet => inp inp out out out | static => inp | step => inp out | subtype_flow => inp inp out out | typeof => inp inp out | typeof_cc => inp inp out out.
+principal: consistent => yes yes | gjoin => yes yes no | join => yes yes no no no | matches => yes no | meet => yes yes no no no | static => yes | step => yes no | subtype_flow => yes yes no no | typeof => no yes no | typeof_cc => no yes no no.
+variance: arrow => contra cov.

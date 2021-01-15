@@ -1,0 +1,594 @@
+Context E ::= (app E e) | (app v E) | (cast E T) | (hole.) | (select1 E) | (select2 E) | (select3 E) | (select4 E) | (tuple E e e e) | (tuple v E e e) | (tuple v v E e) | (tuple v v v E)
+Environment Gamma ::= [<x, T>...]
+Expression e ::= x | (abs T (x)e) | (app e e) | (cast e T) | (gcast e T T L) | (select1 e) | (select2 e) | (select3 e) | (select4 e) | (tuple e e e e)
+Ground G ::= (arrow (dyn.) (dyn.)) | (bot.) | (top.) | (tupleT (dyn.) (dyn.) (dyn.) (dyn.))
+Type T ::= (arrow T T) | (bot.) | (dyn.) | (top.) | (tupleT T T T T)
+Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (tupleT T T T T) (tupleT T T T T) L) | (tuple v v v v)
+
+%
+
+T ~ T.
+gjoin T T T.
+join T T T T T.
+matches T T.
+meet T T T T T.
+static T.
+e --> e.
+T <: T ==> T T.
+Gamma |- e : T.
+Gamma |- e ==> e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-BOT]
+--------------------------------------
+(bot.) ~ (bot.).
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[C-TOP]
+--------------------------------------
+(top.) ~ (top.).
+
+[C-TUPLET]
+T1 ~ T1',
+T2 ~ T2',
+T3 ~ T3',
+T4 ~ T4'
+--------------------------------------
+(tupleT T1 T2 T3 T4) ~ (tupleT T1' T2' T3' T4').
+
+[CC-T-ABS]
+[x => T1]Gamma |- e ==> e' : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
+
+[CC-T-APP]
+Gamma |- e1 ==> e1' : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 ==> e2' : T1_2,
+T1_2 <: T1_1 ==> T1_2' T1_1',
+T1_2 ~ T1_2',
+T1_1 ~ T1_1'
+--------------------------------------
+Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1' T2) L1) (gcast e2' T1_2 T1_2' L2)) : T2.
+
+[CC-T-CAST]
+Gamma |- e ==> e' : T1,
+T1 <: T2 ==> T1' T2',
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+Gamma |- (cast e T2) ==> (cast (gcast e' T1 T1' L3) T2) : T2.
+
+[CC-T-SELECT1]
+Gamma |- e ==> e' : M2,
+matches M2 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select1 e) ==> (select1 (gcast e' M2 (tupleT T1 T2 T3 T4) L4)) : T1.
+
+[CC-T-SELECT2]
+Gamma |- e ==> e' : M3,
+matches M3 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select2 e) ==> (select2 (gcast e' M3 (tupleT T1 T2 T3 T4) L5)) : T2.
+
+[CC-T-SELECT3]
+Gamma |- e ==> e' : M4,
+matches M4 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select3 e) ==> (select3 (gcast e' M4 (tupleT T1 T2 T3 T4) L6)) : T3.
+
+[CC-T-SELECT4]
+Gamma |- e ==> e' : M5,
+matches M5 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select4 e) ==> (select4 (gcast e' M5 (tupleT T1 T2 T3 T4) L7)) : T4.
+
+[CC-T-TUPLE]
+Gamma |- e1 ==> e1' : T1,
+Gamma |- e2 ==> e2' : T2,
+Gamma |- e3 ==> e3' : T3,
+Gamma |- e4 ==> e4' : T4
+--------------------------------------
+Gamma |- (tuple e1 e2 e3 e4) ==> (tuple e1' e2' e3' e4') : (tupleT T1 T2 T3 T4).
+
+[CC-T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x ==> x : T.
+
+[GJOIN-ARROW]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
+
+[GJOIN-BOT]
+--------------------------------------
+gjoin (bot.) (bot.) (bot.).
+
+[GJOIN-DYN-T]
+--------------------------------------
+gjoin (dyn.) T T.
+
+[GJOIN-T-DYN]
+--------------------------------------
+gjoin T (dyn.) T.
+
+[GJOIN-TOP]
+--------------------------------------
+gjoin (top.) (top.) (top.).
+
+[GJOIN-TUPLET]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2'',
+gjoin T3 T3' T3'',
+gjoin T4 T4' T4''
+--------------------------------------
+gjoin (tupleT T1 T2 T3 T4) (tupleT T1' T2' T3' T4') (tupleT T1'' T2'' T3'' T4'').
+
+[JOIN-ARROW]
+meet T1 T5 T7 T1' T5',
+join T2 T6 T8 T2' T6'
+--------------------------------------
+join (arrow T1 T2) (arrow T5 T6) (arrow T7 T8) (arrow T1' T2') (arrow T5' T6').
+
+[JOIN-ARROW-BOT]
+--------------------------------------
+join (arrow T1 T2) (bot.) (arrow T1 T2) (arrow T1' T2') (bot.).
+
+[JOIN-ARROW-DYN]
+join (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
+--------------------------------------
+join (arrow T1 T2) (dyn.) T1' T2' T3'.
+
+[JOIN-ARROW-TOP]
+--------------------------------------
+join (arrow T1 T2) (top.) (top.) (arrow T1' T2') (top.).
+
+[JOIN-BOT]
+--------------------------------------
+join (bot.) (bot.) (bot.) (bot.) (bot.).
+
+[JOIN-BOT-ARROW]
+--------------------------------------
+join (bot.) (arrow T1 T2) (arrow T1 T2) (bot.) (arrow T1' T2').
+
+[JOIN-BOT-DYN]
+--------------------------------------
+join (bot.) (dyn.) (bot.) (bot.) (bot.).
+
+[JOIN-BOT-TOP]
+--------------------------------------
+join (bot.) (top.) (top.) (bot.) (top.).
+
+[JOIN-BOT-TUPLET]
+--------------------------------------
+join (bot.) (tupleT T1 T2 T3 T4) (tupleT T1 T2 T3 T4) (bot.) (tupleT T1' T2' T3' T4').
+
+[JOIN-DYN]
+--------------------------------------
+join (dyn.) (dyn.) (dyn.) (dyn.) (dyn.).
+
+[JOIN-DYN-ARROW]
+join (arrow (dyn.) (dyn.)) (arrow T1 T2) T1' T2' T3'
+--------------------------------------
+join (dyn.) (arrow T1 T2) T1' T2' T3'.
+
+[JOIN-DYN-BOT]
+--------------------------------------
+join (dyn.) (bot.) (bot.) (bot.) (bot.).
+
+[JOIN-DYN-TOP]
+--------------------------------------
+join (dyn.) (top.) (top.) (top.) (top.).
+
+[JOIN-DYN-TUPLET]
+join (tupleT (dyn.) (dyn.) (dyn.) (dyn.)) (tupleT T1 T2 T3 T4) T1' T2' T3'
+--------------------------------------
+join (dyn.) (tupleT T1 T2 T3 T4) T1' T2' T3'.
+
+[JOIN-TOP]
+--------------------------------------
+join (top.) (top.) (top.) (top.) (top.).
+
+[JOIN-TOP-ARROW]
+--------------------------------------
+join (top.) (arrow T1 T2) (top.) (top.) (arrow T1' T2').
+
+[JOIN-TOP-BOT]
+--------------------------------------
+join (top.) (bot.) (top.) (top.) (bot.).
+
+[JOIN-TOP-DYN]
+--------------------------------------
+join (top.) (dyn.) (top.) (top.) (top.).
+
+[JOIN-TOP-TUPLET]
+--------------------------------------
+join (top.) (tupleT T1 T2 T3 T4) (top.) (top.) (tupleT T1' T2' T3' T4').
+
+[JOIN-TUPLET]
+join T1 T9 T13 T1' T9',
+join T2 T10 T14 T2' T10',
+join T3 T11 T15 T3' T11',
+join T4 T12 T16 T4' T12'
+--------------------------------------
+join (tupleT T1 T2 T3 T4) (tupleT T9 T10 T11 T12) (tupleT T13 T14 T15 T16) (tupleT T1' T2' T3' T4') (tupleT T9' T10' T11' T12').
+
+[JOIN-TUPLET-BOT]
+--------------------------------------
+join (tupleT T1 T2 T3 T4) (bot.) (tupleT T1 T2 T3 T4) (tupleT T1' T2' T3' T4') (bot.).
+
+[JOIN-TUPLET-DYN]
+join (tupleT T1 T2 T3 T4) (tupleT (dyn.) (dyn.) (dyn.) (dyn.)) T1' T2' T3'
+--------------------------------------
+join (tupleT T1 T2 T3 T4) (dyn.) T1' T2' T3'.
+
+[JOIN-TUPLET-TOP]
+--------------------------------------
+join (tupleT T1 T2 T3 T4) (top.) (top.) (tupleT T1' T2' T3' T4') (top.).
+
+[MATCHES-ARROW]
+--------------------------------------
+matches (arrow T1 T2) (arrow T1 T2).
+
+[MATCHES-BOT]
+--------------------------------------
+matches (bot.) (bot.).
+
+[MATCHES-DYN-ARROW]
+--------------------------------------
+matches (dyn.) (arrow (dyn.) (dyn.)).
+
+[MATCHES-DYN-BOT]
+--------------------------------------
+matches (dyn.) (bot.).
+
+[MATCHES-DYN-TOP]
+--------------------------------------
+matches (dyn.) (top.).
+
+[MATCHES-DYN-TUPLET]
+--------------------------------------
+matches (dyn.) (tupleT (dyn.) (dyn.) (dyn.) (dyn.)).
+
+[MATCHES-TOP]
+--------------------------------------
+matches (top.) (top.).
+
+[MATCHES-TUPLET]
+--------------------------------------
+matches (tupleT T1 T2 T3 T4) (tupleT T1 T2 T3 T4).
+
+[MEET-ARROW]
+join T1 T17 T19 T1' T17',
+meet T2 T18 T20 T2' T18'
+--------------------------------------
+meet (arrow T1 T2) (arrow T17 T18) (arrow T19 T20) (arrow T1' T2') (arrow T17' T18').
+
+[MEET-ARROW-BOT]
+--------------------------------------
+meet (arrow T1 T2) (bot.) (bot.) (arrow T1' T2') (bot.).
+
+[MEET-ARROW-DYN]
+meet (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
+--------------------------------------
+meet (arrow T1 T2) (dyn T1 T2) T1' T2' T3'.
+
+[MEET-ARROW-TOP]
+--------------------------------------
+meet (arrow T1 T2) (top.) (arrow T1 T2) (arrow T1' T2') (top.).
+
+[MEET-BOT]
+--------------------------------------
+meet (bot.) (bot.) (bot.) (bot.) (bot.).
+
+[MEET-BOT-ARROW]
+--------------------------------------
+meet (bot.) (arrow T1 T2) (bot.) (bot.) (arrow T1' T2').
+
+[MEET-BOT-DYN]
+--------------------------------------
+meet (bot.) (dyn.) (dyn.) (bot.) (bot.).
+
+[MEET-BOT-TOP]
+--------------------------------------
+meet (bot.) (top.) (bot.) (bot.) (top.).
+
+[MEET-BOT-TUPLET]
+--------------------------------------
+meet (bot.) (tupleT T1 T2 T3 T4) (bot.) (bot.) (tupleT T1' T2' T3' T4').
+
+[MEET-DYN]
+--------------------------------------
+meet (dyn.) (dyn.) (dyn.) (dyn.) (dyn.).
+
+[MEET-DYN-ARROW]
+meet (arrow (dyn.) (dyn.)) (arrow T1 T2) T1' T2' T3'
+--------------------------------------
+meet (dyn.) (arrow T1 T2) T1' T2' T3'.
+
+[MEET-DYN-BOT]
+--------------------------------------
+meet (dyn.) (bot.) (dyn.) (bot.) (bot.).
+
+[MEET-DYN-TOP]
+--------------------------------------
+meet (dyn.) (top.) (dyn.) (top.) (top.).
+
+[MEET-DYN-TUPLET]
+meet (tupleT (dyn.) (dyn.) (dyn.) (dyn.)) (tupleT T1 T2 T3 T4) T1' T2' T3'
+--------------------------------------
+meet (dyn.) (tupleT T1 T2 T3 T4) T1' T2' T3'.
+
+[MEET-TOP]
+--------------------------------------
+meet (top.) (top.) (top.) (top.) (top.).
+
+[MEET-TOP-ARROW]
+--------------------------------------
+meet (top.) (arrow T1 T2) (arrow T1 T2) (top.) (arrow T1' T2').
+
+[MEET-TOP-BOT]
+--------------------------------------
+meet (top.) (bot.) (bot.) (top.) (bot.).
+
+[MEET-TOP-DYN]
+--------------------------------------
+meet (top.) (dyn.) (dyn.) (top.) (top.).
+
+[MEET-TOP-TUPLET]
+--------------------------------------
+meet (top.) (tupleT T1 T2 T3 T4) (tupleT T1 T2 T3 T4) (top.) (tupleT T1' T2' T3' T4').
+
+[MEET-TUPLET]
+meet T1 T21 T25 T1' T21',
+meet T2 T22 T26 T2' T22',
+meet T3 T23 T27 T3' T23',
+meet T4 T24 T28 T4' T24'
+--------------------------------------
+meet (tupleT T1 T2 T3 T4) (tupleT T21 T22 T23 T24) (tupleT T25 T26 T27 T28) (tupleT T1' T2' T3' T4') (tupleT T21' T22' T23' T24').
+
+[MEET-TUPLET-BOT]
+--------------------------------------
+meet (tupleT T1 T2 T3 T4) (bot.) (bot.) (tupleT T1' T2' T3' T4') (bot.).
+
+[MEET-TUPLET-DYN]
+meet (tupleT T1 T2 T3 T4) (tupleT (dyn.) (dyn.) (dyn.) (dyn.)) T1' T2' T3'
+--------------------------------------
+meet (tupleT T1 T2 T3 T4) (dyn T1 T2 T3 T4) T1' T2' T3'.
+
+[MEET-TUPLET-TOP]
+--------------------------------------
+meet (tupleT T1 T2 T3 T4) (top.) (tupleT T1 T2 T3 T4) (tupleT T1' T2' T3' T4') (top.).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-CAST]
+--------------------------------------
+(cast v T) --> v.
+
+[R-SELECT1]
+--------------------------------------
+(select1 (tuple v1 v2 v3 v4)) --> v1.
+
+[R-SELECT2]
+--------------------------------------
+(select2 (tuple v1 v2 v3 v4)) --> v2.
+
+[R-SELECT3]
+--------------------------------------
+(select3 (tuple v1 v2 v3 v4)) --> v3.
+
+[R-SELECT4]
+--------------------------------------
+(select4 (tuple v1 v2 v3 v4)) --> v4.
+
+[S-ARROW]
+T29 <: T1 ==> T29' T1',
+T2 <: T30 ==> T2' T30'
+--------------------------------------
+(arrow T1 T2) <: (arrow T29 T30) ==> (arrow T1' T2') (arrow T29' T30').
+
+[S-ARROW-DYN]
+(arrow T1 T2) <: (arrow (dyn.) (dyn.)) ==> T1' T2'
+--------------------------------------
+(arrow T1 T2) <: (dyn.) ==> T1' T2'.
+
+[S-BOT]
+--------------------------------------
+(bot.) <: (bot.) ==> (bot.) (bot.).
+
+[S-BOT-ARROW]
+--------------------------------------
+(bot.) <: (arrow T1 T2) ==> (bot.) (arrow T1' T2').
+
+[S-BOT-BOT]
+--------------------------------------
+(bot.) <: (bot.) ==> (bot.) (bot.).
+
+[S-BOT-DYN]
+--------------------------------------
+(bot.) <: (dyn.) ==> (bot.) (bot.).
+
+[S-BOT-TOP]
+--------------------------------------
+(bot.) <: (top.) ==> (bot.) (top.).
+
+[S-BOT-TUPLET]
+--------------------------------------
+(bot.) <: (tupleT T1 T2 T3 T4) ==> (bot.) (tupleT T1' T2' T3' T4').
+
+[S-DYN]
+--------------------------------------
+(dyn.) <: (dyn.) ==> (dyn.) (dyn.).
+
+[S-DYN-ARROW]
+(arrow (dyn.) (dyn.)) <: (arrow T1 T2) ==> T1' T2'
+--------------------------------------
+(dyn.) <: (arrow T1 T2) ==> T1' T2'.
+
+[S-DYN-BOT]
+--------------------------------------
+(dyn.) <: (bot.) ==> (bot.) (bot.).
+
+[S-DYN-TOP]
+--------------------------------------
+(dyn.) <: (top.) ==> (top.) (top.).
+
+[S-DYN-TUPLET]
+(tupleT (dyn.) (dyn.) (dyn.) (dyn.)) <: (tupleT T1 T2 T3 T4) ==> T1' T2'
+--------------------------------------
+(dyn.) <: (tupleT T1 T2 T3 T4) ==> T1' T2'.
+
+[S-TOP]
+--------------------------------------
+(top.) <: (top.) ==> (top.) (top.).
+
+[S-TOP-ARROW]
+--------------------------------------
+(arrow T1 T2) <: (top.) ==> (arrow T1' T2') (top.).
+
+[S-TOP-BOT]
+--------------------------------------
+(bot.) <: (top.) ==> (bot.) (top.).
+
+[S-TOP-DYN]
+--------------------------------------
+(top.) <: (dyn.) ==> (top.) (top.).
+
+[S-TOP-TOP]
+--------------------------------------
+(top.) <: (top.) ==> (top.) (top.).
+
+[S-TOP-TUPLET]
+--------------------------------------
+(tupleT T1 T2 T3 T4) <: (top.) ==> (tupleT T1' T2' T3' T4') (top.).
+
+[S-TUPLET]
+T1 <: T31 ==> T1' T31',
+T2 <: T32 ==> T2' T32',
+T3 <: T33 ==> T3' T33',
+T4 <: T34 ==> T4' T34'
+--------------------------------------
+(tupleT T1 T2 T3 T4) <: (tupleT T31 T32 T33 T34) ==> (tupleT T1' T2' T3' T4') (tupleT T31' T32' T33' T34').
+
+[S-TUPLET-DYN]
+(tupleT T1 T2 T3 T4) <: (tupleT (dyn.) (dyn.) (dyn.) (dyn.)) ==> T1' T2'
+--------------------------------------
+(tupleT T1 T2 T3 T4) <: (dyn.) ==> T1' T2'.
+
+[STATIC-ARROW]
+static T1,
+static T2
+--------------------------------------
+static (arrow T1 T2).
+
+[STATIC-BOT]
+--------------------------------------
+static (bot.).
+
+[STATIC-TOP]
+--------------------------------------
+static (top.).
+
+[STATIC-TUPLET]
+static T1,
+static T2,
+static T3,
+static T4
+--------------------------------------
+static (tupleT T1 T2 T3 T4).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+T1_2 <: T1_1 ==> T1_2' T1_1',
+T1_2 ~ T1_2',
+T1_1 ~ T1_1'
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-CAST]
+Gamma |- e : T1,
+T1 <: T2 ==> T1' T2',
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+Gamma |- (cast e T2) : T2.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-SELECT1]
+Gamma |- e : M2,
+matches M2 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select1 e) : T1.
+
+[T-SELECT2]
+Gamma |- e : M3,
+matches M3 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select2 e) : T2.
+
+[T-SELECT3]
+Gamma |- e : M4,
+matches M4 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select3 e) : T3.
+
+[T-SELECT4]
+Gamma |- e : M5,
+matches M5 (tupleT T1 T2 T3 T4)
+--------------------------------------
+Gamma |- (select4 e) : T4.
+
+[T-TUPLE]
+Gamma |- e1 : T1,
+Gamma |- e2 : T2,
+Gamma |- e3 : T3,
+Gamma |- e4 : T4
+--------------------------------------
+Gamma |- (tuple e1 e2 e3 e4) : (tupleT T1 T2 T3 T4).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+%
+
+eliminationform: app => 0 | select1 => 0 | select2 => 0 | select3 => 0 | select4 => 0.
+mode: consistent => inp inp | gjoin => inp inp out | join => inp inp out out out | matches => inp out | meet => inp inp out out out | static => inp | step => inp out | subtype_flow => inp inp out out | typeof => inp inp out | typeof_cc => inp inp out out.
+principal: consistent => yes yes | gjoin => yes yes no | join => yes yes no no no | matches => yes no | meet => yes yes no no no | static => yes | step => yes no | subtype_flow => yes yes no no | typeof => no yes no | typeof_cc => no yes no no.
+variance: arrow => contra cov | tupleT => cov cov cov cov.

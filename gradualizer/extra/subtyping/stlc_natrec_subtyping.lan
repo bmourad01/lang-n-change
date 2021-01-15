@@ -140,7 +140,7 @@ meet (top.) (nat.) (nat.).
 
 [R-NAREC-SUCC]
 --------------------------------------
-(add (succ v1) v2 v3) --> (app (app v3 v1) (natrec v1 v2 v3)).
+(natrec (succ v1) v2 v3) --> (app (app v3 v1) (natrec v1 v2 v3)).
 
 [R-NATREC-ZERO]
 --------------------------------------
@@ -237,7 +237,7 @@ Gamma |- (zero.) : (nat.).
 
 %
 
-eliminationform: add => 0 | app => 0 | natrec => 0.
+eliminationform: app => 0 | natrec => 0.
 mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | |- => inp inp out.
 principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | |- => no yes no.
 variance: arrow => contra cov.

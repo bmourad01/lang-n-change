@@ -76,13 +76,7 @@ Some sample language definitions are provided in the `lan/` directory:
 
 The `gradualizer/` directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4], and contains one-to-one translations of the language repositories for both papers (`gradualizer/static/` and `gradualizer/dynamic/`, respectively; see https://github.com/mcimini/Gradualizer and https://github.com/mcimini/GradualizerDynamicSemantics).
 
-Additionally, the directory `gradualizer/extra/` contains languages not included in the repo of the original Gradualizer, including `stlc_multiple_consumers.lan`, which contains examples of operators with multiple consumers.
-Furthermore, `gradualizer/extra/subtyping/` contains the languages of our repo extended with subtyping using the algorithm found in `examples/subtyping.tr`.
-Note that this algorithm does not cover languages with multiple consumers.
-
-- `gradual_static.tr` generates the static semantics (type system), including the Cast Calculus.
-- `gradual_static_extended.tr` extends the previous algorithm to accomodate languages with subtyping and multiple comsumers.
-- `gradual_dynamic.tr` generates the dynamic semantics with elimination forms for the `cast` operator.
+See the corresponding [README](./gradualizer/README.md) for more information.
 
 ## Compiling to λProlog
 

@@ -1,0 +1,369 @@
+Context E ::= (app E e) | (app v E) | (app5 E e e) | (app5 v E e) | (app5 v v E) | (cons T E e) | (cons T v E) | (fst E) | (head T E) | (hole.) | (pair E e) | (pair v E) | (snd E) | (tail T E)
+Environment Gamma ::= [<x, T>...]
+Expression e ::= x | (abs T (x)e) | (app e e) | (app5 e e e) | (cons T e e) | (ff.) | (fst e) | (gcast e T T L) | (head T e) | (nill T) | (pair e e) | (snd e) | (tail T e) | (tt.)
+Ground G ::= (arrow (dyn.) (dyn.)) | (bool.) | (list (dyn.)) | (times (dyn.) (dyn.))
+Type T ::= (arrow T T) | (bool.) | (dyn.) | (list T) | (times T T)
+Value v ::= (abs T (x)e) | (cons T v v) | (ff.) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (list T) (list T) L) | (gcast v (times T T) (times T T) L) | (nill T) | (pair v v) | (tt.)
+
+%
+
+T ~ T.
+gjoin T T T.
+matches T T.
+static T.
+e --> e.
+Gamma |- e : T.
+Gamma |- e ==> e : T.
+
+%
+
+[C-ARROW]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(arrow T1 T2) ~ (arrow T1' T2').
+
+[C-BOOL]
+--------------------------------------
+(bool.) ~ (bool.).
+
+[C-DYN]
+--------------------------------------
+(dyn.) ~ (dyn.).
+
+[C-DYN-T]
+--------------------------------------
+(dyn.) ~ T.
+
+[C-LIST]
+T ~ T'
+--------------------------------------
+(list T) ~ (list T').
+
+[C-T-DYN]
+--------------------------------------
+T ~ (dyn.).
+
+[C-TIMES]
+T1 ~ T1',
+T2 ~ T2'
+--------------------------------------
+(times T1 T2) ~ (times T1' T2').
+
+[CC-T-ABS]
+[x => T1]Gamma |- e ==> e' : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) ==> (abs T1 (x)e') : (arrow T1 T2).
+
+[CC-T-APP]
+Gamma |- e1 ==> e1' : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 ==> e2' : T1_2,
+T1_2 ~ T1_1
+--------------------------------------
+Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
+
+[CC-T-APP5]
+Gamma |- e1 ==> e1' : M6,
+matches M6 (times M3 M5),
+matches M3 (arrow M2 T1_2),
+matches M2 (list T1_1),
+matches M5 (arrow M4 T2_2),
+matches M4 (list T2_1),
+Gamma |- e2 ==> e2' : M7,
+matches M7 (list T1_3),
+Gamma |- e3 ==> e3' : M8,
+matches M8 (list T2_3),
+T1_3 ~ T1_1,
+T2_2 ~ T2_1,
+T2_3 ~ T1_2
+--------------------------------------
+Gamma |- (app5 e1 e2 e3) ==> (app5 (gcast e1' M6 (times (arrow (list T1_1) T1_2) (arrow (list T2_1) T2_1)) L3) (gcast e2' M7 (list T1_1) L4) (gcast e3' M8 (list T1_2) L5)) : (times T1_2 T2_2).
+
+[CC-T-CONS]
+Gamma |- e1 ==> e1' : T_1,
+Gamma |- e2 ==> e2' : M9,
+matches M9 (list T_2),
+T_1 ~ T,
+T_2 ~ T
+--------------------------------------
+Gamma |- (cons T e1 e2) ==> (cons T (gcast e1' T_1 T L6) (gcast e2' M9 (list T) L7)) : (list T).
+
+[CC-T-FALSE]
+--------------------------------------
+Gamma |- (ff.) ==> (ff.) : (bool.).
+
+[CC-T-FST]
+Gamma |- e ==> e' : M10,
+matches M10 (times T1 T2)
+--------------------------------------
+Gamma |- (fst e) ==> (fst (gcast e' M10 (times T1 T2) L8)) : T1.
+
+[CC-T-HEAD]
+Gamma |- e ==> e' : M11,
+matches M11 (list T_1),
+T_1 ~ T
+--------------------------------------
+Gamma |- (head T e) ==> (head T (gcast e' M11 (list T) L9)) : T.
+
+[CC-T-IS-NIL]
+Gamma |- e ==> e' : M12,
+matches M12 (list T_1),
+T_1 ~ T
+--------------------------------------
+Gamma |- (is_nil T e) ==> (is_nil T (gcast e' M12 (list T) L10)) : (bool.).
+
+[CC-T-NIL]
+--------------------------------------
+Gamma |- (nill T) ==> (nill T) : (list T).
+
+[CC-T-PAIR]
+Gamma |- e1 ==> e1' : T1,
+Gamma |- e2 ==> e2' : T2
+--------------------------------------
+Gamma |- (pair e1 e2) ==> (pair e1' e2') : (times T1 T2).
+
+[CC-T-SND]
+Gamma |- e ==> e' : M13,
+matches M13 (times T1 T2)
+--------------------------------------
+Gamma |- (snd e) ==> (snd (gcast e' M13 (times T1 T2) L11)) : T2.
+
+[CC-T-TAIL]
+Gamma |- e ==> e' : M14,
+matches M14 (list T_1),
+T_1 ~ T
+--------------------------------------
+Gamma |- (tail T e) ==> (tail T (gcast e' M14 (list T) L12)) : (list T).
+
+[CC-T-TRUE]
+--------------------------------------
+Gamma |- (tt.) ==> (tt.) : (bool.).
+
+[CC-T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x ==> x : T.
+
+[GJOIN-ARROW]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
+
+[GJOIN-BOOL]
+--------------------------------------
+gjoin (bool.) (bool.) (bool.).
+
+[GJOIN-DYN-T]
+--------------------------------------
+gjoin (dyn.) T T.
+
+[GJOIN-LIST]
+gjoin T T' T''
+--------------------------------------
+gjoin (list T) (list T') (list T'').
+
+[GJOIN-T-DYN]
+--------------------------------------
+gjoin T (dyn.) T.
+
+[GJOIN-TIMES]
+gjoin T1 T1' T1'',
+gjoin T2 T2' T2''
+--------------------------------------
+gjoin (times T1 T2) (times T1' T2') (times T1'' T2'').
+
+[MATCHES-ARROW]
+--------------------------------------
+matches (arrow T1 T2) (arrow T1 T2).
+
+[MATCHES-BOOL]
+--------------------------------------
+matches (bool.) (bool.).
+
+[MATCHES-DYN-ARROW]
+--------------------------------------
+matches (dyn.) (arrow (dyn.) (dyn.)).
+
+[MATCHES-DYN-BOOL]
+--------------------------------------
+matches (dyn.) (bool.).
+
+[MATCHES-DYN-LIST]
+--------------------------------------
+matches (dyn.) (list (dyn.)).
+
+[MATCHES-DYN-TIMES]
+--------------------------------------
+matches (dyn.) (times (dyn.) (dyn.)).
+
+[MATCHES-LIST]
+--------------------------------------
+matches (list T) (list T).
+
+[MATCHES-TIMES]
+--------------------------------------
+matches (times T1 T2) (times T1 T2).
+
+[R-APP5]
+--------------------------------------
+(app5 v1 v2 v3) --> (pair (app (fst v1) v2) (app (snd v1) v3)).
+
+[R-BETA]
+--------------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-FST]
+--------------------------------------
+(fst (pair v1 v2)) --> v1.
+
+[R-HEAD-CONS]
+--------------------------------------
+(head T (cons T v1 v2)) --> v1.
+
+[R-IS-NIL-FALSE]
+--------------------------------------
+(is_nil T (cons T v1 v2)) --> (ff.).
+
+[R-IS-NIL-TRUE]
+--------------------------------------
+(is_nil T (nill T)) --> (tt.).
+
+[R-SND]
+--------------------------------------
+(snd (pair v1 v2)) --> v2.
+
+[R-TAIL-CONS]
+--------------------------------------
+(tail T (cons T v1 v2)) --> v2.
+
+[STATIC-ARROW]
+static T1,
+static T2
+--------------------------------------
+static (arrow T1 T2).
+
+[STATIC-BOOL]
+--------------------------------------
+static (bool.).
+
+[STATIC-LIST]
+static T
+--------------------------------------
+static (list T).
+
+[STATIC-TIMES]
+static T1,
+static T2
+--------------------------------------
+static (times T1 T2).
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : M1,
+matches M1 (arrow T1_1 T2),
+Gamma |- e2 : T1_2,
+T1_2 ~ T1_1
+--------------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-APP5]
+Gamma |- e1 : M6,
+matches M6 (times M3 M5),
+matches M3 (arrow M2 T1_2),
+matches M2 (list T1_1),
+matches M5 (arrow M4 T2_2),
+matches M4 (list T2_1),
+Gamma |- e2 : M7,
+matches M7 (list T1_3),
+Gamma |- e3 : M8,
+matches M8 (list T2_3),
+T1_3 ~ T1_1,
+T2_2 ~ T2_1,
+T2_3 ~ T1_2
+--------------------------------------
+Gamma |- (app5 e1 e2 e3) : (times T1_2 T2_2).
+
+[T-CONS]
+Gamma |- e1 : T_1,
+Gamma |- e2 : M9,
+matches M9 (list T_2),
+T_1 ~ T,
+T_2 ~ T
+--------------------------------------
+Gamma |- (cons T e1 e2) : (list T).
+
+[T-FALSE]
+--------------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-FST]
+Gamma |- e : M10,
+matches M10 (times T1 T2)
+--------------------------------------
+Gamma |- (fst e) : T1.
+
+[T-GCAST]
+Gamma |- e : T1,
+T1 ~ T2
+--------------------------------------
+Gamma |- (gcast e T1 T2 L) : T2.
+
+[T-HEAD]
+Gamma |- e : M11,
+matches M11 (list T_1),
+T_1 ~ T
+--------------------------------------
+Gamma |- (head T e) : T.
+
+[T-IS-NIL]
+Gamma |- e : M12,
+matches M12 (list T_1),
+T_1 ~ T
+--------------------------------------
+Gamma |- (is_nil T e) : (bool.).
+
+[T-NIL]
+--------------------------------------
+Gamma |- (nill T) : (list T).
+
+[T-PAIR]
+Gamma |- e1 : T1,
+Gamma |- e2 : T2
+--------------------------------------
+Gamma |- (pair e1 e2) : (times T1 T2).
+
+[T-SND]
+Gamma |- e : M13,
+matches M13 (times T1 T2)
+--------------------------------------
+Gamma |- (snd e) : T2.
+
+[T-TAIL]
+Gamma |- e : M14,
+matches M14 (list T_1),
+T_1 ~ T
+--------------------------------------
+Gamma |- (tail T e) : (list T).
+
+[T-TRUE]
+--------------------------------------
+Gamma |- (tt.) : (bool.).
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------------
+Gamma |- x : T.
+
+%
+
+eliminationform: app => 0 | app5 => 0 | fst => 0 | head => 1 | is_nil => 1 | snd => 0 | tail => 1.
+flows: app5 => [e1, 0, e2, 0] [e1, 1, e3, 0] [T1, c, 0, e1, 1] [T2, c, 0, e1, 3].
+mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out | typeof_cc => inp inp out out.
+principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no | typeof_cc => no yes no no.
+variance: arrow => contra cov.

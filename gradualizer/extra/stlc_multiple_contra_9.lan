@@ -1,0 +1,84 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (app9 e e e e) | (tt.) | (ff.) | (pair e e) | (fst e) | (snd e)
+Value v ::= (abs T (x)e) | (tt.) | (ff.) | (pair v v)
+Type T ::= (arrow T T) | (bool.) | (times T T)
+Context E ::= (hole.) | (app E e) | (app v E) | (app9 E e e e) | (app9 v E e e) | (app9 v v E e) | (app9 v v v E) | (pair E e) | (pair v E) | (fst E) | (snd E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-APP9]
+Gamma |- e1 : (arrow (times T T) (arrow T (arrow T (times T T)))),
+Gamma |- e2 : (pair T T),
+Gamma |- e3 : T,
+Gamma |- e4 : T
+--------------------------------
+Gamma |- (app9 e1 e2 e3 e4) : (times T T).
+
+[T-TRUE]
+--------------------------------
+Gamma |- (tt.) : (bool.).
+ 
+[T-FALSE]
+--------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-PAIR]
+Gamma |- e1 : T1,
+Gamma |- e2 : T2
+--------------------------------
+Gamma |- (pair e1 e2) : (times T1 T2).
+
+[T-FST]
+Gamma |- e : (times T1 T2)
+--------------------------------
+Gamma |- (fst e) : T1.
+
+[T-SND]
+Gamma |- e : (times T1 T2)
+--------------------------------
+Gamma |- (snd e) : T2.
+    
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-APP9]
+--------------------------------
+(app9 v1 v2 v3 v4) --> (app (app (app v1 v2) v4) v3).
+
+[R-FST]
+--------------------------------
+(fst (pair v1 v2)) --> v1.
+
+[R-SND]
+--------------------------------
+(snd (pair v1 v2)) --> v2.
+
+%
+
+mode: |- => inp inp out | step => inp out.
+principal: |- => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | app9 => 0 | fst => 0 | snd => 0.
+flows: app9 => [e1, 0, e2, 0] [e1, 1, e2, 1] [e1, 2, e4, 0] [e1, 3, e3, 0] [T, c, 0, e1, 4] [T, c, 1, e1, 5].

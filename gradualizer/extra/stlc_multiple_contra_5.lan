@@ -1,0 +1,124 @@
+Expression e ::= x | (abs T (x)e) | (app e e) | (app5 e e e) | (tt.) | (ff.) | (pair e e) | (fst e) | (snd e) | (nill T) | (cons T e e) | (head T e) | (tail T e)
+Value v ::= (abs T (x)e) | (tt.) | (ff.) | (pair v v) | (nill T) | (cons T v v)
+Type T ::= (arrow T T) | (bool.) | (times T T) | (list T)
+Context E ::= (hole.) | (app E e) | (app v E) | (app5 E e e) | (app5 v E e) | (app5 v v E) | (pair E e) | (pair v E) | (fst E) | (snd E) | (cons T E e) | (cons T v E) | (head T E) | (tail T E)
+Environment Gamma ::= [<x, T>...]
+
+%
+
+e --> e.
+Gamma |- e : T.
+
+%
+
+[T-VAR]
+member <x, T> Gamma
+--------------------------------
+Gamma |- x : T.
+
+[T-ABS]
+[x => T1]Gamma |- e : T2
+--------------------------------
+Gamma |- (abs T1 (x)e) : (arrow T1 T2).
+
+[T-APP]
+Gamma |- e1 : (arrow T1 T2),
+Gamma |- e2 : T1
+--------------------------------
+Gamma |- (app e1 e2) : T2.
+
+[T-APP5]
+Gamma |- e1 : (times (arrow (list T1) T1) (arrow (list T2) T2)),
+Gamma |- e2 : (list T1),
+Gamma |- e3 : (list T2)
+--------------------------------
+Gamma |- (app5 e1 e2 e3) : (times T1 T2).
+
+[T-TRUE]
+--------------------------------
+Gamma |- (tt.) : (bool.).
+ 
+[T-FALSE]
+--------------------------------
+Gamma |- (ff.) : (bool.).
+
+[T-PAIR]
+Gamma |- e1 : T1,
+Gamma |- e2 : T2
+--------------------------------
+Gamma |- (pair e1 e2) : (times T1 T2).
+
+[T-FST]
+Gamma |- e : (times T1 T2)
+--------------------------------
+Gamma |- (fst e) : T1.
+
+[T-SND]
+Gamma |- e : (times T1 T2)
+--------------------------------
+Gamma |- (snd e) : T2.
+
+[T-NIL]
+--------------------------------
+Gamma |- (nill T) : (list T).
+
+[T-IS-NIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (is_nil T e) : (bool.).
+
+[T-CONS]
+Gamma |- e1 : T,
+Gamma |- e2 : (list T)
+--------------------------------
+Gamma |- (cons T e1 e2) : (list T).
+ 
+[T-HEAD]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (head T e) : T.
+
+[T-TAIL]
+Gamma |- e : (list T)
+--------------------------------
+Gamma |- (tail T e) : (list T).
+    
+[R-BETA]
+--------------------------------
+(app (abs T (x)e) v) --> e{v/x}.
+
+[R-APP5]
+--------------------------------
+(app5 v1 v2 v3) --> (pair (app (fst v1) v2) (app (snd v1) v3)).
+
+[R-FST]
+--------------------------------
+(fst (pair v1 v2)) --> v1.
+
+[R-SND]
+--------------------------------
+(snd (pair v1 v2)) --> v2.
+
+[R-IS-NIL-TRUE]
+--------------------------------
+(is_nil T (nill T)) --> (tt.).
+
+[R-IS-NIL-FALSE]
+--------------------------------
+(is_nil T (cons T v1 v2)) --> (ff.).
+
+[R-HEAD-CONS]
+--------------------------------
+(head T (cons T v1 v2)) --> v1.
+
+[R-TAIL-CONS]
+--------------------------------
+(tail T (cons T v1 v2)) --> v2.
+
+%
+
+mode: |- => inp inp out | step => inp out.
+principal: |- => no yes no | step => yes no.
+variance: arrow => contra cov.
+eliminationform: app => 0 | app5 => 0 | fst => 0 | snd => 0 | is_nil => 1 | head => 1 | tail => 1.
+flows: app5 => [e1, 0, e2, 0] [e1, 1, e3, 0] [T1, c, 0, e1, 1] [T2, c, 0, e1, 3].

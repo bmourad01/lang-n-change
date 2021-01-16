@@ -10,7 +10,7 @@ This directory has the following structure:
 
 ```
 |-- dynamic
-|   |-- *.lan (languages from the repo of https://github.com/mcimini/GradualizerDynamicSemantics
+|   |-- *.lan (languages from the repo of https://github.com/mcimini/GradualizerDynamicSemantics)
 |   `-- gradualized
 |       `-- *.lan (the same languages, applied to gradual_dynamic.tr)
 |-- static

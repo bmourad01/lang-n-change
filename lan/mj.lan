@@ -238,7 +238,7 @@ D |- (unitT.) <: (unitT.).
 --------------------------------------
 D |- (refT T) <: (refT T).
 
-[S-CLASST-TRANSITIVE]
+[S-CLASST-DECL]
 member (class_decl N1 N2 _ _) D
 --------------------------------------
 D |- (classT N1) <: (classT N2).
@@ -247,7 +247,7 @@ D |- (classT N1) <: (classT N2).
 --------------------------------------
 D |- (classT N) <: (classT N).
 
-[S-CLASST-SUPER]
+[S-CLASST-TRANSITIVE]
 not(member (class_decl N1 N2 _ _) D),
 member (class_decl N1 N3 _ _) D,
 D |- (classT N3) <: (classT N2)

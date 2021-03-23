@@ -1,4 +1,4 @@
-Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (tt.) | (ff.) | (ite e e e)
+Expression e ::= x | (abs T (x)e) | (app e e) | (zero.) | (tt.) | (ff.) | (if e e e)
 Value v ::= (abs T (x)e) | (zero.) | (tt.) | (ff.)
 Type T ::= (arrow T T) | (nat.) | (bool.)
 Context E ::= (hole.) | (app E e) | (app v E) | (if E e e)
@@ -44,7 +44,7 @@ Gamma |- e1 : (bool.),
 Gamma |- e2 : T,
 Gamma |- e3 : T
 --------------------------------
-Gamma |- (ite e1 e2 e3) : T.
+Gamma |- (if e1 e2 e3) : T.
 
 [R-BETA]
 --------------------------------
@@ -52,15 +52,15 @@ Gamma |- (ite e1 e2 e3) : T.
 
 [R-IF-TRUE]
 --------------------------------
-(ite (tt.) e1 e2) --> e1.
+(if (tt.) e1 e2) --> e1.
 
 [R-IF-FALSE]
 --------------------------------
-(ite (ff.) e1 e2) --> e2.
+(if (ff.) e1 e2) --> e2.
 
 %
 
 mode: |- => inp inp out | step => inp out.
 principal: |- => no yes no | step => yes no.
 variance: arrow => contra cov.
-eliminationform: app => 0 | ite => 0.
+eliminationform: app => 0 | if => 0.

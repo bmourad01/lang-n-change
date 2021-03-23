@@ -13,6 +13,7 @@ module Term : sig
     | Map_domain of t
     | Map_range of t
     | Map_union of t list
+    | Map_union_uniq of t list
     | Cons of t * t
     | List of t
     | Tuple of t list
@@ -50,6 +51,8 @@ module Term : sig
   val is_map_range : t -> bool
 
   val is_map_union : t -> bool
+
+  val is_map_union_uniq : t -> bool
 
   val is_nil : t -> bool
 

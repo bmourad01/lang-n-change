@@ -46,6 +46,7 @@ module Exp : sig
       | Term_map_domain of t
       | Term_map_range of t
       | Term_map_union of t
+      | Term_map_union_uniq of t
       | Term_cons of t * t
       | Term_list of t
       | Term_tuple of t
@@ -226,6 +227,7 @@ module Exp : sig
     | Term_map_domain of t
     | Term_map_range of t
     | Term_map_union of t
+    | Term_map_union_uniq of t
     | Term_cons of t * t
     | Term_list of t
     | Term_tuple of t

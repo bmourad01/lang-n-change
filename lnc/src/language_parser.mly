@@ -71,7 +71,7 @@
 %token BIGARROW
 %token MAPSTO
 %token EQ
-%token NIL DOM RANGE MEMBER NOT UNION MAPUNION SUBSET ZIP FRESH
+%token NIL DOM RANGE MEMBER NOT UNION MAPUNION MAPUNIONUNIQ SUBSET ZIP FRESH
 
 %start lan
 %type <Language.t> lan
@@ -267,6 +267,10 @@ term:
     { Term.Map_union [t1; t2] }
   | MAPUNION LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
     { Term.Map_union (t1 :: t2 :: rest) }
+  | MAPUNIONUNIQ LPAREN t1 = term COMMA t2 = term RPAREN
+    { Term.Map_union_uniq [t1; t2] }
+  | MAPUNIONUNIQ LPAREN t1 = term COMMA t2 = term COMMA rest = separated_list(COMMA, term) RPAREN
+    { Term.Map_union_uniq (t1 :: t2 :: rest) }
   | ZIP LPAREN t1 = term COMMA t2 = term RPAREN
     { Term.Zip (t1, t2) }
   | FRESH LPAREN term RPAREN

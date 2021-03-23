@@ -1,4 +1,5 @@
-Expression e ::= ... | ("pmatch" [$e, [<[$p, $e]>...]]).;
+Expression e ::= ... | ("pmatch" [$e, [<[$p, $e]>...]]) | ("err" []).;
+Error er ::= ... | ("err" []).;
 
 let has_binding (ts: term list) : bool =
   not(empty?(ts[`t`]: if binding?(t) then some(t) else none))
@@ -36,7 +37,7 @@ in
       if var?(e) && var_kind?(e, "Expression") then p else e
     in
     let new_gammas = prems_map[`(_, g)`]: g in
-    let result = match new_gammas with [] -> gamma | _ -> $Gamma' in
+    let result = match new_gammas with [] -> $nil | [g] -> g | _ -> $Gamma' in
     some(["T-MATCH-" ^ uppercase(op)] {
       Premises[`prem`]:
         match prem with
@@ -47,7 +48,8 @@ in
         | _ -> self,
       (match new_gammas with
        | [] -> none
-       | _ -> some(&($Gamma' = $map_union(gamma :: new_gammas))))
+       | g :: [] -> none
+       | _ -> some(&($Gamma' = $map_union_uniq(new_gammas))))
       -----------------------------------------------------------
       gamma |- (p_op args_with_ps) : t ==> result
     })
@@ -55,7 +57,7 @@ in
 
 ["T-MATCH-VAR"] {
   ------------------------------------------------------------
-  $Gamma |- ("pattern_var" [$x, $T]) : $T ==> [$x => $T]$Gamma
+  $Gamma |- ("pattern_var" [$x, $T]) : $T ==> [$x => $T]$nil
 };
 
 add_relation("match_pattern", [$p, $v, $MR]);
@@ -84,7 +86,7 @@ add_relation("match_pattern", [$p, $v, $MR]);
       (match subs_un with
        | [] -> none
        | _ :: [] -> none
-       | _ -> some(&($S = $map_union(subs_un))))
+       | _ -> some(&($S = $map_union_uniq(subs_un))))
       --------------------------------------------------------------------
       &("match_pattern" [(p_op ps), (op vs), ("match_subst" [result.])])
     })
@@ -141,7 +143,7 @@ add_relation("typeof_pmatch", [$Gamma, $T, [<[$p, $e]>...], [$T...]]);
 
 ["TYPEOF-PMATCH"] {
   $Gamma |- $p : $T ==> $Gamma',
-  $Gamma' |- $e : $T',
+  $map_union([$Gamma, $Gamma']) |- $e : $T',
   &("typeof_pmatch" [$Gamma, $T, $M, $typs])
   ----------------------------------------------------
   &("typeof_pmatch" [$Gamma, $T, $(<[$p, $e]> :: $M), $($T' :: $typs)])

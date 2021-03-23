@@ -198,6 +198,7 @@ module Exp = struct
       | Term_map_domain of t
       | Term_map_range of t
       | Term_map_union of t
+      | Term_map_union_uniq of t
       | Term_cons of t * t
       | Term_list of t
       | Term_tuple of t
@@ -248,6 +249,8 @@ module Exp = struct
       | Term_map_domain p -> Printf.sprintf "$dom(%s)" (to_string p)
       | Term_map_range p -> Printf.sprintf "$range(%s)" (to_string p)
       | Term_map_union p -> Printf.sprintf "$map_union(%s)" (to_string p)
+      | Term_map_union_uniq p ->
+          Printf.sprintf "$map_union_uniq(%s)" (to_string p)
       | Term_cons (p1, p2) ->
           Printf.sprintf "$(%s :: %s)" (to_string p1) (to_string p2)
       | Term_list p -> Printf.sprintf "[%s...]" (to_string p)
@@ -430,6 +433,7 @@ module Exp = struct
     | Term_map_domain of t
     | Term_map_range of t
     | Term_map_union of t
+    | Term_map_union_uniq of t
     | Term_cons of t * t
     | Term_list of t
     | Term_tuple of t
@@ -685,6 +689,8 @@ module Exp = struct
     | Term_map_domain e -> Printf.sprintf "$dom(%s)" (to_string e)
     | Term_map_range e -> Printf.sprintf "$range(%s)" (to_string e)
     | Term_map_union e -> Printf.sprintf "$map_union(%s)" (to_string e)
+    | Term_map_union_uniq e ->
+        Printf.sprintf "$map_union_uniq(%s)" (to_string e)
     | Term_cons (e1, e2) ->
         Printf.sprintf "$(%s :: %s)" (to_string e1) (to_string e2)
     | Term_list e -> Printf.sprintf "[%s...]" (to_string e)
@@ -1016,6 +1022,13 @@ and compile_pattern_term ctx t =
           let p' = Printf.sprintf "(T.Map_union (%s))" p' in
           (p', Type.Term, ctx)
       | _ -> incompat "Term_map_union pattern" [typ] Type.[List Term] )
+  | Exp.Pattern.Term_map_union_uniq p -> (
+      let p', typ, ctx = compile_pattern ctx Type.(List Term) p in
+      match typ with
+      | Type.(List Term) ->
+          let p' = Printf.sprintf "(T.Map_union_uniq (%s))" p' in
+          (p', Type.Term, ctx)
+      | _ -> incompat "Term_map_union_uniq pattern" [typ] Type.[List Term] )
   | Exp.Pattern.Term_cons (p1, p2) -> (
       let p1', typ1, ctx1 = compile_pattern ctx Type.Term p1 in
       let p2', typ2, ctx2 = compile_pattern ctx Type.Term p2 in
@@ -2806,6 +2819,13 @@ and compile_term ctx t =
           let e' = Printf.sprintf "(T.Map_union (%s))" e' in
           (e', Type.Term, ctx)
       | _ -> incompat "Term_map_union" [typ] Type.[List Term] )
+  | Exp.Term_map_union_uniq e -> (
+      let e', typ, _ = compile ctx e in
+      match Type_unify.run Type.[List Term; typ] with
+      | Some Type.(List Term) ->
+          let e' = Printf.sprintf "(T.Map_union_uniq (%s))" e' in
+          (e', Type.Term, ctx)
+      | _ -> incompat "Term_map_union_uniq" [typ] Type.[List Term] )
   | Exp.Term_cons (e1, e2) -> (
       let e1', typ1, _ = compile ctx e1 in
       let e2', typ2, _ = compile ctx e2 in

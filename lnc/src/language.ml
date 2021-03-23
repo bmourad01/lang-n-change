@@ -13,6 +13,7 @@ module Term = struct
     | Map_domain of t
     | Map_range of t
     | Map_union of t list
+    | Map_union_uniq of t list
     | Cons of t * t
     | List of t
     | Tuple of t list
@@ -64,6 +65,9 @@ module Term = struct
     | Map_union ts ->
         Printf.sprintf "map_union(%s)"
           (List.map ts ~f:to_string |> String.concat ~sep:", ")
+    | Map_union_uniq ts ->
+        Printf.sprintf "map_union_uniq(%s)"
+          (List.map ts ~f:to_string |> String.concat ~sep:", ")
     | Zip (t1, t2) ->
         Printf.sprintf "zip(%s, %s)" (to_string t1) (to_string t2)
     | Fresh t -> Printf.sprintf "fresh(%s)" (to_string t)
@@ -110,6 +114,10 @@ module Term = struct
 
   let is_map_union = function
     | Map_union _ -> true
+    | _ -> false
+
+  let is_map_union_uniq = function
+    | Map_union_uniq _ -> true
     | _ -> false
 
   let is_nil = function
@@ -163,6 +171,7 @@ module Term = struct
     | Map_domain t -> Map_domain (unbind_rec t)
     | Map_range t -> Map_range (unbind_rec t)
     | Map_union ts -> Map_union (List.map ts ~f:unbind_rec)
+    | Map_union_uniq ts -> Map_union_uniq (List.map ts ~f:unbind_rec)
     | Cons (element, lst) -> Cons (unbind_rec element, unbind_rec lst)
     | List t -> List (unbind_rec t)
     | Tuple ts -> Tuple (List.map ts ~f:unbind_rec)
@@ -190,7 +199,8 @@ module Term = struct
     | Map_domain m | Map_range m -> f m
     | Cons (element, lst) -> List.map [element; lst] ~f |> List.concat
     | List s -> f s
-    | Tuple ts | Union ts | Map_union ts -> List.map ts ~f |> List.concat
+    | Tuple ts | Union ts | Map_union ts | Map_union_uniq ts ->
+        List.map ts ~f |> List.concat
     | Zip (t1, t2) -> f t1 @ f t2
     | Fresh t -> f t
 
@@ -220,6 +230,7 @@ module Term = struct
     | Map_domain m -> Map_domain (ticked m)
     | Map_range m -> Map_range (ticked m)
     | Map_union ts -> Map_union (List.map ts ~f:ticked)
+    | Map_union_uniq ts -> Map_union_uniq (List.map ts ~f:ticked)
     | Cons (element, lst) -> Cons (ticked element, ticked lst)
     | List s -> List (ticked s)
     | Tuple ts -> Tuple (List.map ts ~f:ticked)
@@ -252,6 +263,7 @@ module Term = struct
     | Map_domain m -> Map_domain (unticked m)
     | Map_range m -> Map_range (unticked m)
     | Map_union ts -> Map_union (List.map ts ~f:unticked)
+    | Map_union_uniq ts -> Map_union_uniq (List.map ts ~f:unticked)
     | Cons (element, lst) -> Cons (unticked element, unticked lst)
     | List s -> List (unticked s)
     | Tuple ts -> Tuple (List.map ts ~f:unticked)
@@ -284,6 +296,7 @@ module Term = struct
     | Map_domain m -> Map_domain (ticked_restricted m ts)
     | Map_range m -> Map_range (ticked_restricted m ts)
     | Map_union ts -> Map_union (List.map ts ~f)
+    | Map_union_uniq ts -> Map_union_uniq (List.map ts ~f)
     | Cons (element, lst) -> Cons (f element, f lst)
     | List s -> List (f s)
     | Tuple ts -> Tuple (List.map ts ~f)
@@ -319,6 +332,7 @@ module Term = struct
         | Map_domain m -> Map_domain (f m)
         | Map_range m -> Map_range (f m)
         | Map_union ts -> Map_union (List.map ts ~f)
+        | Map_union_uniq ts -> Map_union_uniq (List.map ts ~f)
         | Cons (element, lst) -> Cons (f element, f lst)
         | List s -> List (f s)
         | Tuple ts -> Tuple (List.map ts ~f)
@@ -423,6 +437,16 @@ module Term = struct
           in
           let ts, m = aux' m ts in
           (Map_union ts, m)
+      | Map_union_uniq ts ->
+          let rec aux' m = function
+            | [] -> ([], m)
+            | x :: xs ->
+                let x, m = aux x m in
+                let xs, m = aux' m xs in
+                (x :: xs, m)
+          in
+          let ts, m = aux' m ts in
+          (Map_union_uniq ts, m)
       | Cons (element, lst) ->
           let element, m = aux element m in
           let lst, m = aux lst m in

@@ -95,6 +95,7 @@ rule token = parse
   | "not" {NOT}
   | "union" {UNION}
   | "map_union" {MAPUNION}
+  | "map_union_uniq" {MAPUNIONUNIQ}
   | "subset" {SUBSET}
   | "zip" {ZIP}
   | "unzip" {UNZIP}

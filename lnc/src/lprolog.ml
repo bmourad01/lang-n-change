@@ -108,8 +108,20 @@ module Sigs = struct
         ; "list" @ ["lnc_pair" @ [v "A"; v "B"]]
         ; "list" @ ["lnc_pair" @ [v "A"; v "B"]] ]
     in
+    let lnc_map_join_uniq =
+      "lnc_map_join_uniq"
+      $ [ "list" @ ["lnc_pair" @ [v "A"; v "B"]]
+        ; "list" @ ["lnc_pair" @ [v "A"; v "B"]]
+        ; "list" @ ["lnc_pair" @ [v "A"; v "B"]] ]
+    in
     let lnc_map_union =
       "lnc_map_union"
+      $ [ "list" @ ["list" @ ["lnc_pair" @ [v "A"; v "B"]]]
+        ; "list" @ ["lnc_pair" @ [v "A"; v "B"]]
+        ; "list" @ ["lnc_pair" @ [v "A"; v "B"]] ]
+    in
+    let lnc_map_union_uniq =
+      "lnc_map_union_uniq"
       $ [ "list" @ ["list" @ ["lnc_pair" @ [v "A"; v "B"]]]
         ; "list" @ ["lnc_pair" @ [v "A"; v "B"]]
         ; "list" @ ["lnc_pair" @ [v "A"; v "B"]] ]
@@ -140,7 +152,9 @@ module Sigs = struct
       ; (lnc_map_domain.name, lnc_map_domain)
       ; (lnc_map_range.name, lnc_map_range)
       ; (lnc_map_join.name, lnc_map_join)
+      ; (lnc_map_join_uniq.name, lnc_map_join_uniq)
       ; (lnc_map_union.name, lnc_map_union)
+      ; (lnc_map_union_uniq.name, lnc_map_union_uniq)
       ; (lnc_append.name, lnc_append)
       ; (lnc_reverse.name, lnc_reverse)
       ; (lnc_subset.name, lnc_subset)
@@ -606,20 +620,33 @@ let builtin_rules =
     ("LNC-MAP-JOIN-1", "lnc_map_join" $ ["nil" @ []; v "K"; v "K"]) <-- []
   in
   let lnc_map_join_2 =
-    ( "LNC_MAP-JOIN-2"
+    ( "LNC-MAP-JOIN-2"
     , "lnc_map_join" $ [("lnc_pair" @ [v "X"; v "Y"]) ++ v "M"; v "K"; v "M'"]
     )
-    <-- [ "lnc_member" $ ["lnc_pair" @ [v "X"; v "Y"]; v "K"]
+    <-- [ "lnc_member" $ ["lnc_pair" @ [v "X"; v "Y'"]; v "K"]
         ; "lnc_map_join" $ [v "M"; v "K"; v "M'"] ]
   in
   let lnc_map_join_3 =
-    ( "LNC_MAP-JOIN-3"
+    ( "LNC-MAP-JOIN-3"
     , "lnc_map_join"
       $ [ ("lnc_pair" @ [v "X"; v "Y"]) ++ v "M"
         ; v "K"
         ; ("lnc_pair" @ [v "X"; v "Y"]) ++ v "M'" ] )
     <-- [ !("lnc_member" $ ["lnc_pair" @ [v "X"; v "Y'"]; v "K"])
         ; "lnc_map_join" $ [v "M"; v "K"; v "M'"] ]
+  in
+  let lnc_map_join_uniq_1 =
+    ("LNC-MAP-JOIN-UNIQ-1", "lnc_map_join_uniq" $ ["nil" @ []; v "K"; v "K"])
+    <-- []
+  in
+  let lnc_map_join_uniq_2 =
+    ( "LNC-MAP-JOIN-UNIQ-2"
+    , "lnc_map_join_uniq"
+      $ [ ("lnc_pair" @ [v "X"; v "Y"]) ++ v "M"
+        ; v "K"
+        ; ("lnc_pair" @ [v "X"; v "Y"]) ++ v "M'" ] )
+    <-- [ !("lnc_member" $ ["lnc_pair" @ [v "X"; v "Y'"]; v "K"])
+        ; "lnc_map_join_uniq" $ [v "M"; v "K"; v "M'"] ]
   in
   let lnc_map_union_1 =
     ("LNC-MAP-UNION-1", "lnc_map_union" $ ["nil" @ []; v "K"; v "K"]) <-- []
@@ -628,6 +655,17 @@ let builtin_rules =
     ("LNC-MAP-UNION-2", "lnc_map_union" $ [v "X" ++ v "L"; v "K"; v "M2"])
     <-- [ "lnc_map_join" $ [v "X"; v "K"; v "M1"]
         ; "lnc_map_union" $ [v "L"; v "M1"; v "M2"] ]
+  in
+  let lnc_map_union_uniq_1 =
+    ( "LNC-MAP-UNION-UNIQ-1"
+    , "lnc_map_union_uniq" $ ["nil" @ []; v "K"; v "K"] )
+    <-- []
+  in
+  let lnc_map_union_uniq_2 =
+    ( "LNC-MAP-UNION-UNIQ-2"
+    , "lnc_map_union_uniq" $ [v "X" ++ v "L"; v "K"; v "M2"] )
+    <-- [ "lnc_map_join_uniq" $ [v "X"; v "K"; v "M1"]
+        ; "lnc_map_union_uniq" $ [v "L"; v "M1"; v "M2"] ]
   in
   let lnc_append_1 =
     ("LNC-APPEND-1", "lnc_append" $ ["nil" @ []; v "K"; v "K"]) <-- []
@@ -707,8 +745,12 @@ let builtin_rules =
     ; (lnc_map_join_1.name, lnc_map_join_1)
     ; (lnc_map_join_2.name, lnc_map_join_2)
     ; (lnc_map_join_3.name, lnc_map_join_3)
+    ; (lnc_map_join_uniq_1.name, lnc_map_join_uniq_1)
+    ; (lnc_map_join_uniq_2.name, lnc_map_join_uniq_2)
     ; (lnc_map_union_1.name, lnc_map_union_1)
     ; (lnc_map_union_2.name, lnc_map_union_2)
+    ; (lnc_map_union_uniq_1.name, lnc_map_union_uniq_1)
+    ; (lnc_map_union_uniq_2.name, lnc_map_union_uniq_2)
     ; (lnc_append_1.name, lnc_append_1)
     ; (lnc_append_2.name, lnc_append_2)
     ; (lnc_reverse_1.name, lnc_reverse_1)
@@ -1003,6 +1045,20 @@ let of_language (lan : L.t) =
                  ~f:(fun t t' -> Syntax.(t ++ t'))
           in
           let prop = Syntax.("lnc_map_union" $ [t'; "nil" @ []; l]) in
+          ([l], props @ [prop])
+      | T.Map_union_uniq ts ->
+          let ts', props =
+            List.map ts ~f:(aux_term (succ depth)) |> List.unzip
+          in
+          let ts', props = (List.concat ts', List.concat props) in
+          let l = fresh_var vars "List" None in
+          let t' =
+            List.rev ts'
+            |> List.fold_right
+                 ~init:Syntax.("nil" @ [])
+                 ~f:(fun t t' -> Syntax.(t ++ t'))
+          in
+          let prop = Syntax.("lnc_map_union_uniq" $ [t'; "nil" @ []; l]) in
           ([l], props @ [prop])
       | T.Zip (t1, t2) ->
           let t1', ps1 = aux_term (succ depth) t1 in

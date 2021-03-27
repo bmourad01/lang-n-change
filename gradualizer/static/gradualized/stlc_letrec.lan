@@ -1,6 +1,6 @@
-Context E ::= (app E e) | (app v E) | (hole.) | (let E (x)e)
+Context E ::= (app E e) | (app v E) | (fix E) | (hole.) | (let E (x)e)
 Environment Gamma ::= [<x, T>...]
-Expression e ::= x | (abs T (x)e) | (app e e) | (gcast e T T L) | (let e (x)e) | (letrec T (x)e (x)e)
+Expression e ::= x | (abs T (x)e) | (app e e) | (fix e) | (gcast e T T L) | (let e (x)e) | (letrec T (x)e (x)e)
 Ground G ::= (arrow (dyn.) (dyn.))
 Type T ::= (arrow T T) | (dyn.)
 Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L)
@@ -48,6 +48,13 @@ T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) ==> (app (gcast e1' M1 (arrow T1_1 T2) L1) (gcast e2' T1_2 T1_1 L2)) : T2.
 
+[CC-T-FIX]
+Gamma |- e ==> e' : M2,
+matches M2 (arrow T_1 T_2),
+T_2 ~ T_1
+--------------------------------------
+Gamma |- (fix e) ==> (fix (gcast e' M2 (arrow T_1 T_1) L3)) : T_1.
+
 [CC-T-LET]
 Gamma |- e1 ==> e1' : T1,
 [x => T1]Gamma |- e2 ==> e2' : T2
@@ -92,6 +99,10 @@ matches (dyn.) (arrow (dyn.) (dyn.)).
 --------------------------------------
 (app (abs T (x)e) v) --> e{v/x}.
 
+[R-FIX]
+--------------------------------------
+(fix (abs T (x)e)) --> e{(fix (abs T (x)e))/x}.
+
 [R-LET]
 --------------------------------------
 (let v (x)e) --> e{v/x}.
@@ -119,6 +130,13 @@ T1_2 ~ T1_1
 --------------------------------------
 Gamma |- (app e1 e2) : T2.
 
+[T-FIX]
+Gamma |- e : M2,
+matches M2 (arrow T_1 T_2),
+T_2 ~ T_1
+--------------------------------------
+Gamma |- (fix e) : T_1.
+
 [T-GCAST]
 Gamma |- e : T1,
 T1 ~ T2
@@ -145,7 +163,7 @@ Gamma |- x : T.
 
 %
 
-eliminationform: app => 0.
+eliminationform: app => 0 | fix => 0.
 mode: consistent => inp inp | gjoin => inp inp out | matches => inp out | static => inp | step => inp out | typeof => inp inp out | typeof_cc => inp inp out out.
 principal: consistent => yes yes | gjoin => yes yes no | matches => yes no | static => yes | step => yes no | typeof => no yes no | typeof_cc => no yes no no.
 variance: arrow => contra cov.

@@ -1,8 +1,8 @@
 Context E ::= (app E e) | (app v E) | (case E (x)e (x)e) | (cast E T) | (hole.) | (inl T E) | (inr T E)
 Environment Gamma ::= [<x, T>...]
 Expression e ::= x | (abs T (x)e) | (app e e) | (case e (x)e (x)e) | (cast e T) | (gcast e T T L) | (inl T e) | (inr T e)
-Ground G ::= (arrow (dyn.) (dyn.)) | (bot.) | (plus (dyn.) (dyn.)) | (top.)
-Type T ::= (arrow T T) | (bot.) | (dyn.) | (plus T T) | (top.)
+Ground G ::= (arrow (dyn.) (dyn.)) | (plus (dyn.) (dyn.))
+Type T ::= (arrow T T) | (dyn.) | (plus T T)
 Value v ::= (abs T (x)e) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (plus T T) (plus T T) L) | (inl T v) | (inr T v)
 
 %
@@ -26,10 +26,6 @@ T2 ~ T2'
 --------------------------------------
 (arrow T1 T2) ~ (arrow T1' T2').
 
-[C-BOT]
---------------------------------------
-(bot.) ~ (bot.).
-
 [C-DYN]
 --------------------------------------
 (dyn.) ~ (dyn.).
@@ -47,10 +43,6 @@ T2 ~ T2'
 [C-T-DYN]
 --------------------------------------
 T ~ (dyn.).
-
-[C-TOP]
---------------------------------------
-(top.) ~ (top.).
 
 [CC-T-ABS]
 [x => T1]Gamma |- e ==> e' : T2
@@ -107,10 +99,6 @@ gjoin T2 T2' T2''
 --------------------------------------
 gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
 
-[GJOIN-BOT]
---------------------------------------
-gjoin (bot.) (bot.) (bot.).
-
 [GJOIN-DYN-T]
 --------------------------------------
 gjoin (dyn.) T T.
@@ -125,48 +113,16 @@ gjoin (plus T1 T2) (plus T1' T2') (plus T1'' T2'').
 --------------------------------------
 gjoin T (dyn.) T.
 
-[GJOIN-TOP]
---------------------------------------
-gjoin (top.) (top.) (top.).
-
 [JOIN-ARROW]
 meet T1 T3 T5 T1' T3',
 join T2 T4 T6 T2' T4'
 --------------------------------------
 join (arrow T1 T2) (arrow T3 T4) (arrow T5 T6) (arrow T1' T2') (arrow T3' T4').
 
-[JOIN-ARROW-BOT]
---------------------------------------
-join (arrow T1 T2) (bot.) (arrow T1 T2) (arrow T1' T2') (bot.).
-
 [JOIN-ARROW-DYN]
 join (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
 --------------------------------------
 join (arrow T1 T2) (dyn.) T1' T2' T3'.
-
-[JOIN-ARROW-TOP]
---------------------------------------
-join (arrow T1 T2) (top.) (top.) (arrow T1' T2') (top.).
-
-[JOIN-BOT]
---------------------------------------
-join (bot.) (bot.) (bot.) (bot.) (bot.).
-
-[JOIN-BOT-ARROW]
---------------------------------------
-join (bot.) (arrow T1 T2) (arrow T1 T2) (bot.) (arrow T1' T2').
-
-[JOIN-BOT-DYN]
---------------------------------------
-join (bot.) (dyn.) (bot.) (bot.) (bot.).
-
-[JOIN-BOT-PLUS]
---------------------------------------
-join (bot.) (plus T1 T2) (plus T1 T2) (bot.) (plus T1' T2').
-
-[JOIN-BOT-TOP]
---------------------------------------
-join (bot.) (top.) (top.) (bot.) (top.).
 
 [JOIN-DYN]
 --------------------------------------
@@ -177,18 +133,10 @@ join (arrow (dyn.) (dyn.)) (arrow T1 T2) T1' T2' T3'
 --------------------------------------
 join (dyn.) (arrow T1 T2) T1' T2' T3'.
 
-[JOIN-DYN-BOT]
---------------------------------------
-join (dyn.) (bot.) (bot.) (bot.) (bot.).
-
 [JOIN-DYN-PLUS]
 join (plus (dyn.) (dyn.)) (plus T1 T2) T1' T2' T3'
 --------------------------------------
 join (dyn.) (plus T1 T2) T1' T2' T3'.
-
-[JOIN-DYN-TOP]
---------------------------------------
-join (dyn.) (top.) (top.) (top.) (top.).
 
 [JOIN-PLUS]
 join T1 T7 T9 T1' T7',
@@ -196,70 +144,26 @@ join T2 T8 T10 T2' T8'
 --------------------------------------
 join (plus T1 T2) (plus T7 T8) (plus T9 T10) (plus T1' T2') (plus T7' T8').
 
-[JOIN-PLUS-BOT]
---------------------------------------
-join (plus T1 T2) (bot.) (plus T1 T2) (plus T1' T2') (bot.).
-
 [JOIN-PLUS-DYN]
 join (plus T1 T2) (plus (dyn.) (dyn.)) T1' T2' T3'
 --------------------------------------
 join (plus T1 T2) (dyn.) T1' T2' T3'.
 
-[JOIN-PLUS-TOP]
---------------------------------------
-join (plus T1 T2) (top.) (top.) (plus T1' T2') (top.).
-
-[JOIN-TOP]
---------------------------------------
-join (top.) (top.) (top.) (top.) (top.).
-
-[JOIN-TOP-ARROW]
---------------------------------------
-join (top.) (arrow T1 T2) (top.) (top.) (arrow T1' T2').
-
-[JOIN-TOP-BOT]
---------------------------------------
-join (top.) (bot.) (top.) (top.) (bot.).
-
-[JOIN-TOP-DYN]
---------------------------------------
-join (top.) (dyn.) (top.) (top.) (top.).
-
-[JOIN-TOP-PLUS]
---------------------------------------
-join (top.) (plus T1 T2) (top.) (top.) (plus T1' T2').
-
 [MATCHES-ARROW]
 --------------------------------------
 matches (arrow T1 T2) (arrow T1 T2).
-
-[MATCHES-BOT]
---------------------------------------
-matches (bot.) (bot.).
 
 [MATCHES-DYN-ARROW]
 --------------------------------------
 matches (dyn.) (arrow (dyn.) (dyn.)).
 
-[MATCHES-DYN-BOT]
---------------------------------------
-matches (dyn.) (bot.).
-
 [MATCHES-DYN-PLUS]
 --------------------------------------
 matches (dyn.) (plus (dyn.) (dyn.)).
 
-[MATCHES-DYN-TOP]
---------------------------------------
-matches (dyn.) (top.).
-
 [MATCHES-PLUS]
 --------------------------------------
 matches (plus T1 T2) (plus T1 T2).
-
-[MATCHES-TOP]
---------------------------------------
-matches (top.) (top.).
 
 [MEET-ARROW]
 join T1 T11 T13 T1' T11',
@@ -267,38 +171,10 @@ meet T2 T12 T14 T2' T12'
 --------------------------------------
 meet (arrow T1 T2) (arrow T11 T12) (arrow T13 T14) (arrow T1' T2') (arrow T11' T12').
 
-[MEET-ARROW-BOT]
---------------------------------------
-meet (arrow T1 T2) (bot.) (bot.) (arrow T1' T2') (bot.).
-
 [MEET-ARROW-DYN]
 meet (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
 --------------------------------------
 meet (arrow T1 T2) (dyn T1 T2) T1' T2' T3'.
-
-[MEET-ARROW-TOP]
---------------------------------------
-meet (arrow T1 T2) (top.) (arrow T1 T2) (arrow T1' T2') (top.).
-
-[MEET-BOT]
---------------------------------------
-meet (bot.) (bot.) (bot.) (bot.) (bot.).
-
-[MEET-BOT-ARROW]
---------------------------------------
-meet (bot.) (arrow T1 T2) (bot.) (bot.) (arrow T1' T2').
-
-[MEET-BOT-DYN]
---------------------------------------
-meet (bot.) (dyn.) (dyn.) (bot.) (bot.).
-
-[MEET-BOT-PLUS]
---------------------------------------
-meet (bot.) (plus T1 T2) (bot.) (bot.) (plus T1' T2').
-
-[MEET-BOT-TOP]
---------------------------------------
-meet (bot.) (top.) (bot.) (bot.) (top.).
 
 [MEET-DYN]
 --------------------------------------
@@ -309,18 +185,10 @@ meet (arrow (dyn.) (dyn.)) (arrow T1 T2) T1' T2' T3'
 --------------------------------------
 meet (dyn.) (arrow T1 T2) T1' T2' T3'.
 
-[MEET-DYN-BOT]
---------------------------------------
-meet (dyn.) (bot.) (dyn.) (bot.) (bot.).
-
 [MEET-DYN-PLUS]
 meet (plus (dyn.) (dyn.)) (plus T1 T2) T1' T2' T3'
 --------------------------------------
 meet (dyn.) (plus T1 T2) T1' T2' T3'.
-
-[MEET-DYN-TOP]
---------------------------------------
-meet (dyn.) (top.) (dyn.) (top.) (top.).
 
 [MEET-PLUS]
 meet T1 T15 T17 T1' T15',
@@ -328,38 +196,10 @@ meet T2 T16 T18 T2' T16'
 --------------------------------------
 meet (plus T1 T2) (plus T15 T16) (plus T17 T18) (plus T1' T2') (plus T15' T16').
 
-[MEET-PLUS-BOT]
---------------------------------------
-meet (plus T1 T2) (bot.) (bot.) (plus T1' T2') (bot.).
-
 [MEET-PLUS-DYN]
 meet (plus T1 T2) (plus (dyn.) (dyn.)) T1' T2' T3'
 --------------------------------------
 meet (plus T1 T2) (dyn T1 T2) T1' T2' T3'.
-
-[MEET-PLUS-TOP]
---------------------------------------
-meet (plus T1 T2) (top.) (plus T1 T2) (plus T1' T2') (top.).
-
-[MEET-TOP]
---------------------------------------
-meet (top.) (top.) (top.) (top.) (top.).
-
-[MEET-TOP-ARROW]
---------------------------------------
-meet (top.) (arrow T1 T2) (arrow T1 T2) (top.) (arrow T1' T2').
-
-[MEET-TOP-BOT]
---------------------------------------
-meet (top.) (bot.) (bot.) (top.) (bot.).
-
-[MEET-TOP-DYN]
---------------------------------------
-meet (top.) (dyn.) (dyn.) (top.) (top.).
-
-[MEET-TOP-PLUS]
---------------------------------------
-meet (top.) (plus T1 T2) (plus T1 T2) (top.) (plus T1' T2').
 
 [R-BETA]
 --------------------------------------
@@ -388,30 +228,6 @@ T2 <: T20 ==> T2' T20'
 --------------------------------------
 (arrow T1 T2) <: (dyn.) ==> T1' T2'.
 
-[S-BOT]
---------------------------------------
-(bot.) <: (bot.) ==> (bot.) (bot.).
-
-[S-BOT-ARROW]
---------------------------------------
-(bot.) <: (arrow T1 T2) ==> (bot.) (arrow T1' T2').
-
-[S-BOT-BOT]
---------------------------------------
-(bot.) <: (bot.) ==> (bot.) (bot.).
-
-[S-BOT-DYN]
---------------------------------------
-(bot.) <: (dyn.) ==> (bot.) (bot.).
-
-[S-BOT-PLUS]
---------------------------------------
-(bot.) <: (plus T1 T2) ==> (bot.) (plus T1' T2').
-
-[S-BOT-TOP]
---------------------------------------
-(bot.) <: (top.) ==> (bot.) (top.).
-
 [S-DYN]
 --------------------------------------
 (dyn.) <: (dyn.) ==> (dyn.) (dyn.).
@@ -421,18 +237,10 @@ T2 <: T20 ==> T2' T20'
 --------------------------------------
 (dyn.) <: (arrow T1 T2) ==> T1' T2'.
 
-[S-DYN-BOT]
---------------------------------------
-(dyn.) <: (bot.) ==> (bot.) (bot.).
-
 [S-DYN-PLUS]
 (plus (dyn.) (dyn.)) <: (plus T1 T2) ==> T1' T2'
 --------------------------------------
 (dyn.) <: (plus T1 T2) ==> T1' T2'.
-
-[S-DYN-TOP]
---------------------------------------
-(dyn.) <: (top.) ==> (top.) (top.).
 
 [S-PLUS]
 T1 <: T21 ==> T1' T21',
@@ -445,49 +253,17 @@ T2 <: T22 ==> T2' T22'
 --------------------------------------
 (plus T1 T2) <: (dyn.) ==> T1' T2'.
 
-[S-TOP]
---------------------------------------
-(top.) <: (top.) ==> (top.) (top.).
-
-[S-TOP-ARROW]
---------------------------------------
-(arrow T1 T2) <: (top.) ==> (arrow T1' T2') (top.).
-
-[S-TOP-BOT]
---------------------------------------
-(bot.) <: (top.) ==> (bot.) (top.).
-
-[S-TOP-DYN]
---------------------------------------
-(top.) <: (dyn.) ==> (top.) (top.).
-
-[S-TOP-PLUS]
---------------------------------------
-(plus T1 T2) <: (top.) ==> (plus T1' T2') (top.).
-
-[S-TOP-TOP]
---------------------------------------
-(top.) <: (top.) ==> (top.) (top.).
-
 [STATIC-ARROW]
 static T1,
 static T2
 --------------------------------------
 static (arrow T1 T2).
 
-[STATIC-BOT]
---------------------------------------
-static (bot.).
-
 [STATIC-PLUS]
 static T1,
 static T2
 --------------------------------------
 static (plus T1 T2).
-
-[STATIC-TOP]
---------------------------------------
-static (top.).
 
 [T-ABS]
 [x => T1]Gamma |- e : T2

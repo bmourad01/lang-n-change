@@ -1,8 +1,8 @@
 Context E ::= (app E e) | (app v E) | (cast E T) | (cons T E e) | (cons T v E) | (head T E) | (hole.) | (is_nil T E) | (length E) | (succ E) | (tail T E)
 Environment Gamma ::= [<x, T>...]
 Expression e ::= x | (abs T (x)e) | (app e e) | (cast e T) | (cons T e e) | (ff.) | (gcast e T T L) | (head T e) | (is_nil T e) | (length e) | (nill T) | (succ e) | (tail T e) | (tt.) | (zero.)
-Ground G ::= (arrow (dyn.) (dyn.)) | (bool.) | (bot.) | (list (dyn.)) | (nat.) | (top.)
-Type T ::= (arrow T T) | (bool.) | (bot.) | (dyn.) | (list T) | (nat.) | (top.)
+Ground G ::= (arrow (dyn.) (dyn.)) | (bool.) | (list (dyn.)) | (nat.)
+Type T ::= (arrow T T) | (bool.) | (dyn.) | (list T) | (nat.)
 Value v ::= (abs T (x)e) | (cons T v v) | (ff.) | (gcast v G (dyn.) L) | (gcast v (arrow T T) (arrow T T) L) | (gcast v (list T) (list T) L) | (nill T) | (succ v) | (tt.) | (zero.)
 
 %
@@ -30,10 +30,6 @@ T2 ~ T2'
 --------------------------------------
 (bool.) ~ (bool.).
 
-[C-BOT]
---------------------------------------
-(bot.) ~ (bot.).
-
 [C-DYN]
 --------------------------------------
 (dyn.) ~ (dyn.).
@@ -54,10 +50,6 @@ T ~ T'
 [C-T-DYN]
 --------------------------------------
 T ~ (dyn.).
-
-[C-TOP]
---------------------------------------
-(top.) ~ (top.).
 
 [CC-T-ABS]
 [x => T1]Gamma |- e ==> e' : T2
@@ -157,10 +149,6 @@ gjoin (arrow T1 T2) (arrow T1' T2') (arrow T1'' T2'').
 --------------------------------------
 gjoin (bool.) (bool.) (bool.).
 
-[GJOIN-BOT]
---------------------------------------
-gjoin (bot.) (bot.) (bot.).
-
 [GJOIN-DYN-T]
 --------------------------------------
 gjoin (dyn.) T T.
@@ -178,72 +166,24 @@ gjoin (nat.) (nat.) (nat.).
 --------------------------------------
 gjoin T (dyn.) T.
 
-[GJOIN-TOP]
---------------------------------------
-gjoin (top.) (top.) (top.).
-
 [JOIN-ARROW]
 meet T1 T3 T5 T1' T3',
 join T2 T4 T6 T2' T4'
 --------------------------------------
 join (arrow T1 T2) (arrow T3 T4) (arrow T5 T6) (arrow T1' T2') (arrow T3' T4').
 
-[JOIN-ARROW-BOT]
---------------------------------------
-join (arrow T1 T2) (bot.) (arrow T1 T2) (arrow T1' T2') (bot.).
-
 [JOIN-ARROW-DYN]
 join (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
 --------------------------------------
 join (arrow T1 T2) (dyn.) T1' T2' T3'.
 
-[JOIN-ARROW-TOP]
---------------------------------------
-join (arrow T1 T2) (top.) (top.) (arrow T1' T2') (top.).
-
 [JOIN-BOOL]
 --------------------------------------
 join (bool.) (bool.) (bool.) (bool.) (bool.).
 
-[JOIN-BOOL-BOT]
---------------------------------------
-join (bool.) (bot.) (bool.) (bool.) (bot.).
-
 [JOIN-BOOL-DYN]
 --------------------------------------
 join (bool.) (dyn.) (bool.) (bool.) (bool.).
-
-[JOIN-BOOL-TOP]
---------------------------------------
-join (bool.) (top.) (top.) (bool.) (top.).
-
-[JOIN-BOT]
---------------------------------------
-join (bot.) (bot.) (bot.) (bot.) (bot.).
-
-[JOIN-BOT-ARROW]
---------------------------------------
-join (bot.) (arrow T1 T2) (arrow T1 T2) (bot.) (arrow T1' T2').
-
-[JOIN-BOT-BOOL]
---------------------------------------
-join (bot.) (bool.) (bool.) (bot.) (bool.).
-
-[JOIN-BOT-DYN]
---------------------------------------
-join (bot.) (dyn.) (bot.) (bot.) (bot.).
-
-[JOIN-BOT-LIST]
---------------------------------------
-join (bot.) (list T) (list T) (bot.) (list T').
-
-[JOIN-BOT-NAT]
---------------------------------------
-join (bot.) (nat.) (nat.) (bot.) (nat.).
-
-[JOIN-BOT-TOP]
---------------------------------------
-join (bot.) (top.) (top.) (bot.) (top.).
 
 [JOIN-DYN]
 --------------------------------------
@@ -258,10 +198,6 @@ join (dyn.) (arrow T1 T2) T1' T2' T3'.
 --------------------------------------
 join (dyn.) (bool.) (bool.) (bool.) (bool.).
 
-[JOIN-DYN-BOT]
---------------------------------------
-join (dyn.) (bot.) (bot.) (bot.) (bot.).
-
 [JOIN-DYN-LIST]
 join (list (dyn.)) (list T) T1' T2' T3'
 --------------------------------------
@@ -271,71 +207,23 @@ join (dyn.) (list T) T1' T2' T3'.
 --------------------------------------
 join (dyn.) (nat.) (nat.) (nat.) (nat.).
 
-[JOIN-DYN-TOP]
---------------------------------------
-join (dyn.) (top.) (top.) (top.) (top.).
-
 [JOIN-LIST]
 join T T7 T8 T' T7'
 --------------------------------------
 join (list T) (list T7) (list T8) (list T') (list T7').
-
-[JOIN-LIST-BOT]
---------------------------------------
-join (list T) (bot.) (list T) (list T') (bot.).
 
 [JOIN-LIST-DYN]
 join (list T) (list (dyn.)) T1' T2' T3'
 --------------------------------------
 join (list T) (dyn.) T1' T2' T3'.
 
-[JOIN-LIST-TOP]
---------------------------------------
-join (list T) (top.) (top.) (list T') (top.).
-
 [JOIN-NAT]
 --------------------------------------
 join (nat.) (nat.) (nat.) (nat.) (nat.).
 
-[JOIN-NAT-BOT]
---------------------------------------
-join (nat.) (bot.) (nat.) (nat.) (bot.).
-
 [JOIN-NAT-DYN]
 --------------------------------------
 join (nat.) (dyn.) (nat.) (nat.) (nat.).
-
-[JOIN-NAT-TOP]
---------------------------------------
-join (nat.) (top.) (top.) (nat.) (top.).
-
-[JOIN-TOP]
---------------------------------------
-join (top.) (top.) (top.) (top.) (top.).
-
-[JOIN-TOP-ARROW]
---------------------------------------
-join (top.) (arrow T1 T2) (top.) (top.) (arrow T1' T2').
-
-[JOIN-TOP-BOOL]
---------------------------------------
-join (top.) (bool.) (top.) (top.) (bool.).
-
-[JOIN-TOP-BOT]
---------------------------------------
-join (top.) (bot.) (top.) (top.) (bot.).
-
-[JOIN-TOP-DYN]
---------------------------------------
-join (top.) (dyn.) (top.) (top.) (top.).
-
-[JOIN-TOP-LIST]
---------------------------------------
-join (top.) (list T) (top.) (top.) (list T').
-
-[JOIN-TOP-NAT]
---------------------------------------
-join (top.) (nat.) (top.) (top.) (nat.).
 
 [MATCHES-ARROW]
 --------------------------------------
@@ -345,10 +233,6 @@ matches (arrow T1 T2) (arrow T1 T2).
 --------------------------------------
 matches (bool.) (bool.).
 
-[MATCHES-BOT]
---------------------------------------
-matches (bot.) (bot.).
-
 [MATCHES-DYN-ARROW]
 --------------------------------------
 matches (dyn.) (arrow (dyn.) (dyn.)).
@@ -356,10 +240,6 @@ matches (dyn.) (arrow (dyn.) (dyn.)).
 [MATCHES-DYN-BOOL]
 --------------------------------------
 matches (dyn.) (bool.).
-
-[MATCHES-DYN-BOT]
---------------------------------------
-matches (dyn.) (bot.).
 
 [MATCHES-DYN-LIST]
 --------------------------------------
@@ -369,10 +249,6 @@ matches (dyn.) (list (dyn.)).
 --------------------------------------
 matches (dyn.) (nat.).
 
-[MATCHES-DYN-TOP]
---------------------------------------
-matches (dyn.) (top.).
-
 [MATCHES-LIST]
 --------------------------------------
 matches (list T) (list T).
@@ -381,72 +257,24 @@ matches (list T) (list T).
 --------------------------------------
 matches (nat.) (nat.).
 
-[MATCHES-TOP]
---------------------------------------
-matches (top.) (top.).
-
 [MEET-ARROW]
 join T1 T9 T11 T1' T9',
 meet T2 T10 T12 T2' T10'
 --------------------------------------
 meet (arrow T1 T2) (arrow T9 T10) (arrow T11 T12) (arrow T1' T2') (arrow T9' T10').
 
-[MEET-ARROW-BOT]
---------------------------------------
-meet (arrow T1 T2) (bot.) (bot.) (arrow T1' T2') (bot.).
-
 [MEET-ARROW-DYN]
 meet (arrow T1 T2) (arrow (dyn.) (dyn.)) T1' T2' T3'
 --------------------------------------
 meet (arrow T1 T2) (dyn T1 T2) T1' T2' T3'.
 
-[MEET-ARROW-TOP]
---------------------------------------
-meet (arrow T1 T2) (top.) (arrow T1 T2) (arrow T1' T2') (top.).
-
 [MEET-BOOL]
 --------------------------------------
 meet (bool.) (bool.) (bool.) (bool.) (bool.).
 
-[MEET-BOOL-BOT]
---------------------------------------
-meet (bool.) (bot.) (bot.) (bool.) (bot.).
-
 [MEET-BOOL-DYN]
 --------------------------------------
 meet (bool.) (dyn.) (dyn.) (bool.) (bool.).
-
-[MEET-BOOL-TOP]
---------------------------------------
-meet (bool.) (top.) (bool.) (bool.) (top.).
-
-[MEET-BOT]
---------------------------------------
-meet (bot.) (bot.) (bot.) (bot.) (bot.).
-
-[MEET-BOT-ARROW]
---------------------------------------
-meet (bot.) (arrow T1 T2) (bot.) (bot.) (arrow T1' T2').
-
-[MEET-BOT-BOOL]
---------------------------------------
-meet (bot.) (bool.) (bot.) (bot.) (bool.).
-
-[MEET-BOT-DYN]
---------------------------------------
-meet (bot.) (dyn.) (dyn.) (bot.) (bot.).
-
-[MEET-BOT-LIST]
---------------------------------------
-meet (bot.) (list T) (bot.) (bot.) (list T').
-
-[MEET-BOT-NAT]
---------------------------------------
-meet (bot.) (nat.) (bot.) (bot.) (nat.).
-
-[MEET-BOT-TOP]
---------------------------------------
-meet (bot.) (top.) (bot.) (bot.) (top.).
 
 [MEET-DYN]
 --------------------------------------
@@ -461,10 +289,6 @@ meet (dyn.) (arrow T1 T2) T1' T2' T3'.
 --------------------------------------
 meet (dyn.) (bool.) (dyn.) (bool.) (bool.).
 
-[MEET-DYN-BOT]
---------------------------------------
-meet (dyn.) (bot.) (dyn.) (bot.) (bot.).
-
 [MEET-DYN-LIST]
 meet (list (dyn.)) (list T) T1' T2' T3'
 --------------------------------------
@@ -474,71 +298,23 @@ meet (dyn.) (list T) T1' T2' T3'.
 --------------------------------------
 meet (dyn.) (nat.) (dyn.) (nat.) (nat.).
 
-[MEET-DYN-TOP]
---------------------------------------
-meet (dyn.) (top.) (dyn.) (top.) (top.).
-
 [MEET-LIST]
 meet T T13 T14 T' T13'
 --------------------------------------
 meet (list T) (list T13) (list T14) (list T') (list T13').
-
-[MEET-LIST-BOT]
---------------------------------------
-meet (list T) (bot.) (bot.) (list T') (bot.).
 
 [MEET-LIST-DYN]
 meet (list T) (list (dyn.)) T1' T2' T3'
 --------------------------------------
 meet (list T) (dyn T) T1' T2' T3'.
 
-[MEET-LIST-TOP]
---------------------------------------
-meet (list T) (top.) (list T) (list T') (top.).
-
 [MEET-NAT]
 --------------------------------------
 meet (nat.) (nat.) (nat.) (nat.) (nat.).
 
-[MEET-NAT-BOT]
---------------------------------------
-meet (nat.) (bot.) (bot.) (nat.) (bot.).
-
 [MEET-NAT-DYN]
 --------------------------------------
 meet (nat.) (dyn.) (dyn.) (nat.) (nat.).
-
-[MEET-NAT-TOP]
---------------------------------------
-meet (nat.) (top.) (nat.) (nat.) (top.).
-
-[MEET-TOP]
---------------------------------------
-meet (top.) (top.) (top.) (top.) (top.).
-
-[MEET-TOP-ARROW]
---------------------------------------
-meet (top.) (arrow T1 T2) (arrow T1 T2) (top.) (arrow T1' T2').
-
-[MEET-TOP-BOOL]
---------------------------------------
-meet (top.) (bool.) (bool.) (top.) (bool.).
-
-[MEET-TOP-BOT]
---------------------------------------
-meet (top.) (bot.) (bot.) (top.) (bot.).
-
-[MEET-TOP-DYN]
---------------------------------------
-meet (top.) (dyn.) (dyn.) (top.) (top.).
-
-[MEET-TOP-LIST]
---------------------------------------
-meet (top.) (list T) (list T) (top.) (list T').
-
-[MEET-TOP-NAT]
---------------------------------------
-meet (top.) (nat.) (nat.) (top.) (nat.).
 
 [R-BETA]
 --------------------------------------
@@ -591,38 +367,6 @@ T2 <: T16 ==> T2' T16'
 --------------------------------------
 (bool.) <: (dyn.) ==> (bool.) (bool.).
 
-[S-BOT]
---------------------------------------
-(bot.) <: (bot.) ==> (bot.) (bot.).
-
-[S-BOT-ARROW]
---------------------------------------
-(bot.) <: (arrow T1 T2) ==> (bot.) (arrow T1' T2').
-
-[S-BOT-BOOL]
---------------------------------------
-(bot.) <: (bool.) ==> (bot.) (bool.).
-
-[S-BOT-BOT]
---------------------------------------
-(bot.) <: (bot.) ==> (bot.) (bot.).
-
-[S-BOT-DYN]
---------------------------------------
-(bot.) <: (dyn.) ==> (bot.) (bot.).
-
-[S-BOT-LIST]
---------------------------------------
-(bot.) <: (list T) ==> (bot.) (list T').
-
-[S-BOT-NAT]
---------------------------------------
-(bot.) <: (nat.) ==> (bot.) (nat.).
-
-[S-BOT-TOP]
---------------------------------------
-(bot.) <: (top.) ==> (bot.) (top.).
-
 [S-DYN]
 --------------------------------------
 (dyn.) <: (dyn.) ==> (dyn.) (dyn.).
@@ -636,10 +380,6 @@ T2 <: T16 ==> T2' T16'
 --------------------------------------
 (dyn.) <: (bool.) ==> (bool.) (bool.).
 
-[S-DYN-BOT]
---------------------------------------
-(dyn.) <: (bot.) ==> (bot.) (bot.).
-
 [S-DYN-LIST]
 (list (dyn.)) <: (list T) ==> T1' T2'
 --------------------------------------
@@ -648,10 +388,6 @@ T2 <: T16 ==> T2' T16'
 [S-DYN-NAT]
 --------------------------------------
 (dyn.) <: (nat.) ==> (nat.) (nat.).
-
-[S-DYN-TOP]
---------------------------------------
-(dyn.) <: (top.) ==> (top.) (top.).
 
 [S-LIST]
 T <: T17 ==> T' T17'
@@ -671,38 +407,6 @@ T <: T17 ==> T' T17'
 --------------------------------------
 (nat.) <: (dyn.) ==> (nat.) (nat.).
 
-[S-TOP]
---------------------------------------
-(top.) <: (top.) ==> (top.) (top.).
-
-[S-TOP-ARROW]
---------------------------------------
-(arrow T1 T2) <: (top.) ==> (arrow T1' T2') (top.).
-
-[S-TOP-BOOL]
---------------------------------------
-(bool.) <: (top.) ==> (bool.) (top.).
-
-[S-TOP-BOT]
---------------------------------------
-(bot.) <: (top.) ==> (bot.) (top.).
-
-[S-TOP-DYN]
---------------------------------------
-(top.) <: (dyn.) ==> (top.) (top.).
-
-[S-TOP-LIST]
---------------------------------------
-(list T) <: (top.) ==> (list T') (top.).
-
-[S-TOP-NAT]
---------------------------------------
-(nat.) <: (top.) ==> (nat.) (top.).
-
-[S-TOP-TOP]
---------------------------------------
-(top.) <: (top.) ==> (top.) (top.).
-
 [STATIC-ARROW]
 static T1,
 static T2
@@ -713,10 +417,6 @@ static (arrow T1 T2).
 --------------------------------------
 static (bool.).
 
-[STATIC-BOT]
---------------------------------------
-static (bot.).
-
 [STATIC-LIST]
 static T
 --------------------------------------
@@ -725,10 +425,6 @@ static (list T).
 [STATIC-NAT]
 --------------------------------------
 static (nat.).
-
-[STATIC-TOP]
---------------------------------------
-static (top.).
 
 [T-ABS]
 [x => T1]Gamma |- e : T2

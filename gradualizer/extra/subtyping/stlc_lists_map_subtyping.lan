@@ -1,7 +1,7 @@
 Context E ::= (app E e) | (app v E) | (cast E T) | (cons T E e) | (cons T v E) | (head T E) | (hole.) | (is_nil T E) | (map T E e) | (map T v E) | (tail T E)
 Environment Gamma ::= [<x, T>...]
 Expression e ::= x | (abs T (x)e) | (app e e) | (cast e T) | (cons T e e) | (ff.) | (head T e) | (is_nil T e) | (map T e e) | (nill T) | (tail T e) | (tt.)
-Type T ::= (arrow T T) | (bool.) | (bot.) | (list T) | (top.)
+Type T ::= (arrow T T) | (bool.) | (list T)
 Value v ::= (abs T (x)e) | (cons T v v) | (ff.) | (nill T) | (tt.)
 
 %
@@ -20,78 +20,14 @@ join T2 T4 T6
 --------------------------------------
 join (arrow T1 T2) (arrow T3 T4) (arrow T5 T6).
 
-[JOIN-ARROW-BOT]
---------------------------------------
-join (arrow T1 T2) (bot.) (arrow T1 T2).
-
-[JOIN-ARROW-TOP]
---------------------------------------
-join (arrow T1 T2) (top.) (top.).
-
 [JOIN-BOOL]
 --------------------------------------
 join (bool.) (bool.) (bool.).
-
-[JOIN-BOOL-BOT]
---------------------------------------
-join (bool.) (bot.) (bool.).
-
-[JOIN-BOOL-TOP]
---------------------------------------
-join (bool.) (top.) (top.).
-
-[JOIN-BOT]
---------------------------------------
-join (bot.) (bot.) (bot.).
-
-[JOIN-BOT-ARROW]
---------------------------------------
-join (bot.) (arrow T1 T2) (arrow T1 T2).
-
-[JOIN-BOT-BOOL]
---------------------------------------
-join (bot.) (bool.) (bool.).
-
-[JOIN-BOT-LIST]
---------------------------------------
-join (bot.) (list T) (list T).
-
-[JOIN-BOT-TOP]
---------------------------------------
-join (bot.) (top.) (top.).
 
 [JOIN-LIST]
 join T T7 T8
 --------------------------------------
 join (list T) (list T7) (list T8).
-
-[JOIN-LIST-BOT]
---------------------------------------
-join (list T) (bot.) (list T).
-
-[JOIN-LIST-TOP]
---------------------------------------
-join (list T) (top.) (top.).
-
-[JOIN-TOP]
---------------------------------------
-join (top.) (top.) (top.).
-
-[JOIN-TOP-ARROW]
---------------------------------------
-join (top.) (arrow T1 T2) (top.).
-
-[JOIN-TOP-BOOL]
---------------------------------------
-join (top.) (bool.) (top.).
-
-[JOIN-TOP-BOT]
---------------------------------------
-join (top.) (bot.) (top.).
-
-[JOIN-TOP-LIST]
---------------------------------------
-join (top.) (list T) (top.).
 
 [MEET-ARROW]
 join T1 T9 T11,
@@ -99,78 +35,14 @@ meet T2 T10 T12
 --------------------------------------
 meet (arrow T1 T2) (arrow T9 T10) (arrow T11 T12).
 
-[MEET-ARROW-BOT]
---------------------------------------
-meet (arrow T1 T2) (bot.) (bot.).
-
-[MEET-ARROW-TOP]
---------------------------------------
-meet (arrow T1 T2) (top.) (arrow T1 T2).
-
 [MEET-BOOL]
 --------------------------------------
 meet (bool.) (bool.) (bool.).
-
-[MEET-BOOL-BOT]
---------------------------------------
-meet (bool.) (bot.) (bot.).
-
-[MEET-BOOL-TOP]
---------------------------------------
-meet (bool.) (top.) (bool.).
-
-[MEET-BOT]
---------------------------------------
-meet (bot.) (bot.) (bot.).
-
-[MEET-BOT-ARROW]
---------------------------------------
-meet (bot.) (arrow T1 T2) (bot.).
-
-[MEET-BOT-BOOL]
---------------------------------------
-meet (bot.) (bool.) (bot.).
-
-[MEET-BOT-LIST]
---------------------------------------
-meet (bot.) (list T) (bot.).
-
-[MEET-BOT-TOP]
---------------------------------------
-meet (bot.) (top.) (bot.).
 
 [MEET-LIST]
 meet T T13 T14
 --------------------------------------
 meet (list T) (list T13) (list T14).
-
-[MEET-LIST-BOT]
---------------------------------------
-meet (list T) (bot.) (bot.).
-
-[MEET-LIST-TOP]
---------------------------------------
-meet (list T) (top.) (list T).
-
-[MEET-TOP]
---------------------------------------
-meet (top.) (top.) (top.).
-
-[MEET-TOP-ARROW]
---------------------------------------
-meet (top.) (arrow T1 T2) (arrow T1 T2).
-
-[MEET-TOP-BOOL]
---------------------------------------
-meet (top.) (bool.) (bool.).
-
-[MEET-TOP-BOT]
---------------------------------------
-meet (top.) (bot.) (bot.).
-
-[MEET-TOP-LIST]
---------------------------------------
-meet (top.) (list T) (list T).
 
 [R-BETA]
 --------------------------------------
@@ -214,58 +86,10 @@ T2 <: T16
 --------------------------------------
 (bool.) <: (bool.).
 
-[S-BOT]
---------------------------------------
-(bot.) <: (bot.).
-
-[S-BOT-ARROW]
---------------------------------------
-(bot.) <: (arrow T1 T2).
-
-[S-BOT-BOOL]
---------------------------------------
-(bot.) <: (bool.).
-
-[S-BOT-BOT]
---------------------------------------
-(bot.) <: (bot.).
-
-[S-BOT-LIST]
---------------------------------------
-(bot.) <: (list T).
-
-[S-BOT-TOP]
---------------------------------------
-(bot.) <: (top.).
-
 [S-LIST]
 T <: T17
 --------------------------------------
 (list T) <: (list T17).
-
-[S-TOP]
---------------------------------------
-(top.) <: (top.).
-
-[S-TOP-ARROW]
---------------------------------------
-(arrow T1 T2) <: (top.).
-
-[S-TOP-BOOL]
---------------------------------------
-(bool.) <: (top.).
-
-[S-TOP-BOT]
---------------------------------------
-(bot.) <: (top.).
-
-[S-TOP-LIST]
---------------------------------------
-(list T) <: (top.).
-
-[S-TOP-TOP]
---------------------------------------
-(top.) <: (top.).
 
 [T-ABS]
 [x => T1]Gamma |- e : T2
@@ -334,6 +158,6 @@ Gamma |- x : T.
 %
 
 eliminationform: app => 0 | head => 1 | is_nil => 1 | map => 1 | tail => 1.
-mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | |- => inp inp out.
-principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | |- => no yes no.
+mode: join => inp inp out | meet => inp inp out | step => inp out | subtype => inp inp | typeof => inp inp out.
+principal: join => yes yes no | meet => yes yes no | step => yes no | subtype => yes yes | typeof => no yes no.
 variance: arrow => contra cov | list => cov.

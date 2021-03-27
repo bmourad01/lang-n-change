@@ -1,6 +1,3 @@
-(* add 'top' and 'bottom' types *)
-Type T ::= ... | ("top" []) | ("bot" []).;
-
 let interleave_pairs (l: term list) =
   let rec loop (l: term list) : (term, term) tuple list =
     match l with
@@ -190,35 +187,6 @@ in
   }
 );
 
-(concat(Type[`(c ts)` when not((c = "top") || (c = "bot"))]:
-  [["JOIN-TOP-" ^ uppercase(c)] {
-     ---------------------------------------
-     &("join" [("top" []), (c ts), ("top" [])])
-   },
-   ["JOIN-" ^ uppercase(c) ^ "-TOP"] {
-     ---------------------------------------
-     &("join" [(c ts), ("top" []), ("top" [])])
-   },
-   ["JOIN-BOT-" ^ uppercase(c)] {
-     ---------------------------------------
-     &("join" [("bot" []), (c ts), (c ts)])
-   },
-   ["JOIN-" ^ uppercase(c) ^ "-BOT"] {
-     ---------------------------------------
-     &("join" [(c ts), ("bot" []), (c ts)])
-   }]
-));
-
-["JOIN-TOP-BOT"] {
-  ----------------------------------------------
-  &("join" [("top" []), ("bot" []), ("top" [])])
-};
-
-["JOIN-BOT-TOP"] {
-  ----------------------------------------------
-  &("join" [("bot" []), ("top" []), ("top" [])])
-};
-
 (* add the relation for the meet of types *)
 (Type[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
@@ -251,35 +219,6 @@ in
   }
 );
 
-(concat(Type[`(c ts)` when not((c = "top") || (c = "bot"))]:
-  [["MEET-TOP-" ^ uppercase(c)] {
-     ---------------------------------------
-     &("meet" [("top" []), (c ts), (c ts)])
-   },
-   ["MEET-" ^ uppercase(c) ^ "-TOP"] {
-     ---------------------------------------
-     &("meet" [(c ts), ("top" []), (c ts)])
-   },
-   ["MEET-BOT-" ^ uppercase(c)] {
-     ---------------------------------------
-     &("meet" [("bot" []), (c ts), ("bot" [])])
-   },
-   ["MEET-" ^ uppercase(c) ^ "-BOT"] {
-     ---------------------------------------
-     &("meet" [(c ts), ("bot" []), ("bot" [])])
-   }]
-));
-
-["MEET-TOP-BOT"] {
-  ----------------------------------------------
-  &("meet" [("top" []), ("bot" []), ("bot" [])])
-};
-
-["MEET-BOT-TOP"] {
-  ----------------------------------------------
-  &("meet" [("bot" []), ("top" []), ("bot" [])])
-};
-
 (* add the relation for subtyping *)
 (Type[`(c ts)`]:
   let vmap = match assoc(c, hint("variance")) with  
@@ -304,17 +243,6 @@ in
     (c ts) <: (c ts2)
   }
 );
-
-(concat(Type[`(c ts)`]:
-  [["S-TOP-" ^ uppercase(c)] {
-     --------------------
-     (c ts) <: ("top" [])
-   },
-   ["S-BOT-" ^ uppercase(c)] {
-     --------------------
-     ("bot" []) <: (c ts)
-   }]
-));
 
 add_relation("join", [$T, $T, $T]);
 add_relation("meet", [$T, $T, $T]);
@@ -342,8 +270,8 @@ let do_config (t: term) = match config with
   | <_ :: ts> -> <t :: ts>
   | $!_ -> t
 in
+
 ["R-CAST"] {
   ----------------------------------------------
   do_config(("cast" [$v, $T])) --> do_config($v)
 }
-

@@ -80,7 +80,7 @@ in
             | some(_) -> (tk, v)
             | none ->
                let ov = var_overlap(tv, contra_types) in
-               if empty?(ov) then (tk, tk) else (tk, head(ov)))
+               if length(ov) = 1 then (tk, head(ov)) else (tk, tk))
       | _ -> none)
     in
    
@@ -119,12 +119,14 @@ in
       conclusion
     };
     
-    (* check for types that are peers, and if so, add a join for them *) 
+    (* check for types that are peers, and if so, add a join for them.
+     * additionally, multiple contravariant types require a meet *) 
     [name] {
       Premises,
       tmap[`(tk, tv)`]:
-        let ov = var_overlap(tv, contra_types) in
-        if not(empty?(ov)) then none else
+        match var_overlap(tv, contra_types) with
+        | _ :: [] -> none
+        | [] ->
           let ov = var_overlap(tv, inv_types) in
           if empty?(ov)
           then some(&("join" (tv @ [tk.])))
@@ -133,18 +135,19 @@ in
             if member?(tk, final_type_range)
             then some(&("join" (tv @ [tk.])))
             else none
-      -----------------------
+        | _ -> some(&("meet" (tv @ [tk.])))
+      -------------------------------------
       conclusion
     };
     
     (* substitute the final type in the rule *)
     substitute(self, final_type);
     
-    (* eliminate subtyping premises that are subsumed by a join *)
+    (* eliminate subtyping premises that are subsumed by a join or meet *)
     let prems = Premises in
     [name] {
       prems(keep)[`t1 <: t2`]:
-        let joins = prems[`&("join" ts)`]:
+        let joins = prems[`&(pred ts)` when ((pred = "join") || (pred = "meet"))]:
           let ov1 = var_overlap([t1.], ts) in
           let ov2 = var_overlap([t2.], ts) in
           if empty?(ov1) || empty?(ov2) then none else some(self)

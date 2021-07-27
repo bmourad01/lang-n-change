@@ -74,9 +74,9 @@ Some sample language definitions are provided in the `lan/` directory:
 
 ### Gradualizer
 
-The `gradualizer/` directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4], and contains one-to-one translations of the language repositories for both papers (`gradualizer/static/` and `gradualizer/dynamic/`, respectively; see https://github.com/mcimini/Gradualizer and https://github.com/mcimini/GradualizerDynamicSemantics).
+The [`gradualizer/`](./gradualizer/) directory contains algorithms for adding gradual typing to a functional language. It is based on the methodologies described in [3] and [4], and contains one-to-one translations of the language repositories for both papers (`gradualizer/static/` and `gradualizer/dynamic/`, respectively; see https://github.com/mcimini/Gradualizer and https://github.com/mcimini/GradualizerDynamicSemantics).
 
-See the corresponding [README](./gradualizer/README.md) for more information.
+See the corresponding [README](./gradualizer/README.md) for more information, as well as the corresponding paper [6] for a high-level overview of the algorithm(s).
 
 ## Compiling to λProlog
 
@@ -108,3 +108,5 @@ To run queries/execute programs, first enter the aforementioned directory, and t
 [4] Matteo Cimini and Jeremy G. Siek. 2017. Automatically generating the dynamic semantics of gradually typed languages. In Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages (POPL 2017). Association for Computing Machinery, New York, NY, USA, 789–803. DOI:https://doi.org/10.1145/3009837.3009863 
 
 [5] Bierman, G., Parkinson, M.J., & Pitts, A. (2003). MJ: An imperative core calculus for Java and Java with effects. https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-563.pdf
+
+[6] Benjamin Mourad and Matteo Cimini. 2020. A Declarative Gradualizer with Language Transformations. In IFL 2020: Proceedings of the 32nd Symposium on Implementation and Application of Functional Languages (IFL 2020). Association for Computing Machinery, New York, NY, USA, 44–54. DOI:https://doi.org/10.1145/3462172.3462190

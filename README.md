@@ -26,6 +26,9 @@ Language definitions that are ill-formed will fail to compile to λProlog progra
 A prototype of *lang-n-change* is presented in [2].
 The current tool is a new and improved version of the prototype.
 
+[6] describes a translation and extension of the Gradualizer of Cimini and Siek [3,4], showing that *L-Tr* can be applied to more sophisticated transformations.
+See the [corresponding section](#gradualizer) below for more details.
+
 ## Requirements
 
 - OCaml (>= 4.08)
